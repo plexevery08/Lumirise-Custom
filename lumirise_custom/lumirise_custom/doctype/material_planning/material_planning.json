@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "MP-.YYYY.-.#####",
+ "creation": "2026-06-03 19:54:14.398892",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "planning_date",
+  "branch",
+  "due_date",
+  "col1",
+  "created_indent",
+  "created_work_orders",
+  "workflow_state",
+  "sec_fg",
+  "fg_plan",
+  "sec_comp",
+  "components",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "default": "Today",
+   "fieldname": "planning_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Planning Date",
+   "reqd": 1
+  },
+  {
+   "default": "Lumirise",
+   "fieldname": "branch",
+   "fieldtype": "Data",
+   "label": "Branch"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date"
+  },
+  {
+   "fieldname": "col1",
+   "fieldtype": "Column Break",
+   "label": "Col1"
+  },
+  {
+   "fieldname": "created_indent",
+   "fieldtype": "Link",
+   "label": "Created Indent",
+   "options": "Indent",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_work_orders",
+   "fieldtype": "Small Text",
+   "label": "Created Work Orders",
+   "read_only": 1
+  },
+  {
+   "fieldname": "workflow_state",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_fg",
+   "fieldtype": "Section Break",
+   "label": "FG / Sales Order Plan"
+  },
+  {
+   "fieldname": "fg_plan",
+   "fieldtype": "Table",
+   "label": "FG Plan",
+   "options": "Material Planning FG"
+  },
+  {
+   "fieldname": "sec_comp",
+   "fieldtype": "Section Break",
+   "label": "Component Requirement (reservation / blocking)"
+  },
+  {
+   "fieldname": "components",
+   "fieldtype": "Table",
+   "label": "Components",
+   "options": "Material Planning Item"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Material Planning",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-06-03 19:54:14.398892",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Material Planning",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

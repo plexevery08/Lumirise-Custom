@@ -1,0 +1,30 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-06-03 14:21:34.883195",
+  "name": "Submit for Approval",
+  "workflow_action_name": "Submit for Approval"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-06-03 20:24:14.803876",
+  "name": "Purchase Manager Approve",
+  "workflow_action_name": "Purchase Manager Approve"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-06-03 20:24:14.811288",
+  "name": "MD Approve",
+  "workflow_action_name": "MD Approve"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-05-22 20:36:07.877102",
+  "name": "Reject",
+  "workflow_action_name": "Reject"
+ }
+]

@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "CPDI-.YYYY.-.#####",
+ "creation": "2026-06-03 19:54:12.512117",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sales_order",
+  "customer",
+  "fg_item",
+  "sampled_qty",
+  "col1",
+  "source_warehouse",
+  "pdi_warehouse",
+  "video_recording",
+  "customer_signoff",
+  "sec_checks",
+  "checks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "sales_order.customer",
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fg_item",
+   "fieldtype": "Link",
+   "label": "FG Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "default": "20",
+   "fieldname": "sampled_qty",
+   "fieldtype": "Float",
+   "label": "Sampled Qty"
+  },
+  {
+   "fieldname": "col1",
+   "fieldtype": "Column Break",
+   "label": "Col1"
+  },
+  {
+   "default": "Finished Goods - L",
+   "fieldname": "source_warehouse",
+   "fieldtype": "Link",
+   "label": "Source Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "default": "Customer PDI - L",
+   "fieldname": "pdi_warehouse",
+   "fieldtype": "Link",
+   "label": "PDI Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "video_recording",
+   "fieldtype": "Attach",
+   "label": "Video Recording"
+  },
+  {
+   "fieldname": "customer_signoff",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Customer Sign-off",
+   "options": "\nPass\nFail"
+  },
+  {
+   "fieldname": "sec_checks",
+   "fieldtype": "Section Break",
+   "label": "Inspection Checks"
+  },
+  {
+   "fieldname": "checks",
+   "fieldtype": "Table",
+   "label": "Checks",
+   "options": "Customer PDI Check"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Customer PDI",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-06-03 19:54:12.512117",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Customer PDI",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

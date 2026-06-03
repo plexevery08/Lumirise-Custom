@@ -44,6 +44,10 @@ app_license = "mit"
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+	"Purchase Order": "public/js/purchase_order.js",
+	"Sales Order": "public/js/sales_order.js",
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -145,6 +149,28 @@ app_license = "mit"
 # 		"on_trash": "method"
 # 	}
 # }
+
+# Ship the Lumirise customisations as fixtures (ordered: states before workflow).
+fixtures = [
+	{"dt": "Custom Field", "filters": [["module", "=", "Lumirise Custom"]]},
+	{"dt": "Property Setter", "filters": [["module", "=", "Lumirise Custom"]]},
+	{"dt": "Workflow State", "filters": [["name", "in", [
+		"Pending Purchase Manager", "Pending MD", "Approved", "Rejected", "Ordered"]]]},
+	{"dt": "Workflow Action Master", "filters": [["name", "in", [
+		"Submit for Approval", "Purchase Manager Approve", "MD Approve", "Reject"]]]},
+	{"dt": "Workflow", "filters": [["name", "in", ["Indent Approval"]]]},
+	{"dt": "Workspace", "filters": [["module", "=", "Lumirise Custom"]]},
+]
+
+# Focus 9 quality gates on standard ERPNext documents.
+doc_events = {
+	"Purchase Receipt": {
+		"before_submit": "lumirise_custom.events.iqc_gate",
+	},
+	"Delivery Note": {
+		"before_submit": "lumirise_custom.events.customer_pdi_gate",
+	},
+}
 
 # Scheduled Tasks
 # ---------------

@@ -1,0 +1,125 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "IQC-.YYYY.-.#####",
+ "creation": "2026-06-03 19:54:10.732292",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "inbound_logistics",
+  "purchase_order",
+  "mode",
+  "col1",
+  "iqc_date",
+  "sampling_plan",
+  "result",
+  "sec_items",
+  "items",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "inbound_logistics",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Inbound Logistics",
+   "options": "Inbound Logistics",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "inbound_logistics.purchase_order",
+   "fieldname": "purchase_order",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Purchase Order",
+   "options": "Purchase Order",
+   "read_only": 1
+  },
+  {
+   "default": "Domestic",
+   "fieldname": "mode",
+   "fieldtype": "Select",
+   "label": "Mode",
+   "options": "Domestic\nImport"
+  },
+  {
+   "fieldname": "col1",
+   "fieldtype": "Column Break",
+   "label": "Col1"
+  },
+  {
+   "default": "Today",
+   "fieldname": "iqc_date",
+   "fieldtype": "Date",
+   "label": "IQC Date"
+  },
+  {
+   "fieldname": "sampling_plan",
+   "fieldtype": "Data",
+   "label": "Sampling Plan"
+  },
+  {
+   "default": "Accepted",
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Result",
+   "options": "Accepted\nPartial\nRejected"
+  },
+  {
+   "fieldname": "sec_items",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "IQC Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "IQC",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-06-03 19:54:10.732292",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "IQC",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
