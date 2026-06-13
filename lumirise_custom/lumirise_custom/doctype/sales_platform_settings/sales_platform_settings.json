@@ -1,0 +1,86 @@
+{
+ "actions": [],
+ "creation": "2026-06-10 14:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "no_master_box_extra_cost",
+  "profit_fallback_finish",
+  "col_a",
+  "approval_window_days",
+  "min_agreed_qty"
+ ],
+ "fields": [
+  {
+   "fieldname": "no_master_box_extra_cost",
+   "fieldtype": "Currency",
+   "label": "No-Master-Box Extra Cost (per unit)",
+   "default": "0.8",
+   "precision": "3",
+   "description": "Flat per-unit packaging adder applied when no master box is selected."
+  },
+  {
+   "fieldname": "profit_fallback_finish",
+   "fieldtype": "Data",
+   "label": "Profit Fallback Finish",
+   "default": "UV DRIPOFF SPOT",
+   "description": "Mono-box finish whose profit price is used when 'No Mono Box' is selected."
+  },
+  {
+   "fieldname": "col_a",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "approval_window_days",
+   "fieldtype": "Int",
+   "label": "Approval Window (Days)",
+   "default": "7",
+   "description": "Pending price sheets expire this many days after creation."
+  },
+  {
+   "fieldname": "min_agreed_qty",
+   "fieldtype": "Int",
+   "label": "Minimum Customer Agreed Qty",
+   "default": "1000"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-06-10 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Sales Platform Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Pricing Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Approver"
+  },
+  {
+   "read": 1,
+   "role": "Sales User"
+  },
+  {
+   "read": 1,
+   "role": "Sales Auditor"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

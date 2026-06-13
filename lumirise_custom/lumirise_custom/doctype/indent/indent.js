@@ -1,9 +1,10 @@
 // Copyright (c) 2026, riddhi solanki and contributors
 // For license information, please see license.txt
 
-// Indent form: convert THIS indent into Purchase Order(s).
-// Indent list: select MANY approved indents -> one consolidated PO per supplier
-// (the Focus 9 "merge indents for volume discounts" behaviour).
+// Indent form: pull THIS indent's items into a new Purchase Order.
+// Indent list: select MANY approved indents -> ONE consolidated Purchase Order
+// (common parts summed). We never pre-set a supplier -- the buyer fills supplier
+// and rates on the fresh PO screen we route them to.
 
 frappe.ui.form.on("Indent", {
 	refresh(frm) {
@@ -18,34 +19,46 @@ frappe.ui.form.on("Indent", {
 
 function make_po(indents) {
 	frappe.call({
-		method: "lumirise_custom.lumirise_custom.doctype.indent.indent.make_po_from_indents",
+		method: "lumirise_custom.lumirise_custom.doctype.indent.indent.get_consolidated_po_items",
 		args: { indents },
 		freeze: true,
-		freeze_message: __("Consolidating indents into Purchase Order(s)..."),
+		freeze_message: __("Fetching indent items into a new Purchase Order..."),
 		callback(r) {
 			if (!r.message) return;
-			const pos = (r.message.purchase_orders || [])
-				.map((p) => `<a href="/app/purchase-order/${encodeURIComponent(p)}">${p}</a>`)
-				.join(", ");
-			let msg = __("Created Purchase Order(s): {0}", [pos || "—"]);
-			const warn = r.message.reconciliation || [];
-			if (warn.length) {
-				msg += "<hr><b>" + __("BOM reconciliation — components missing from indents:") + "</b><ul>";
-				warn.forEach((w) => {
-					msg += `<li>${w.model}: ${(w.missing_from_indent || []).join(", ")}</li>`;
-				});
-				msg += "</ul>";
-			} else {
-				msg += "<br><span style='color:green'>" + __("BOM reconciliation: nothing missing.") + "</span>";
+			const data = r.message;
+			if (!(data.items || []).length) {
+				frappe.msgprint(__("No items to order from the selected indent(s)."));
+				return;
 			}
-			frappe.msgprint({ title: __("Purchase Orders"), message: msg, indicator: "green" });
+			// Open a FRESH, unsaved Purchase Order pre-filled with the consolidated
+			// items only -- no supplier, no rates. The buyer completes it on screen.
+			frappe.model.with_doctype("Purchase Order", () => {
+				const po = frappe.model.get_new_doc("Purchase Order");
+				po.lr_indent_refs = (data.indents || []).join(", ");
+				(data.items || []).forEach((it) => {
+					const row = frappe.model.add_child(po, "items");
+					Object.assign(row, it);
+				});
+				frappe.set_route("Form", "Purchase Order", po.name);
+				show_reconciliation(data.reconciliation || []);
+			});
 		},
 	});
 }
 
+function show_reconciliation(warn) {
+	if (!warn.length) return;
+	let msg = "<b>" + __("BOM reconciliation — components missing from indents:") + "</b><ul>";
+	warn.forEach((w) => {
+		msg += `<li>${w.model}: ${(w.missing_from_indent || []).join(", ")}</li>`;
+	});
+	msg += "</ul>";
+	frappe.msgprint({ title: __("Check before ordering"), message: msg, indicator: "orange" });
+}
+
 frappe.listview_settings["Indent"] = {
 	onload(listview) {
-		listview.page.add_action_item(__("Create Purchase Order(s)"), () => {
+		listview.page.add_action_item(__("Create Purchase Order"), () => {
 			const names = listview.get_checked_items().map((d) => d.name);
 			if (!names.length) {
 				frappe.msgprint(__("Select one or more Indents first."));

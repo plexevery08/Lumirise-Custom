@@ -64,3 +64,28 @@ def make_customer_pdi(source_name, target_doc=None):
 	doc.fg_item = so.items[0].item_code if so.items else None
 	doc.sampled_qty = 20
 	return doc
+
+
+@frappe.whitelist()
+def make_delivery_note(source_name, target_doc=None):
+	"""Dispatch = standard Delivery Note against the Sales Order. Native mapping
+	carries only the remaining (undelivered) qty, so partial / multi-batch dispatch
+	off one SO is tracked automatically. FG is shipped from the Dispatch FG store.
+	The Customer-PDI gate (events.py) blocks submission until a passed PDI exists."""
+	from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note as _mdn
+	from lumirise_custom import defaults as config
+
+	dn = _mdn(source_name)
+	dispatch_fg = config.dispatch_fg_warehouse()
+	for it in dn.items:
+		it.warehouse = dispatch_fg
+	return dn
+
+
+@frappe.whitelist()
+def make_sales_invoice(source_name, target_doc=None):
+	"""Sales Invoice against a submitted Delivery Note (stock already moved by the
+	DN; this is the billing document)."""
+	from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice as _msi
+
+	return _msi(source_name)

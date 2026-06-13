@@ -124,7 +124,9 @@ def execute():
         _f("branch", "Data", "Branch", default="Lumirise"),
         _f("indent_type", "Select", "Indent Type", options="Purchase\nService", default="Purchase"),
         _f("col1", "Column Break", None),
-        # source_planning is added after Material Planning exists (circular link).
+        # source_planning is added after Material Planning exists. It is a plain
+        # Data field (NOT a Link) on purpose -- a Link here + created_indent on
+        # Material Planning forms a circular link that blocks deleting either doc.
         _f("source_sales_order", "Link", "Source Sales Order", options="Sales Order", read_only=1),
         _f("workflow_state", "Link", "Status", options="Workflow State", read_only=1, in_list_view=1),
         _f("sec_items", "Section Break", "Items"),
@@ -196,7 +198,8 @@ def execute():
         _f("branch", "Data", "Branch", default="Lumirise"),
         _f("due_date", "Date", "Due Date"),
         _f("col1", "Column Break", None),
-        _f("created_indent", "Link", "Created Indent", options="Indent", read_only=1),
+        # Data, not Link -- see the source_planning note on Indent above.
+        _f("created_indent", "Data", "Created Indent", read_only=1),
         _f("created_work_orders", "Small Text", "Created Work Orders", read_only=1),
         _f("workflow_state", "Data", "Status", read_only=1, hidden=1),
         _f("sec_fg", "Section Break", "FG / Sales Order Plan"),
@@ -206,9 +209,10 @@ def execute():
         _f("amended_from", "Link", "Amended From", options="Material Planning", read_only=1, no_copy=1, print_hide=1),
     ], submittable=1, autoname="MP-.YYYY.-.#####", naming_rule="Expression")
 
-    # Now that Material Planning exists, add the circular link onto Indent.
+    # Now that Material Planning exists, add the source_planning back-reference
+    # onto Indent -- as Data (NOT a Link) to avoid the circular-link delete deadlock.
     _add_field_after("Indent", "indent_type",
-        _f("source_planning", "Link", "Source Planning", options="Material Planning", read_only=1))
+        _f("source_planning", "Data", "Source Planning", read_only=1))
 
     frappe.db.commit()
     print("DocTypes built.")

@@ -1,0 +1,117 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:department",
+ "creation": "2026-06-12 00:00:00",
+ "description": "Maps each Lumirise department to its Supervisor and HOD so the task engine can auto-assign the owner and tag the supervisor + HOD for oversight. Seeded from the discovery-call transcripts \u2014 fill in the User links to activate per-person assignment.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "department",
+  "description",
+  "is_active",
+  "col_people",
+  "supervisor_name",
+  "supervisor_user",
+  "hod_name",
+  "hod_user",
+  "sec_escalation",
+  "escalation_hours"
+ ],
+ "fields": [
+  {
+   "fieldname": "department",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Department",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "col_people",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "supervisor_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Supervisor (name)"
+  },
+  {
+   "description": "ERPNext login that owns/processes this department's tasks. Leave blank until the user exists.",
+   "fieldname": "supervisor_user",
+   "fieldtype": "Link",
+   "label": "Supervisor (user)",
+   "options": "User"
+  },
+  {
+   "fieldname": "hod_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "HOD (name)"
+  },
+  {
+   "description": "Head of Department \u2014 tagged on every task for oversight.",
+   "fieldname": "hod_user",
+   "fieldtype": "Link",
+   "label": "HOD (user)",
+   "options": "User"
+  },
+  {
+   "fieldname": "sec_escalation",
+   "fieldtype": "Section Break",
+   "label": "Escalation"
+  },
+  {
+   "default": "24",
+   "description": "Hours after the due date before an open task is escalated to the HOD.",
+   "fieldname": "escalation_hours",
+   "fieldtype": "Int",
+   "label": "Escalation Hours"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-12 16:43:43.596632",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Lumirise Department Map",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Lumirise Operations"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "department",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 1
+}

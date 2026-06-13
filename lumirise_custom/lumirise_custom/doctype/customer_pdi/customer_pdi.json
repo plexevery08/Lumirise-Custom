@@ -57,14 +57,14 @@
    "label": "Col1"
   },
   {
-   "default": "Finished Goods - L",
+   "description": "Dispatch FG store the sample is drawn from. Defaults from Operations Settings.",
    "fieldname": "source_warehouse",
    "fieldtype": "Link",
-   "label": "Source Warehouse",
+   "label": "Source Warehouse (Dispatch FG)",
    "options": "Warehouse"
   },
   {
-   "default": "Customer PDI - L",
+   "description": "Quarantine store the sample is inspected in. Defaults from Operations Settings.",
    "fieldname": "pdi_warehouse",
    "fieldtype": "Link",
    "label": "PDI Warehouse",

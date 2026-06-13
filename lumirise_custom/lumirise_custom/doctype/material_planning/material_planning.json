@@ -47,9 +47,8 @@
   },
   {
    "fieldname": "created_indent",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Created Indent",
-   "options": "Indent",
    "read_only": 1
   },
   {

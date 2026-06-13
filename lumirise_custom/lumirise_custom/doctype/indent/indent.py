@@ -2,9 +2,11 @@
 # For license information, please see license.txt
 
 # Indent = the Focus 9 rate-less purchase request that sits between Planning and
-# the Purchase Order. Multiple approved Indents merge into one PO per supplier
-# (common parts like screws summed across orders), with a BOM-reconciliation
-# check that flags any model component missing from the consolidated demand.
+# the Purchase Order. Multiple approved Indents merge into ONE Purchase Order
+# (common parts like screws summed across orders). The buyer chooses the supplier
+# and rates on the PO screen -- we never pre-set a supplier or split the demand by
+# supplier. A BOM-reconciliation check flags any model component missing from the
+# consolidated demand.
 
 import json
 
@@ -23,71 +25,71 @@ class Indent(Document):
 				frappe.throw(f"Row {row.idx}: Qty must be greater than zero.")
 
 
-def _default_supplier(item):
-	return frappe.db.get_value(
-		"Item Default", {"parent": item, "company": COMPANY}, "default_supplier"
-	)
-
-
 @frappe.whitelist()
-def make_po_from_indents(indents):
-	"""Consolidate multiple Indents into one Purchase Order PER SUPPLIER.
-	Common parts (e.g. screws shared by two SOs) are summed onto a single line.
-	Returns the created PO names + any BOM-reconciliation warnings."""
+def get_consolidated_po_items(indents):
+	"""Aggregate the items across the selected Indents into ONE Purchase Order's
+	worth of lines (common parts summed, accurate qty). Does NOT create a PO and
+	does NOT set a supplier -- the client opens a fresh Purchase Order form with
+	these items and fills in supplier/rates there.
+	Returns {items, indents, reconciliation}."""
+	frappe.has_permission("Purchase Order", "create", throw=True)
 	if isinstance(indents, str):
 		indents = json.loads(indents)
 	if not indents:
 		frappe.throw("Select at least one Indent.")
 
-	# aggregate qty by (supplier, item) across all selected indents
-	by_supplier = {}
+	# aggregate qty by (item, uom) across all selected indents, first-seen order
+	agg = {}
+	order = []
 	models = set()
-	indent_refs = []
 	for name in indents:
 		ind = frappe.get_doc("Indent", name)
-		indent_refs.append(name)
 		for row in ind.items:
 			if row.model:
 				models.add(row.model)
-			supplier = _default_supplier(row.item_code)
-			if not supplier:
-				continue
-			bucket = by_supplier.setdefault(supplier, {})
-			bucket[row.item_code] = bucket.get(row.item_code, 0) + flt(row.qty)
+			uom = row.uom or "Nos"
+			key = (row.item_code, uom)
+			if key not in agg:
+				agg[key] = 0.0
+				order.append(key)
+			agg[key] += flt(row.qty)
 
-	if not by_supplier:
-		frappe.throw("None of the indent items have a default supplier set.")
+	ordered_items = {item_code for (item_code, _uom) in order}
 
-	po_names = []
-	for supplier, items in by_supplier.items():
-		po = frappe.get_doc({
-			"doctype": "Purchase Order",
-			"supplier": supplier,
-			"company": COMPANY,
+	# Pre-fetch item_name / description for the lines. Building the PO rows
+	# programmatically on the client does NOT fire ERPNext's auto-fetch from
+	# item_code, so item_name (a mandatory PO Item field) would stay blank.
+	item_meta = {
+		r.name: r for r in frappe.get_all(
+			"Item",
+			filters={"name": ["in", list(ordered_items)]},
+			fields=["name", "item_name", "description", "stock_uom"],
+		)
+	} if ordered_items else {}
+
+	items = []
+	for (item_code, uom) in order:
+		meta = item_meta.get(item_code)
+		items.append({
+			"item_code": item_code,
+			"item_name": (meta.item_name if meta else None) or item_code,
+			"description": (meta.description if meta else None) or item_code,
+			"qty": agg[(item_code, uom)],
+			"uom": uom,
+			"stock_uom": (meta.stock_uom if meta else uom) or uom,
+			"conversion_factor": 1,
 			"schedule_date": add_days(nowdate(), 15),
-			"buying_price_list": "Standard Buying",
-			"lr_indent_refs": ", ".join(indent_refs),
-			"items": [{
-				"item_code": item, "qty": qty, "schedule_date": add_days(nowdate(), 15),
-				"warehouse": RM_STORE,
-			} for item, qty in items.items()],
+			"warehouse": RM_STORE,
 		})
-		po.insert(ignore_permissions=True)
-		po_names.append(po.name)
 
-	# mark the indents as Ordered so they drop off the pending list
-	for name in indent_refs:
-		frappe.db.set_value("Indent", name, "workflow_state", "Ordered")
-
-	warnings = _reconcile_against_bom(models, by_supplier)
-	return {"purchase_orders": po_names, "reconciliation": warnings}
+	warnings = _reconcile_against_bom(models, ordered_items)
+	return {"items": items, "indents": list(indents), "reconciliation": warnings}
 
 
-def _reconcile_against_bom(models, by_supplier):
+def _reconcile_against_bom(models, ordered_items):
 	"""Flag any component in a model's BOM that is NOT present in the
 	consolidated PO demand -- the client's 1-2 hr manual screw-reconciliation,
-	automated."""
-	ordered_items = {item for items in by_supplier.values() for item in items}
+	automated. `ordered_items` is the set of item codes going onto the PO."""
 	warnings = []
 	for model in models:
 		bom = frappe.db.get_value("Item", model, "default_bom")
@@ -104,3 +106,25 @@ def _reconcile_against_bom(models, by_supplier):
 		if missing:
 			warnings.append({"model": model, "missing_from_indent": missing})
 	return warnings
+
+
+def _indent_names_from_po(doc):
+	"""Parse the comma/newline-separated Indent names off a Purchase Order's
+	lr_indent_refs field."""
+	refs = (doc.get("lr_indent_refs") or "").replace("\n", ",")
+	return [n.strip() for n in refs.split(",") if n.strip()]
+
+
+def mark_indents_ordered(doc, method=None):
+	"""PO on_submit: flag the source Indents Ordered so they drop off the pending
+	list. Only runs once the PO is actually submitted -- not at fetch time."""
+	for name in _indent_names_from_po(doc):
+		if frappe.db.exists("Indent", name):
+			frappe.db.set_value("Indent", name, "workflow_state", "Ordered")
+
+
+def unmark_indents_ordered(doc, method=None):
+	"""PO on_cancel: return the source Indents to Approved so they can be re-ordered."""
+	for name in _indent_names_from_po(doc):
+		if frappe.db.exists("Indent", name):
+			frappe.db.set_value("Indent", name, "workflow_state", "Approved")

@@ -1,0 +1,375 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "LQ-.MM.YY.-.####",
+ "creation": "2026-06-10 15:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "customer",
+  "customer_name",
+  "transaction_date",
+  "col_h1",
+  "status",
+  "valid_till",
+  "sec_config",
+  "products",
+  "mono_box_finishes",
+  "master_box_finish",
+  "master_box_caselots",
+  "col_c1",
+  "delivery_type",
+  "transport_type",
+  "transport_zone",
+  "payment_type",
+  "credit_term",
+  "credit_days",
+  "credit_percentage",
+  "sec_listening",
+  "listening_percentage",
+  "col_l1",
+  "listening_remarks",
+  "sec_rows",
+  "rows",
+  "sec_approval",
+  "approval_items",
+  "approved_by",
+  "approved_at",
+  "section_break_puwu",
+  "col_ap1",
+  "quotation",
+  "rejection_remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "customer.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name",
+   "read_only": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "transaction_date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "read_only_depends_on": "eval:!doc.__islocal",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_h1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Draft\nPending Approval\nApproved\nRejected\nExpired",
+   "read_only": 1
+  },
+  {
+   "description": "Pending sheets expire after the approval window (Sales Platform Settings).",
+   "fieldname": "valid_till",
+   "fieldtype": "Date",
+   "label": "Approval Valid Till",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_config",
+   "fieldtype": "Section Break",
+   "label": "Configuration"
+  },
+  {
+   "fieldname": "products",
+   "fieldtype": "Table MultiSelect",
+   "label": "Products",
+   "options": "Price Sheet Product",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mono_box_finishes",
+   "fieldtype": "Table MultiSelect",
+   "label": "Mono Box Finishes",
+   "options": "Price Sheet Finish"
+  },
+  {
+   "fieldname": "master_box_finish",
+   "fieldtype": "Link",
+   "label": "Master Box Finish",
+   "options": "Box Finish"
+  },
+  {
+   "depends_on": "eval:doc.master_box_finish",
+   "description": "Comma-separated caselots, e.g. 50,100. Only caselots with Master Box Pricing records are used.",
+   "fieldname": "master_box_caselots",
+   "fieldtype": "Data",
+   "label": "Master Box Caselots"
+  },
+  {
+   "fieldname": "col_c1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Ex-Factory",
+   "fieldname": "delivery_type",
+   "fieldtype": "Select",
+   "label": "Delivery Type",
+   "options": "Ex-Factory\nTransport",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.delivery_type==\"Transport\"",
+   "fieldname": "transport_type",
+   "fieldtype": "Select",
+   "label": "Transport Type",
+   "mandatory_depends_on": "eval:doc.delivery_type==\"Transport\"",
+   "options": "\nPublic\nPrivate"
+  },
+  {
+   "depends_on": "eval:doc.delivery_type==\"Transport\"",
+   "fieldname": "transport_zone",
+   "fieldtype": "Data",
+   "label": "Transport Zone",
+   "mandatory_depends_on": "eval:doc.delivery_type==\"Transport\""
+  },
+  {
+   "default": "Advance",
+   "fieldname": "payment_type",
+   "fieldtype": "Select",
+   "label": "Payment Type",
+   "options": "Advance\nCredit",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.payment_type==\"Credit\"",
+   "fieldname": "credit_term",
+   "fieldtype": "Link",
+   "label": "Credit Term",
+   "mandatory_depends_on": "eval:doc.payment_type==\"Credit\"",
+   "options": "Sales Credit Term"
+  },
+  {
+   "depends_on": "eval:doc.payment_type==\"Credit\"",
+   "fetch_from": "credit_term.credit_days",
+   "fieldname": "credit_days",
+   "fieldtype": "Int",
+   "label": "Credit Days",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.payment_type==\"Credit\"",
+   "fetch_from": "credit_term.percentage",
+   "fieldname": "credit_percentage",
+   "fieldtype": "Percent",
+   "label": "Credit %",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sec_listening",
+   "fieldtype": "Section Break",
+   "label": "Listening (restricted)",
+   "permlevel": 1
+  },
+  {
+   "description": "Hidden uplift applied to all customer-facing totals.",
+   "fieldname": "listening_percentage",
+   "fieldtype": "Percent",
+   "label": "Listening %",
+   "no_copy": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "col_l1",
+   "fieldtype": "Column Break",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "listening_remarks",
+   "fieldtype": "Small Text",
+   "label": "Listening Remarks",
+   "no_copy": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "sec_rows",
+   "fieldtype": "Section Break",
+   "label": "Price Sheet"
+  },
+  {
+   "fieldname": "rows",
+   "fieldtype": "Table",
+   "label": "Rows",
+   "options": "Price Sheet Row",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "eval:doc.docstatus==1",
+   "fieldname": "sec_approval",
+   "fieldtype": "Section Break",
+   "label": "Approval"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "approval_items",
+   "fieldtype": "Table",
+   "label": "Approval Lines",
+   "options": "Price Sheet Approval Item"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "approved_at",
+   "fieldtype": "Datetime",
+   "label": "Approved At",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_ap1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "ERPNext Quotation created on approval.",
+   "fieldname": "quotation",
+   "fieldtype": "Data",
+   "label": "Quotation",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rejection_remarks",
+   "fieldtype": "Small Text",
+   "label": "Rejection Remarks",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Price Sheet",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_puwu",
+   "fieldtype": "Section Break"
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-06-12 17:14:08.155271",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Price Sheet",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Approver",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Auditor"
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pricing Manager"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Sales Approver",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "customer,customer_name,status",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "customer_name",
+ "track_changes": 1
+}

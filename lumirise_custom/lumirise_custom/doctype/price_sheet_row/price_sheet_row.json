@@ -1,0 +1,179 @@
+{
+ "actions": [],
+ "creation": "2026-06-10 15:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item",
+  "moq",
+  "moq_label",
+  "caselot",
+  "base_price",
+  "price_source",
+  "box_finish",
+  "mono_purchase_price",
+  "mono_selling_price",
+  "mono_profit_price",
+  "master_box_finish",
+  "master_box_cost_per_light",
+  "transport_cost",
+  "credit_percentage",
+  "credit_added",
+  "total",
+  "final_total",
+  "baseline_total",
+  "total_without_mono_box"
+ ],
+ "fields": [
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Item",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "moq",
+   "fieldtype": "Int",
+   "label": "MOQ",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "moq_label",
+   "fieldtype": "Data",
+   "label": "Qty Tier",
+   "read_only": 1
+  },
+  {
+   "fieldname": "caselot",
+   "fieldtype": "Int",
+   "label": "Caselot",
+   "read_only": 1
+  },
+  {
+   "fieldname": "base_price",
+   "fieldtype": "Currency",
+   "label": "Base Price",
+   "read_only": 1,
+   "precision": "3",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "price_source",
+   "fieldtype": "Data",
+   "label": "Price Source",
+   "read_only": 1
+  },
+  {
+   "fieldname": "box_finish",
+   "fieldtype": "Data",
+   "label": "Mono Box Finish",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "mono_purchase_price",
+   "fieldtype": "Currency",
+   "label": "Mono Purchase",
+   "read_only": 1,
+   "precision": "3"
+  },
+  {
+   "fieldname": "mono_selling_price",
+   "fieldtype": "Currency",
+   "label": "Mono Selling",
+   "read_only": 1,
+   "precision": "3"
+  },
+  {
+   "fieldname": "mono_profit_price",
+   "fieldtype": "Currency",
+   "label": "Mono Profit",
+   "read_only": 1,
+   "precision": "3"
+  },
+  {
+   "fieldname": "master_box_finish",
+   "fieldtype": "Data",
+   "label": "Master Box Finish",
+   "read_only": 1
+  },
+  {
+   "fieldname": "master_box_cost_per_light",
+   "fieldtype": "Currency",
+   "label": "Master Box / Light",
+   "read_only": 1,
+   "precision": "3"
+  },
+  {
+   "fieldname": "transport_cost",
+   "fieldtype": "Currency",
+   "label": "Transport / Unit",
+   "read_only": 1,
+   "precision": "3"
+  },
+  {
+   "fieldname": "credit_percentage",
+   "fieldtype": "Percent",
+   "label": "Credit %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "credit_added",
+   "fieldtype": "Currency",
+   "label": "Credit Added",
+   "read_only": 1,
+   "precision": "3"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total",
+   "read_only": 1,
+   "precision": "3",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "final_total",
+   "fieldtype": "Currency",
+   "label": "Customer Total",
+   "read_only": 1,
+   "precision": "3",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "baseline_total",
+   "fieldtype": "Currency",
+   "label": "Baseline Total",
+   "read_only": 1,
+   "precision": "3"
+  },
+  {
+   "fieldname": "total_without_mono_box",
+   "fieldtype": "Currency",
+   "label": "Total w/o Mono Box",
+   "read_only": 1,
+   "precision": "3"
+  }
+ ],
+ "links": [],
+ "modified": "2026-06-10 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Price Sheet Row",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

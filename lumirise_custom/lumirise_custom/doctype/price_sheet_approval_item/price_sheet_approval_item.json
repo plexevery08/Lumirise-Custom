@@ -1,0 +1,246 @@
+{
+ "actions": [],
+ "creation": "2026-06-10 16:30:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "give_to_customer",
+  "item",
+  "customer_agreed_qty",
+  "selected_moq",
+  "sec_sel",
+  "mono_box_finish",
+  "master_box_finish",
+  "master_box_caselot",
+  "col_s1",
+  "transport_mode",
+  "transport_type",
+  "transport_zone",
+  "credit_days",
+  "sec_calc",
+  "base_price",
+  "mono_box_price",
+  "master_box_price",
+  "col_c1",
+  "transport_price",
+  "credit_price",
+  "calculated_price",
+  "sec_final",
+  "listening_percentage",
+  "listening_amount",
+  "col_f1",
+  "customer_price",
+  "variance"
+ ],
+ "fields": [
+  {
+   "fieldname": "give_to_customer",
+   "fieldtype": "Check",
+   "label": "Give To Customer",
+   "default": "1",
+   "in_list_view": 1,
+   "columns": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Item",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "customer_agreed_qty",
+   "fieldtype": "Int",
+   "label": "Agreed Qty",
+   "in_list_view": 1,
+   "columns": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "selected_moq",
+   "fieldtype": "Int",
+   "label": "MOQ Tier",
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "sec_sel",
+   "fieldtype": "Section Break",
+   "label": "Selections"
+  },
+  {
+   "fieldname": "mono_box_finish",
+   "fieldtype": "Link",
+   "label": "Mono Box Finish",
+   "options": "Box Finish",
+   "in_list_view": 1,
+   "columns": 2,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "master_box_finish",
+   "fieldtype": "Link",
+   "label": "Master Box Finish",
+   "options": "Box Finish",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "master_box_caselot",
+   "fieldtype": "Int",
+   "label": "Caselot",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "col_s1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "transport_mode",
+   "fieldtype": "Select",
+   "label": "Transport Mode",
+   "options": "No Transport\nTransport",
+   "default": "No Transport",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "transport_type",
+   "fieldtype": "Select",
+   "label": "Transport Type",
+   "options": "\nPublic\nPrivate",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "transport_zone",
+   "fieldtype": "Data",
+   "label": "Transport Zone",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "credit_days",
+   "fieldtype": "Int",
+   "label": "Credit Days",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "sec_calc",
+   "fieldtype": "Section Break",
+   "label": "Calculated Breakdown"
+  },
+  {
+   "fieldname": "base_price",
+   "fieldtype": "Currency",
+   "label": "Base Price",
+   "read_only": 1,
+   "precision": "3",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "mono_box_price",
+   "fieldtype": "Currency",
+   "label": "Mono Box Price",
+   "read_only": 1,
+   "precision": "3",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "master_box_price",
+   "fieldtype": "Currency",
+   "label": "Master Box Price",
+   "read_only": 1,
+   "precision": "3",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "col_c1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "transport_price",
+   "fieldtype": "Currency",
+   "label": "Transport Price",
+   "read_only": 1,
+   "precision": "3",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "credit_price",
+   "fieldtype": "Currency",
+   "label": "Credit Price",
+   "read_only": 1,
+   "precision": "3",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "calculated_price",
+   "fieldtype": "Currency",
+   "label": "Calculated Price",
+   "read_only": 1,
+   "precision": "3",
+   "in_list_view": 1,
+   "columns": 2,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "sec_final",
+   "fieldtype": "Section Break",
+   "label": "Final Pricing"
+  },
+  {
+   "fieldname": "listening_percentage",
+   "fieldtype": "Percent",
+   "label": "Listening %",
+   "permlevel": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "listening_amount",
+   "fieldtype": "Currency",
+   "label": "Listening Amount",
+   "read_only": 1,
+   "precision": "3",
+   "permlevel": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "col_f1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "customer_price",
+   "fieldtype": "Currency",
+   "label": "Customer Price",
+   "precision": "3",
+   "in_list_view": 1,
+   "columns": 2,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "variance",
+   "fieldtype": "Currency",
+   "label": "Variance",
+   "read_only": 1,
+   "precision": "3",
+   "permlevel": 1,
+   "allow_on_submit": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-10 16:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Price Sheet Approval Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

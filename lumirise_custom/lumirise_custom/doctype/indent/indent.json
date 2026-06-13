@@ -82,9 +82,8 @@
   },
   {
    "fieldname": "source_planning",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Source Planning",
-   "options": "Material Planning",
    "read_only": 1
   }
  ],

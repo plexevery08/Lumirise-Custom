@@ -47,6 +47,7 @@ app_license = "mit"
 doctype_js = {
 	"Purchase Order": "public/js/purchase_order.js",
 	"Sales Order": "public/js/sales_order.js",
+	"Work Order": "public/js/work_order.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -91,6 +92,12 @@ doctype_js = {
 
 # before_install = "lumirise_custom.install.before_install"
 # after_install = "lumirise_custom.install.after_install"
+
+# Ensure roles referenced by DocType JSON exist BEFORE schema sync.
+before_migrate = "lumirise_custom.setup.before_migrate"
+
+# Sales Platform setup: roles, Item/BOM costing custom fields, credit-term seeds.
+after_migrate = "lumirise_custom.setup.after_migrate"
 
 # Uninstallation
 # ------------
@@ -163,17 +170,109 @@ fixtures = [
 ]
 
 # Focus 9 quality gates on standard ERPNext documents.
+# NOTE: several events carry TWO handlers (list form) — the existing business
+# handler PLUS the Lumirise task-engine handler that auto-creates the handoff /
+# defect Kanban card. The task-engine handlers are fail-safe and never block.
 doc_events = {
 	"Purchase Receipt": {
 		"before_submit": "lumirise_custom.events.iqc_gate",
+		"on_submit": [
+			# GRN posted -> RM Stores put-away card.
+			"lumirise_custom.task_engine.on_purchase_receipt_submit",
+			# GRN posted -> SO purchase status = Received.
+			"lumirise_custom.status_sync.on_purchase_receipt_submit",
+			# GRN posted -> refresh item cost + dependent BOM costs.
+			"lumirise_custom.costing.on_purchase_receipt",
+		],
 	},
 	"Delivery Note": {
 		"before_submit": "lumirise_custom.events.customer_pdi_gate",
+		# Dispatched -> task Accounts to raise the Sales Invoice.
+		"on_submit": "lumirise_custom.task_engine.on_delivery_note_submit",
+	},
+	"Purchase Order": {
+		"on_submit": [
+			# Flag the source Indents Ordered once the PO they fed is submitted.
+			"lumirise_custom.lumirise_custom.doctype.indent.indent.mark_indents_ordered",
+			# SO purchase status = Ordered.
+			"lumirise_custom.status_sync.on_purchase_order_submit",
+		],
+		"on_cancel": "lumirise_custom.lumirise_custom.doctype.indent.indent.unmark_indents_ordered",
+	},
+	# Lumirise costing chain (Item landed cost -> BOM layered cost -> MOQ prices).
+	"Item": {
+		"validate": "lumirise_custom.costing.item_validate",
+		# Item cost changed -> auto-refresh every BOM that uses it.
+		"on_update": "lumirise_custom.costing.item_on_update",
+	},
+	# Production posted -> auto-refresh produced/consumed item BOM costs +
+	# advance the material-flow handoff chain (issue -> receive -> transfer ->
+	# produce -> dispatch FG) by raising the next team's task.
+	"Stock Entry": {
+		"on_submit": [
+			"lumirise_custom.costing.on_stock_entry",
+			"lumirise_custom.task_engine.on_stock_entry_submit",
+		],
+	},
+	# Production Material Requisition raised -> task Stores to pick & issue.
+	"Material Request": {
+		"on_submit": "lumirise_custom.task_engine.on_material_request_submit",
+	},
+	# Pick List created -> pick & stage task for the relevant store.
+	"Pick List": {
+		"after_insert": "lumirise_custom.stores.on_pick_list_insert",
+	},
+	# Work Order drives the SO production status + a per-WO build task.
+	"Work Order": {
+		"on_submit": [
+			"lumirise_custom.status_sync.on_work_order_submit",
+			"lumirise_custom.task_engine.on_work_order_submit",
+		],
+		"on_update": "lumirise_custom.status_sync.on_work_order_update",
+	},
+	"BOM": {
+		"validate": "lumirise_custom.costing.bom_validate",
+		"on_update_after_submit": "lumirise_custom.costing.bom_on_update_after_submit",
+	},
+	# ---- Task / Notification / Kanban engine (auto-create operational cards) ----
+	"Sales Order": {
+		# SO approved -> hand off to Planning.
+		"on_update": "lumirise_custom.task_engine.on_sales_order_update",
+	},
+	"Material Planning": {
+		"on_submit": [
+			# Plan posted -> Indent to Purchase + Work Orders to Production.
+			"lumirise_custom.task_engine.on_material_planning_submit",
+			# Plan posted -> SO planning=Planned, purchase=Indented.
+			"lumirise_custom.status_sync.on_material_planning_submit",
+		],
+	},
+	"Indent": {
+		# Indent fully approved -> Purchase raises the PO.
+		"on_update": "lumirise_custom.task_engine.on_indent_update",
+		"on_update_after_submit": "lumirise_custom.task_engine.on_indent_update",
+	},
+	"IQC": {
+		# Rejection at incoming QC -> Defect card to Purchase (vendor claim).
+		"on_submit": "lumirise_custom.task_engine.on_iqc_submit",
+	},
+	"Customer PDI": {
+		# Pre-dispatch inspection failed -> Rework card to Production.
+		"on_submit": "lumirise_custom.task_engine.on_customer_pdi_submit",
 	},
 }
 
 # Scheduled Tasks
 # ---------------
+
+scheduler_events = {
+	"daily": [
+		# Price sheets pending approval past their window flip to Expired.
+		"lumirise_custom.lumirise_custom.doctype.price_sheet.price_sheet.expire_pending_sheets",
+		# Overdue Lumirise Tasks -> escalate to the HOD (missed-deadline alert).
+		"lumirise_custom.task_engine.escalate_overdue_tasks",
+	],
+}
 
 # scheduler_events = {
 # 	"all": [

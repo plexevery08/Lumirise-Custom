@@ -15,15 +15,14 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt, nowdate, add_days
 
-RM_STORE = "Stores - L"
-FG_STORE = "Finished Goods - L"
-WIP_WAREHOUSE = "Line-1 WIP - L"
-COMPANY = "Lumirise"
+from lumirise_custom import defaults as config
 
 
 class MaterialPlanning(Document):
 	def on_submit(self):
 		"""Post: create the Production Orders (Work Orders) + the consolidated Indent."""
+		company = config.get_company(self)
+		fg_wh, wip_wh, rm_wh = config.fg_warehouse(), config.wip_warehouse(), config.rm_warehouse()
 		wo_names = []
 		for fg in self.fg_plan:
 			if flt(fg.required_qty) <= 0:
@@ -33,12 +32,12 @@ class MaterialPlanning(Document):
 				"production_item": fg.fg_item,
 				"bom_no": fg.bom or frappe.db.get_value("Item", fg.fg_item, "default_bom"),
 				"qty": flt(fg.required_qty),
-				"company": COMPANY,
+				"company": company,
 				"use_multi_level_bom": 0,  # consume the stocked MCPCB sub-assembly directly
 				"sales_order": fg.sales_order,
-				"fg_warehouse": FG_STORE,
-				"wip_warehouse": WIP_WAREHOUSE,
-				"source_warehouse": RM_STORE,
+				"fg_warehouse": fg_wh,
+				"wip_warehouse": wip_wh,
+				"source_warehouse": rm_wh,
 				"lr_source_planning": self.name,
 			})
 			wo.insert(ignore_permissions=True)
@@ -69,12 +68,12 @@ class MaterialPlanning(Document):
 		indent = frappe.get_doc({
 			"doctype": "Indent",
 			"indent_date": nowdate(),
-			"branch": self.branch or COMPANY,
+			"branch": self.branch or config.get_company(self),
 			"indent_type": "Purchase",
 			"source_planning": self.name,
 			"source_sales_order": self.fg_plan[0].sales_order if self.fg_plan else None,
 			"items": [{
-				"item_code": item, "qty": d["qty"], "uom": "Nos",
+				"item_code": item, "qty": d["qty"], "uom": config.item_uom(item),
 				"required_date": add_days(nowdate(), 15),
 				"source_bom": frappe.db.get_value("Item", d["model"], "default_bom"),
 				"model": d["model"], "for_sales_order": d["so"],
@@ -169,6 +168,7 @@ def compute_plan(sales_orders):
 		sales_orders = json.loads(sales_orders)
 	exclude = list(sales_orders)
 
+	fg_wh, rm_wh = config.fg_warehouse(), config.rm_warehouse()
 	fg_plan, components = [], []
 	for so in sales_orders:
 		so_doc = frappe.get_doc("Sales Order", so)
@@ -176,7 +176,7 @@ def compute_plan(sales_orders):
 			bom = frappe.db.get_value("Item", soi.item_code, "default_bom")
 			if not bom:
 				continue
-			fg_available = _stock(soi.item_code, FG_STORE)
+			fg_available = _stock(soi.item_code, fg_wh)
 			required = max(0, flt(soi.qty) - fg_available)
 			fg_plan.append({
 				"sales_order": so, "fg_item": soi.item_code, "bom": bom,
@@ -190,7 +190,7 @@ def compute_plan(sales_orders):
 			for bi in bom_doc.items:
 				comp = bi.item_code
 				comp_required = flt(bi.qty) / per * required
-				rm_avail = _stock(comp, RM_STORE)
+				rm_avail = _stock(comp, rm_wh)
 				blocked = _blocked_for_other_so(comp, exclude)
 				usable = max(0, rm_avail - blocked)
 				to_order = max(0, comp_required - usable)

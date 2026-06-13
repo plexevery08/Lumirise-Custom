@@ -12,7 +12,7 @@ from frappe.model.workflow import apply_workflow
 from frappe.utils import add_days, nowdate, flt
 
 from lumirise_custom.lumirise_custom.doctype.material_planning.material_planning import compute_plan
-from lumirise_custom.lumirise_custom.doctype.indent.indent import make_po_from_indents
+from lumirise_custom.lumirise_custom.doctype.indent.indent import get_consolidated_po_items
 from lumirise_custom import chain
 
 COMPANY = "Lumirise"
@@ -129,13 +129,32 @@ def run():
 				  f"blocked={c.blocked_for_other_so} usable={c.available_after_blocking} "
 				  f"to_order={c.to_be_ordered}")
 
-	res = make_po_from_indents([mp1.created_indent, mp2.created_indent])
-	print("POs:", [(po, frappe.db.get_value("Purchase Order", po, "supplier")) for po in res["purchase_orders"]])
-	print("Reconciliation:", res["reconciliation"])
+	data = get_consolidated_po_items([mp1.created_indent, mp2.created_indent])
+	print("Consolidated PO items:", [(i["item_code"], i["qty"]) for i in data["items"]])
+	print("Reconciliation:", data["reconciliation"])
 
-	print("Inbound chains:")
-	for po in res["purchase_orders"]:
-		_inbound_chain(po)
+	# Mimic the buyer: the UI routes to ONE fresh PO pre-filled with these items
+	# and no supplier; the buyer picks the supplier on screen. Here we build that
+	# single PO and submit it (which flags the source indents Ordered on_submit).
+	po = frappe.get_doc({
+		"doctype": "Purchase Order",
+		"supplier": "Shenzhen LED Imports",
+		"company": COMPANY,
+		"schedule_date": add_days(nowdate(), 15),
+		"buying_price_list": "Standard Buying",
+		"lr_indent_refs": ", ".join(data["indents"]),
+		"items": [{
+			"item_code": i["item_code"], "qty": i["qty"], "uom": i["uom"],
+			"schedule_date": i["schedule_date"], "warehouse": i["warehouse"],
+		} for i in data["items"]],
+	})
+	po.insert(ignore_permissions=True)
+	print(f"PO={po.name} (single consolidated PO, supplier set by buyer)")
+
+	print("Inbound chain:")
+	_inbound_chain(po.name)
+	print("Indents Ordered after PO submit:",
+		  [frappe.db.get_value("Indent", n, "workflow_state") for n in data["indents"]])
 
 	wo1 = mp1.created_work_orders.split(", ")[0]
 	_manufacture(wo1, 3000)

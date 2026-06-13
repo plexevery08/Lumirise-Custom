@@ -1,0 +1,158 @@
+{
+ "actions": [],
+ "creation": "2026-06-12 00:00:00.000000",
+ "description": "Central, editable configuration for the Lumirise operations flow. Replaces hard-coded warehouse / company / UOM values in code so everything is dynamic and site-configurable.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "sec_warehouses",
+  "rm_warehouse",
+  "shop_floor_warehouse",
+  "fg_warehouse",
+  "dispatch_fg_warehouse",
+  "wip_warehouse",
+  "col_wh",
+  "rejection_warehouse",
+  "pdi_warehouse",
+  "receiving_warehouse",
+  "sec_lines",
+  "production_lines",
+  "sec_stores",
+  "enable_pick_list_task",
+  "enable_grn_putaway_task"
+ ],
+ "fields": [
+  {
+   "description": "Default company for documents the engine creates. Falls back to the system default company if left blank.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Default Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "sec_warehouses",
+   "fieldtype": "Section Break",
+   "label": "Operational Warehouses"
+  },
+  {
+   "fieldname": "rm_warehouse",
+   "fieldtype": "Link",
+   "label": "Raw Material Store",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Staging area the RM kit is issued into before it is split to the lines (RM Store → Shop Floor).",
+   "fieldname": "shop_floor_warehouse",
+   "fieldtype": "Link",
+   "label": "Shop Floor",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Where finished goods are first received from the line (Manufacture target). Distinct from the Dispatch FG store.",
+   "fieldname": "fg_warehouse",
+   "fieldtype": "Link",
+   "label": "Production FG Store",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Dispatch-ready FG store. Goods move here from Production FG before Customer PDI / Delivery Note.",
+   "fieldname": "dispatch_fg_warehouse",
+   "fieldtype": "Link",
+   "label": "Dispatch FG Store",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Fallback line WIP when a Work Order has no per-line allocation. Per-line warehouses below are preferred.",
+   "fieldname": "wip_warehouse",
+   "fieldtype": "Link",
+   "label": "Default Line WIP",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "col_wh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rejection_warehouse",
+   "fieldtype": "Link",
+   "label": "Rejection Store",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Quarantine store samples are drawn into for Customer PDI (FG ↔ PDI swap).",
+   "fieldname": "pdi_warehouse",
+   "fieldtype": "Link",
+   "label": "Customer PDI Store",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Inbound staging warehouse goods land in before put-away. Optional.",
+   "fieldname": "receiving_warehouse",
+   "fieldtype": "Link",
+   "label": "Receiving / Staging",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "sec_lines",
+   "fieldtype": "Section Break",
+   "label": "Production Lines"
+  },
+  {
+   "description": "Each physical assembly line is its own warehouse so per-line stock is visible. Material is transferred Shop Floor → a chosen line, and RM is consumed from that line.",
+   "fieldname": "production_lines",
+   "fieldtype": "Table",
+   "label": "Production Lines",
+   "options": "Lumirise Production Line"
+  },
+  {
+   "fieldname": "sec_stores",
+   "fieldtype": "Section Break",
+   "label": "Stores Process"
+  },
+  {
+   "default": "1",
+   "description": "Auto-create a pick task when a Pick List is generated.",
+   "fieldname": "enable_pick_list_task",
+   "fieldtype": "Check",
+   "label": "Pick task on Pick List"
+  },
+  {
+   "default": "1",
+   "description": "Auto-create a put-away task when a GRN is posted.",
+   "fieldname": "enable_grn_putaway_task",
+   "fieldtype": "Check",
+   "label": "Put-away task on GRN"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-06-12 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Lumirise Operations Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Lumirise Operations"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
