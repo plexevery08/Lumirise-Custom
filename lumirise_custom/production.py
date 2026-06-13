@@ -160,12 +160,13 @@ def receive_finished_goods(work_order, line_warehouse, produced_qty, physical_qt
 		se.to_warehouse = prod_fg
 		se.custom_narration = f"Built on {line_warehouse}"
 		for row in se.items:
-			if row.is_finished_item:
+			if getattr(row, "is_finished_item", 0):
 				row.t_warehouse = prod_fg
-			elif not row.is_scrap_item and row.s_warehouse:
+			elif row.s_warehouse:
 				# Consume the raw materials from the specific line they were
 				# transferred to (backflush mode already points here; pin it
 				# explicitly so a multi-line WO consumes from the right line).
+				# Scrap rows have no s_warehouse, so they are left untouched.
 				row.s_warehouse = line_warehouse
 
 	se_dict = _native_se_dict(work_order, "Manufacture", qty=produced_qty)
