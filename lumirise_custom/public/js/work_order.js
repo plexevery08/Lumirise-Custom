@@ -15,9 +15,14 @@ frappe.ui.form.on("Work Order", {
 
 		lumirise_accountability(frm);
 
-		if (["Completed", "Stopped", "Closed"].includes(frm.doc.status)) return;
-
 		const grp = __("Production");
+		const open = !["Completed", "Stopped", "Closed"].includes(frm.doc.status);
+
+		// Production-INPUT steps (Pick List → Receive FG) show only while the order is
+		// still open. The FG-handling buttons after this block (Reject finished units,
+		// Move to Dispatch FG) stay available even when the WO is Completed/Closed —
+		// dispatch and post-build rejection happen after production is done.
+		if (open) {
 
 		// 0) Pick List — pick the BOM materials from rack/bin for the line.
 		frm.add_custom_button(__("Create Pick List"), () => {
@@ -49,7 +54,7 @@ frappe.ui.form.on("Work Order", {
 				const pending = flt(frm.doc.qty) - flt(frm.doc.material_transferred_for_manufacturing);
 				frappe.prompt(
 					[
-						{ fieldname: "line", label: __("Production Line"), fieldtype: "Select", options: line_options, reqd: 1 },
+						{ fieldname: "line", label: __("Production Line"), fieldtype: "Link", options: "Warehouse", reqd: 1, get_query: () => ({ filters: [["Warehouse", "name", "in", line_options]] }) },
 						{ fieldname: "qty", label: __("Qty to transfer"), fieldtype: "Float", reqd: 1, default: pending },
 					],
 					(v) => lumirise_call(frm, "transfer_to_line",
@@ -65,7 +70,7 @@ frappe.ui.form.on("Work Order", {
 				const pending = flt(frm.doc.qty) - flt(frm.doc.produced_qty);
 				frappe.prompt(
 					[
-						{ fieldname: "line", label: __("Production Line"), fieldtype: "Select", options: line_options, reqd: 1 },
+						{ fieldname: "line", label: __("Production Line"), fieldtype: "Link", options: "Warehouse", reqd: 1, get_query: () => ({ filters: [["Warehouse", "name", "in", line_options]] }) },
 						{ fieldname: "produced_qty", label: __("Produced Qty (system)"), fieldtype: "Float", reqd: 1, default: pending },
 						{ fieldname: "physical_qty", label: __("Physical Count (boxes × pcs)"), fieldtype: "Float",
 						  description: __("Leave blank if it matches. A difference raises a Stock-Mismatch task.") },
@@ -78,13 +83,14 @@ frappe.ui.form.on("Work Order", {
 					__("Receive Finished Goods"), __("Post"));
 			});
 		}, grp);
+		} // end production-input steps (shown only while the order is open)
 
 		// 4) Reject from production (Quality-gated draft transfer to the rejection store).
 		frm.add_custom_button(__("Reject from Line"), () => {
 			lumirise_with_lines((line_options) => {
 				frappe.prompt(
 					[
-						{ fieldname: "line", label: __("Production Line"), fieldtype: "Select", options: line_options },
+						{ fieldname: "line", label: __("Production Line"), fieldtype: "Link", options: "Warehouse", get_query: () => ({ filters: [["Warehouse", "name", "in", line_options]] }) },
 						{ fieldname: "qty", label: __("Rejected Qty"), fieldtype: "Float", reqd: 1 },
 						{ fieldname: "reason", label: __("Reason"), fieldtype: "Small Text" },
 					],
@@ -124,7 +130,8 @@ function lumirise_accountability(frm) {
 	frm.dashboard.add_indicator(__("Balance to produce: {0}", [bal_prod]), bal_prod <= 0 ? "green" : "red");
 }
 
-// Fetch configured lines, then hand a "Line-1\nLine-2\n..." options string to cb.
+// Fetch configured lines, then hand the list of line-warehouse names (array) to cb,
+// used as the get_query filter for the "Production Line" Link fields in the dialogs.
 function lumirise_with_lines(cb) {
 	frappe.call({
 		method: "lumirise_custom.production.get_production_lines",
@@ -134,7 +141,7 @@ function lumirise_with_lines(cb) {
 				frappe.msgprint(__("No production lines configured. Add them under Lumirise Operations Settings → Production Lines."));
 				return;
 			}
-			cb(lines.join("\n"));
+			cb(lines);
 		},
 	});
 }
