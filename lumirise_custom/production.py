@@ -30,6 +30,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from lumirise_custom import batches
 from lumirise_custom import defaults as config
 
 
@@ -224,15 +225,9 @@ def reject_from_line(work_order, qty, line_warehouse=None, reason=None):
 			"to_warehouse": rejection_wh,
 			"custom_narration": f"Rejected from production{line_note}",
 			"remarks": f"Production rejection from WO {work_order}{line_note}: {reason or '—'}",
-			"items": [
-				{
-					"item_code": wo.production_item,
-					"qty": qty,
-					"s_warehouse": prod_fg,
-					"t_warehouse": rejection_wh,
-					"allow_zero_valuation_rate": 1,
-				}
-			],
+			"items": batches.split_for_batches(
+				wo.production_item, qty, prod_fg, rejection_wh,
+				extra={"allow_zero_valuation_rate": 1}),
 		}
 	)
 	se.flags.ignore_permissions = True
@@ -293,14 +288,7 @@ def move_to_dispatch(work_order=None, item_code=None, qty=None):
 			"from_warehouse": prod_fg,
 			"to_warehouse": dispatch_fg,
 			"custom_narration": narration,
-			"items": [
-				{
-					"item_code": item_code,
-					"qty": qty,
-					"s_warehouse": prod_fg,
-					"t_warehouse": dispatch_fg,
-				}
-			],
+			"items": batches.split_for_batches(item_code, qty, prod_fg, dispatch_fg),
 		}
 	)
 	se.flags.ignore_permissions = True
