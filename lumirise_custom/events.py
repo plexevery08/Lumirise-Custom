@@ -9,6 +9,12 @@ import frappe
 
 def iqc_gate(doc, method=None):
 	"""Block GRN (Purchase Receipt) submission unless IQC passed for the PO."""
+	# Subcontracting job-work billing creates a non-stock Purchase Receipt (for the
+	# service charge) from a Subcontracting Receipt. That is NOT an RM GRN — incoming
+	# quality is governed on the subcontracting receipt / supplied RM, not here — so
+	# the IQC gate must not block it.
+	if doc.get("is_subcontracted"):
+		return
 	pos = {row.purchase_order for row in doc.items if getattr(row, "purchase_order", None)}
 	for po in pos:
 		iqc = frappe.get_all(
