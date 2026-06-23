@@ -1,7 +1,7 @@
 {
  "app": "lumirise_custom",
  "charts": [],
- "content": "[{\"id\": \"5c1a713a01\", \"type\": \"header\", \"data\": {\"text\": \"Lumirise \\u2014 Order to Dispatch\", \"level\": 4, \"col\": 12}}, {\"id\": \"e0281de936\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Material Planning\", \"col\": 3}}, {\"id\": \"1167be5445\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Indent\", \"col\": 3}}, {\"id\": \"b89aab7049\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Vendor PDI\", \"col\": 3}}, {\"id\": \"43495dfd53\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Inbound Logistics\", \"col\": 3}}, {\"id\": \"909166fd71\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"IQC\", \"col\": 3}}, {\"id\": \"c64ed677e1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Customer PDI\", \"col\": 3}}, {\"id\": \"ca7ea98ecd\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sales Order\", \"col\": 3}}, {\"id\": \"55a6de90b6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Order\", \"col\": 3}}, {\"id\": \"0a5f24409f\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Work Order\", \"col\": 3}}, {\"id\": \"9e7510b1fa\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Delivery Note\", \"col\": 3}}, {\"id\": \"67501d981a\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Listing of Documents\", \"col\": 3}}]",
+ "content": "[{\"id\": \"5c1a713a01\", \"type\": \"header\", \"data\": {\"text\": \"Lumirise \\u2014 Order to Dispatch\", \"level\": 4, \"col\": 12}}, {\"id\": \"e0281de936\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Material Planning\", \"col\": 3}}, {\"id\": \"1167be5445\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Indent\", \"col\": 3}}, {\"id\": \"b89aab7049\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Vendor PDI\", \"col\": 3}}, {\"id\": \"43495dfd53\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Inbound Logistics\", \"col\": 3}}, {\"id\": \"909166fd71\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"IQC\", \"col\": 3}}, {\"id\": \"c64ed677e1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Customer PDI\", \"col\": 3}}, {\"id\": \"ca7ea98ecd\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sales Order\", \"col\": 3}}, {\"id\": \"55a6de90b6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Order\", \"col\": 3}}, {\"id\": \"0a5f24409f\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Work Order\", \"col\": 3}}, {\"id\": \"9e7510b1fa\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Delivery Note\", \"col\": 3}}, {\"id\": \"67501d981a\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Listing of Documents\", \"col\": 3}}, {\"id\": \"hcHdr00001\", \"type\": \"header\", \"data\": {\"text\": \"Daily Self-Test\", \"level\": 4, \"col\": 12}}, {\"id\": \"hcShort0001\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Health Check Run\", \"col\": 3}}, {\"id\": \"hcShort0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Open Health Failures\", \"col\": 3}}, {\"id\": \"hcShort0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Health Check Trend\", \"col\": 3}}, {\"id\": \"hcCard00001\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Health: Red Runs\", \"col\": 4}}]",
  "creation": "2026-06-03 20:24:15.392201",
  "custom_blocks": [],
  "docstatus": 0,
@@ -18,7 +18,12 @@
  "modified_by": "Administrator",
  "module": "Lumirise Custom",
  "name": "Lumirise",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Health: Red Runs",
+   "number_card_name": "Health: Red Runs"
+  }
+ ],
  "owner": "Administrator",
  "public": 1,
  "quick_lists": [],
@@ -101,6 +106,29 @@
    "label": "Listing of Documents",
    "link_to": "Listing of Documents",
    "report_ref_doctype": "Sales Order",
+   "type": "Report"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Health Check Run",
+   "link_to": "Health Check Run",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Open Health Failures",
+   "link_to": "Open Health Failures",
+   "report_ref_doctype": "Health Check Run",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Health Check Trend",
+   "link_to": "Health Check Trend",
+   "report_ref_doctype": "Health Check Run",
    "type": "Report"
   }
  ],

@@ -108,6 +108,71 @@ def _reconcile_against_bom(models, ordered_items):
 	return warnings
 
 
+def _default_supplier(item_code):
+	"""Best-guess vendor for an item: its Item Default default_supplier (first found).
+	The buyer can override it per line on the Purchase Plan."""
+	return frappe.db.get_value("Item Default", {"parent": item_code}, "default_supplier")
+
+
+@frappe.whitelist()
+def make_purchase_plan(indents):
+	"""Ajay review 2026-06-14: merge the selected Indents into ONE Purchase Plan
+	(qty summed per item, source indents tracked per line) with a per-line vendor
+	column, so the buyer assigns a vendor to each item and then splits the demand
+	into one Purchase Order per vendor. Creates a Draft Purchase Plan and returns
+	its name. Replaces the old straight-to-one-PO path."""
+	frappe.has_permission("Purchase Plan", "create", throw=True)
+	if isinstance(indents, str):
+		indents = json.loads(indents)
+	if not indents:
+		frappe.throw("Select at least one Indent.")
+
+	# aggregate qty by (item, uom); remember which indents fed each line + model.
+	agg = {}
+	order = []
+	models = set()
+	for name in indents:
+		ind = frappe.get_doc("Indent", name)
+		for row in ind.items:
+			if row.model:
+				models.add(row.model)
+			uom = row.uom or "Nos"
+			key = (row.item_code, uom)
+			if key not in agg:
+				agg[key] = {"qty": 0.0, "indents": set(), "model": row.model,
+				            "required_date": row.required_date}
+				order.append(key)
+			agg[key]["qty"] += flt(row.qty)
+			agg[key]["indents"].add(name)
+
+	plan = frappe.new_doc("Purchase Plan")
+	plan.plan_date = nowdate()
+	plan.indent_refs = ", ".join(indents)
+	for (item_code, uom) in order:
+		d = agg[(item_code, uom)]
+		plan.append("items", {
+			"item_code": item_code,
+			"qty": d["qty"],
+			"uom": uom,
+			"supplier": _default_supplier(item_code),
+			"schedule_date": d["required_date"] or add_days(nowdate(), 15),
+			"warehouse": RM_STORE,
+			"source_indents": ", ".join(sorted(d["indents"])),
+			"model": d["model"],
+		})
+	plan.insert(ignore_permissions=True)
+
+	# carry forward the forgotten-component reconciliation as a heads-up.
+	warnings = _reconcile_against_bom(models, {ic for (ic, _u) in order})
+	if warnings:
+		lines = "; ".join(
+			f"{w['model']}: {', '.join(w['missing_from_indent'])}" for w in warnings)
+		frappe.msgprint(
+			f"Heads-up — BOM components missing from this plan (no stock): {lines}",
+			title="BOM Reconciliation", indicator="orange")
+	return plan.name
+
+
 def _indent_names_from_po(doc):
 	"""Parse the comma/newline-separated Indent names off a Purchase Order's
 	lr_indent_refs field."""

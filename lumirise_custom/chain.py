@@ -47,22 +47,51 @@ def make_iqc(source_name, target_doc=None):
 
 @frappe.whitelist()
 def make_grn(source_name, target_doc=None):
-	"""GRN = standard Purchase Receipt against the IQC's PO."""
-	iqc = frappe.get_doc("IQC", source_name)
+	"""GRN = standard Purchase Receipt against the IQC's PO.
+
+	Ajay review 2026-06-14 (00:33:25-00:36:12): the GRN must reflect ACCEPTED stock
+	only, with the rejected qty auto-fetched from the IQC into the rejected column
+	and routed to the rejection warehouse -- so inventory is truthful and the
+	rejection is visible downstream (it then drives the auto debit note).
+	"""
 	from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
+	from lumirise_custom import defaults as config
+	from frappe.utils import flt
+
+	iqc = frappe.get_doc("IQC", source_name)
 	pr = make_purchase_receipt(iqc.purchase_order)
+	rej_wh = config.rejection_warehouse()
+
+	# IQC rows grouped by item (lists -> consume per matching PR row).
+	iqc_rows = {}
+	for r in iqc.items:
+		iqc_rows.setdefault(r.item_code, []).append(r)
+
 	for it in pr.items:
 		it.warehouse = STORES
+		bucket = iqc_rows.get(it.item_code)
+		if not bucket:
+			continue
+		r = bucket.pop(0)
+		received = flt(r.received_qty) or flt(r.accepted_qty) + flt(r.rejected_qty)
+		# ERPNext PR Item invariant: received_qty == qty(accepted) + rejected_qty.
+		it.received_qty = received
+		it.qty = flt(r.accepted_qty)
+		it.rejected_qty = flt(r.rejected_qty)
+		if flt(r.rejected_qty) > 0:
+			it.rejected_warehouse = rej_wh
 	return pr
 
 
 @frappe.whitelist()
 def make_customer_pdi(source_name, target_doc=None):
+	"""Start a Customer PDI from a Sales Order — seed one inspection line per SO
+	item. FG/Dispatch then sends these to the PDI store via store authorization."""
 	so = frappe.get_doc("Sales Order", source_name)
 	doc = frappe.new_doc("Customer PDI")
 	doc.sales_order = so.name
-	doc.fg_item = so.items[0].item_code if so.items else None
-	doc.sampled_qty = 20
+	for it in so.items:
+		doc.append("items", {"fg_item": it.item_code, "qty": it.qty})
 	return doc
 
 

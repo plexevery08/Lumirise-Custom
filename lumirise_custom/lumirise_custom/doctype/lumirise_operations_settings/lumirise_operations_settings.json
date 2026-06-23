@@ -21,7 +21,20 @@
   "production_lines",
   "sec_stores",
   "enable_pick_list_task",
-  "enable_grn_putaway_task"
+  "enable_grn_putaway_task",
+  "sec_health",
+  "enable_destructive_health_tests",
+  "production_site_name",
+  "col_health",
+  "notify_only_on_red",
+  "health_digest_recipients",
+  "sec_health_thresholds",
+  "health_error_log_threshold",
+  "health_over_receipt_cap",
+  "col_health2",
+  "baseline_server_scripts",
+  "baseline_client_scripts",
+  "baseline_custom_fields"
  ],
  "fields": [
   {
@@ -124,6 +137,84 @@
    "fieldname": "enable_grn_putaway_task",
    "fieldtype": "Check",
    "label": "Put-away task on GRN"
+  },
+  {
+   "description": "Settings for the daily self-test (lumirise_custom.health_check).",
+   "fieldname": "sec_health",
+   "fieldtype": "Section Break",
+   "label": "Daily Health Check"
+  },
+  {
+   "default": "0",
+   "description": "DANGER: when on (and this is NOT the production site), the daily run also drives a real synthetic order-to-cash + costing chain that creates and deletes test documents. Leave OFF on production.",
+   "fieldname": "enable_destructive_health_tests",
+   "fieldtype": "Check",
+   "label": "Run destructive synthetic tests (test site only)"
+  },
+  {
+   "description": "The bench site name of PRODUCTION (e.g. lumiriseindia.m.frappe.cloud). The synthetic tier is skipped whenever the running site matches this, even if the flag above is on.",
+   "fieldname": "production_site_name",
+   "fieldtype": "Data",
+   "label": "Production Site Name (synthetic kill-switch)"
+  },
+  {
+   "fieldname": "col_health",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "When on, only Red runs notify (suppresses the green/amber daily heartbeat).",
+   "fieldname": "notify_only_on_red",
+   "fieldtype": "Check",
+   "label": "Notify only on Red"
+  },
+  {
+   "description": "Comma/newline-separated user emails to receive the in-ERP digest. Blank = all enabled System Managers.",
+   "fieldname": "health_digest_recipients",
+   "fieldtype": "Small Text",
+   "label": "Digest Recipients"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sec_health_thresholds",
+   "fieldtype": "Section Break",
+   "label": "Health Thresholds & Baselines"
+  },
+  {
+   "default": "50",
+   "description": "Warn if Error Log entries in the last 24h reach this count.",
+   "fieldname": "health_error_log_threshold",
+   "fieldtype": "Int",
+   "label": "Error Log spike threshold (24h)"
+  },
+  {
+   "default": "10",
+   "description": "Warn if Stock Settings over-delivery/receipt allowance exceeds this percentage.",
+   "fieldname": "health_over_receipt_cap",
+   "fieldtype": "Float",
+   "label": "Over-receipt allowance cap (%)"
+  },
+  {
+   "fieldname": "col_health2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Expected Server Script count. Drift from this warns. 0 = not checked.",
+   "fieldname": "baseline_server_scripts",
+   "fieldtype": "Int",
+   "label": "Baseline: Server Scripts"
+  },
+  {
+   "description": "Expected Client Script count. Drift from this warns. 0 = not checked.",
+   "fieldname": "baseline_client_scripts",
+   "fieldtype": "Int",
+   "label": "Baseline: Client Scripts"
+  },
+  {
+   "description": "Expected Lumirise Custom field count. Drift from this warns. 0 = not checked.",
+   "fieldname": "baseline_custom_fields",
+   "fieldtype": "Int",
+   "label": "Baseline: Custom Fields"
   }
  ],
  "grid_page_length": 50,

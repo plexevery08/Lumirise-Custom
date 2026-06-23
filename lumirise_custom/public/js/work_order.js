@@ -25,44 +25,44 @@ frappe.ui.form.on("Work Order", {
 		if (open) {
 
 		// 0) Pick List — pick the BOM materials from rack/bin for the line.
-		frm.add_custom_button(__("Create Pick List"), () => {
-			frappe.call({
-				method: "lumirise_custom.stores.make_work_order_pick_list",
-				args: { work_order: frm.doc.name },
-				freeze: true,
-				freeze_message: __("Creating pick list..."),
-				callback(r) {
-					if (r.message) frappe.set_route("Form", "Pick List", r.message.pick_list);
-				},
-			});
-		}, grp);
+		// frm.add_custom_button(__("Create Pick List"), () => {
+		// 	frappe.call({
+		// 		method: "lumirise_custom.stores.make_work_order_pick_list",
+		// 		args: { work_order: frm.doc.name },
+		// 		freeze: true,
+		// 		freeze_message: __("Creating pick list..."),
+		// 		callback(r) {
+		// 			if (r.message) frappe.set_route("Form", "Pick List", r.message.pick_list);
+		// 		},
+		// 	});
+		// }, grp);
 
 		// 1) Issue material to the shop floor (RM Store → Shop Floor, partial OK).
-		frm.add_custom_button(__("Issue to Shop Floor"), () => {
-			const pending = flt(frm.doc.qty) - flt(frm.doc.material_transferred_for_manufacturing);
-			frappe.prompt(
-				[{ fieldname: "qty", label: __("Qty to issue"), fieldtype: "Float", reqd: 1, default: pending,
-				   description: __("Partial issues are allowed — the balance stays visible on the order.") }],
-				(v) => lumirise_call(frm, "issue_to_shop_floor", { work_order: frm.doc.name, qty: v.qty },
-					__("Issuing to shop floor...")),
-				__("Issue to Shop Floor"), __("Issue"));
-		}, grp);
+		// frm.add_custom_button(__("Issue to Shop Floor"), () => {
+		// 	const pending = flt(frm.doc.qty) - flt(frm.doc.material_transferred_for_manufacturing);
+		// 	frappe.prompt(
+		// 		[{ fieldname: "qty", label: __("Qty to issue"), fieldtype: "Float", reqd: 1, default: pending,
+		// 		   description: __("Partial issues are allowed — the balance stays visible on the order.") }],
+		// 		(v) => lumirise_call(frm, "issue_to_shop_floor", { work_order: frm.doc.name, qty: v.qty },
+		// 			__("Issuing to shop floor...")),
+		// 		__("Issue to Shop Floor"), __("Issue"));
+		// }, grp);
 
-		// 2) Transfer to a specific line (Shop Floor → Line-N WIP).
-		frm.add_custom_button(__("Transfer to Line"), () => {
-			lumirise_with_lines((line_options) => {
-				const pending = flt(frm.doc.qty) - flt(frm.doc.material_transferred_for_manufacturing);
-				frappe.prompt(
-					[
-						{ fieldname: "line", label: __("Production Line"), fieldtype: "Link", options: "Warehouse", reqd: 1, get_query: () => ({ filters: [["Warehouse", "name", "in", line_options]] }) },
-						{ fieldname: "qty", label: __("Qty to transfer"), fieldtype: "Float", reqd: 1, default: pending },
-					],
-					(v) => lumirise_call(frm, "transfer_to_line",
-						{ work_order: frm.doc.name, line_warehouse: v.line, qty: v.qty },
-						__("Transferring to {0}...", [v.line])),
-					__("Transfer to Line"), __("Transfer"));
-			});
-		}, grp);
+		// // 2) Transfer to a specific line (Shop Floor → Line-N WIP).
+		// frm.add_custom_button(__("Transfer to Line"), () => {
+		// 	lumirise_with_lines((line_options) => {
+		// 		const pending = flt(frm.doc.qty) - flt(frm.doc.material_transferred_for_manufacturing);
+		// 		frappe.prompt(
+		// 			[
+		// 				{ fieldname: "line", label: __("Production Line"), fieldtype: "Link", options: "Warehouse", reqd: 1, get_query: () => ({ filters: [["Warehouse", "name", "in", line_options]] }) },
+		// 				{ fieldname: "qty", label: __("Qty to transfer"), fieldtype: "Float", reqd: 1, default: pending },
+		// 			],
+		// 			(v) => lumirise_call(frm, "transfer_to_line",
+		// 				{ work_order: frm.doc.name, line_warehouse: v.line, qty: v.qty },
+		// 				__("Transferring to {0}...", [v.line])),
+		// 			__("Transfer to Line"), __("Transfer"));
+		// 	});
+		// }, grp);
 
 		// 3) Receive finished goods (Manufacture from the line) + physical-count check.
 		frm.add_custom_button(__("Receive FG"), () => {

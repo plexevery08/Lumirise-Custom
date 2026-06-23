@@ -1,0 +1,165 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "HCRUN-.YYYY.-.#####",
+ "creation": "2026-06-22 00:00:00.000000",
+ "description": "One daily self-test run. Header carries the overall verdict and pass/warn/fail counts; the results table lists every check with, on failure, the remediation (the improvement to make). Created by lumirise_custom.health_check.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "run_datetime",
+  "overall_status",
+  "trigger",
+  "col_head",
+  "site",
+  "synthetic_ran",
+  "sec_counts",
+  "pass_count",
+  "warn_count",
+  "col_counts",
+  "fail_count",
+  "total_checks",
+  "sec_summary",
+  "summary",
+  "sec_results",
+  "results"
+ ],
+ "fields": [
+  {
+   "default": "Now",
+   "fieldname": "run_datetime",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Run At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "overall_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Overall Status",
+   "options": "Green\nAmber\nRed",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "trigger",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Trigger",
+   "options": "Scheduled\nManual",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The bench site this run executed on.",
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Whether the destructive synthetic order-to-cash tier ran (test site only).",
+   "fieldname": "synthetic_ran",
+   "fieldtype": "Check",
+   "label": "Synthetic Tier Ran",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_counts",
+   "fieldtype": "Section Break",
+   "label": "Result Counts"
+  },
+  {
+   "fieldname": "pass_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Pass",
+   "read_only": 1
+  },
+  {
+   "fieldname": "warn_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Warn",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_counts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fail_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Fail",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_checks",
+   "fieldtype": "Int",
+   "label": "Total Checks",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_summary",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Small Text",
+   "label": "Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_results",
+   "fieldtype": "Section Break",
+   "label": "Checks"
+  },
+  {
+   "fieldname": "results",
+   "fieldtype": "Table",
+   "label": "Results",
+   "options": "Health Check Result"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Health Check Run",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Lumirise Operations"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "run_datetime",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

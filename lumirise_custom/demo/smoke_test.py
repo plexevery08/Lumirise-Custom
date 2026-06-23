@@ -98,19 +98,36 @@ def _manufacture(wo_name, qty):
 	print(f"    Manufactured {qty} on {wo_name}")
 
 
-def _customer_pdi(so, item):
-	cpdi = chain.make_customer_pdi(so)
-	cpdi.customer_signoff = "Pass"
-	cpdi.insert(ignore_permissions=True); cpdi.submit()
+def _customer_pdi(so, item, qty, source_wh):
+	"""Drive the rebuilt two-leg, store-authorized Customer PDI to a passed,
+	SUBMITTED state — the only state that opens the dispatch gate. The document
+	stays Draft through the flow and submits only on authorize_return (a stray
+	native Submit is blocked). Admin carries the System Manager role, which
+	satisfies the store-authority check. source_wh is the warehouse the finished
+	goods actually sit in (the Work Order's fg_warehouse), so the FG -> PDI -> FG
+	legs draw from and return to the right store and dispatch still finds the qty."""
+	from lumirise_custom.lumirise_custom.doctype.customer_pdi import customer_pdi as cpdi_api
+	cpdi = frappe.get_doc({
+		"doctype": "Customer PDI",
+		"sales_order": so,
+		"inspection_date": nowdate(),
+		"source_warehouse": source_wh,
+		"items": [{"fg_item": item, "qty": qty}],
+	})
+	cpdi.insert(ignore_permissions=True)
+	cpdi_api.send_for_authorization(cpdi.name)   # Draft -> Pending Store Authorization
+	cpdi_api.authorize_send(cpdi.name)           # Store authorizes -> FG -> PDI transfer (At PDI)
+	cpdi_api.complete_inspection(cpdi.name)      # untouched rows => full pass, sign-off Pass
+	cpdi_api.authorize_return(cpdi.name)         # PDI -> FG return + submit (Pass) -> opens gate
 	return cpdi.name
 
 
-def _dispatch(so, qty):
+def _dispatch(so, qty, warehouse):
 	from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note
 	dn = frappe.get_doc(make_delivery_note(so))
 	for it in dn.items:
 		it.qty = min(flt(it.qty), qty)
-		it.warehouse = FG_STORE
+		it.warehouse = warehouse
 	dn.insert(ignore_permissions=True)
 	return dn
 
@@ -158,21 +175,25 @@ def run():
 
 	wo1 = mp1.created_work_orders.split(", ")[0]
 	_manufacture(wo1, 3000)
+	# Manufacture lands FG in the Work Order's fg_warehouse (line-aware flow), which
+	# may not be FG_STORE — pin the PDI + dispatch to wherever the goods actually are.
+	fg_wh = frappe.db.get_value("Work Order", wo1, "fg_warehouse") or FG_STORE
 	print("FG stock LED-PANEL-24W:",
-		  flt(frappe.db.get_value("Bin", {"item_code": "LED-PANEL-24W", "warehouse": FG_STORE}, "actual_qty")))
+		  flt(frappe.db.get_value("Bin", {"item_code": "LED-PANEL-24W", "warehouse": fg_wh}, "actual_qty")),
+		  "in", fg_wh)
 
 	# --- gate check: Dispatch BLOCKED before Customer PDI ---
 	frappe.db.savepoint("before_dispatch_gate")
 	blocked = False
 	try:
-		dn = _dispatch(so1, 3000)
+		dn = _dispatch(so1, 3000, fg_wh)
 		dn.submit()
 	except frappe.ValidationError:
 		blocked = True; frappe.db.rollback(save_point="before_dispatch_gate")
 	print(f"  Customer-PDI gate blocked Dispatch before PDI: {blocked}")
 
-	cpdi = _customer_pdi(so1, "LED-PANEL-24W")
-	dn2 = _dispatch(so1, 3000)
+	cpdi = _customer_pdi(so1, "LED-PANEL-24W", 3000, fg_wh)
+	dn2 = _dispatch(so1, 3000, fg_wh)
 	dn2.submit()
 	print(f"  Customer PDI {cpdi} passed -> Dispatch {dn2.name} submitted")
 

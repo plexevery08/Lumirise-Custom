@@ -9,28 +9,48 @@
  "field_order": [
   "sales_order",
   "customer",
-  "fg_item",
-  "sampled_qty",
-  "col1",
+  "col_head",
+  "inspection_date",
+  "status",
+  "sec_items",
+  "items",
+  "sec_warehouses",
   "source_warehouse",
   "pdi_warehouse",
-  "video_recording",
+  "col_wh",
+  "rejection_warehouse",
+  "sec_inspection",
   "customer_signoff",
+  "video_recording",
   "sec_checks",
   "checks",
+  "sec_audit",
+  "requested_by",
+  "requested_on",
+  "sent_authorized_by",
+  "sent_authorized_on",
+  "send_stock_entry",
+  "col_audit",
+  "return_authorized_by",
+  "return_authorized_on",
+  "return_stock_entry",
+  "rejection_stock_entry",
+  "authorization_remarks",
   "amended_from"
  ],
  "fields": [
   {
+   "description": "Optional. Links the inspection to the order it dispatches against — a passed, submitted Customer PDI on this Sales Order is what unlocks the Delivery Note.",
    "fieldname": "sales_order",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Sales Order",
    "options": "Sales Order",
-   "reqd": 1
+   "read_only_depends_on": "eval:doc.status!=\"Draft\""
   },
   {
    "fetch_from": "sales_order.customer",
+   "fetch_if_empty": 1,
    "fieldname": "customer",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -39,36 +59,85 @@
    "read_only": 1
   },
   {
-   "fieldname": "fg_item",
-   "fieldtype": "Link",
-   "label": "FG Item",
-   "options": "Item",
+   "fieldname": "col_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "inspection_date",
+   "fieldtype": "Date",
+   "label": "Inspection Date"
+  },
+  {
+   "default": "Draft",
+   "description": "Driven by the flow actions. Do not edit manually.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nPending Store Authorization\nAt PDI - Under Inspection\nInspection Completed\nReturned to FG - Completed\nSend Rejected\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_items",
+   "fieldtype": "Section Break",
+   "label": "FG Items for Inspection"
+  },
+  {
+   "description": "Add every finished-goods item (and qty) the FG store is sending to the Customer PDI store.",
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Customer PDI Item",
    "reqd": 1
   },
   {
-   "default": "20",
-   "fieldname": "sampled_qty",
-   "fieldtype": "Float",
-   "label": "Sampled Qty"
+   "fieldname": "sec_warehouses",
+   "fieldtype": "Section Break",
+   "label": "Warehouses"
   },
   {
-   "fieldname": "col1",
-   "fieldtype": "Column Break",
-   "label": "Col1"
-  },
-  {
-   "description": "Dispatch FG store the sample is drawn from. Defaults from Operations Settings.",
+   "description": "Finished Goods store the boxes are drawn from and returned to. Defaults from Operations Settings (Dispatch FG).",
    "fieldname": "source_warehouse",
    "fieldtype": "Link",
-   "label": "Source Warehouse (Dispatch FG)",
-   "options": "Warehouse"
+   "label": "Finished Goods Warehouse",
+   "options": "Warehouse",
+   "read_only_depends_on": "eval:doc.status!=\"Draft\""
   },
   {
-   "description": "Quarantine store the sample is inspected in. Defaults from Operations Settings.",
+   "description": "Customer PDI store (under Stores). Stock physically moves here once the store authorizes the request. Defaults from Operations Settings.",
    "fieldname": "pdi_warehouse",
    "fieldtype": "Link",
-   "label": "PDI Warehouse",
-   "options": "Warehouse"
+   "label": "Customer PDI Warehouse",
+   "options": "Warehouse",
+   "read_only_depends_on": "eval:doc.status!=\"Draft\""
+  },
+  {
+   "fieldname": "col_wh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Where failed qty is routed on return. Defaults from Operations Settings (Rejection Store).",
+   "fieldname": "rejection_warehouse",
+   "fieldtype": "Link",
+   "label": "Rejection Warehouse",
+   "options": "Warehouse",
+   "read_only_depends_on": "eval:doc.status==\"Returned to FG - Completed\" || doc.status==\"Cancelled\""
+  },
+  {
+   "fieldname": "sec_inspection",
+   "fieldtype": "Section Break",
+   "label": "Inspection Result"
+  },
+  {
+   "description": "Set automatically on Complete Inspection: Fail if any item has rejected qty or any check is Rejected, else Pass.",
+   "fieldname": "customer_signoff",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Customer Sign-off",
+   "options": "\nPass\nFail",
+   "read_only": 1
   },
   {
    "fieldname": "video_recording",
@@ -76,22 +145,104 @@
    "label": "Video Recording"
   },
   {
-   "fieldname": "customer_signoff",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Customer Sign-off",
-   "options": "\nPass\nFail"
-  },
-  {
    "fieldname": "sec_checks",
    "fieldtype": "Section Break",
-   "label": "Inspection Checks"
+   "label": "Inspection Checklist"
   },
   {
    "fieldname": "checks",
    "fieldtype": "Table",
    "label": "Checks",
    "options": "Customer PDI Check"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sec_audit",
+   "fieldtype": "Section Break",
+   "label": "Authorization & Stock Trail"
+  },
+  {
+   "fieldname": "requested_by",
+   "fieldtype": "Link",
+   "label": "Requested By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "requested_on",
+   "fieldtype": "Datetime",
+   "label": "Requested On",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "sent_authorized_by",
+   "fieldtype": "Link",
+   "label": "Issue Authorized By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sent_authorized_on",
+   "fieldtype": "Datetime",
+   "label": "Issue Authorized On",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Material Transfer that moved the boxes FG store -> PDI store.",
+   "fieldname": "send_stock_entry",
+   "fieldtype": "Link",
+   "label": "Issue Stock Entry",
+   "no_copy": 1,
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_audit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "return_authorized_by",
+   "fieldtype": "Link",
+   "label": "Return Authorized By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "return_authorized_on",
+   "fieldtype": "Datetime",
+   "label": "Return Authorized On",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Material Transfer that moved accepted boxes PDI store -> FG store.",
+   "fieldname": "return_stock_entry",
+   "fieldtype": "Link",
+   "label": "Return Stock Entry",
+   "no_copy": 1,
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "description": "Material Transfer that moved rejected boxes PDI store -> Rejection store (if any).",
+   "fieldname": "rejection_stock_entry",
+   "fieldtype": "Link",
+   "label": "Rejection Stock Entry",
+   "no_copy": 1,
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authorization_remarks",
+   "fieldtype": "Small Text",
+   "label": "Authorization Remarks",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",
@@ -107,7 +258,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-03 19:54:12.512117",
+ "modified": "2026-06-22 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Lumirise Custom",
  "name": "Customer PDI",
@@ -127,6 +278,18 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lumirise Operations",
+   "share": 1,
    "write": 1
   }
  ],

@@ -10,6 +10,7 @@ from lumirise_custom.setup.costing_fields import create_costing_fields
 from lumirise_custom.setup.flow_fields import create_flow_fields
 from lumirise_custom.setup.production_setup import setup_production_flow
 from lumirise_custom.setup.task_seed import seed_task_engine
+from lumirise_custom.setup.approval_setup import setup_approvals
 
 SALES_PLATFORM_ROLES = ["Pricing Manager", "Sales Approver", "Sales Auditor"]
 
@@ -26,8 +27,12 @@ def before_migrate():
 	"""Roles referenced by DocType JSON permissions must exist before the
 	schema sync imports those DocTypes."""
 	from lumirise_custom.setup.task_seed import ensure_ops_role
+	from lumirise_custom.setup.approval_setup import ensure_approval_roles
 
 	ensure_ops_role()
+	# Planning Manager / Purchase Head / MD / Factory Store Manager must exist before
+	# the workflows that reference them (and the new DocType JSON perms) are imported.
+	ensure_approval_roles()
 
 
 def after_migrate():
@@ -43,6 +48,13 @@ def after_migrate():
 	# the production-flow warehouse fields (Shop Floor / Production FG / Dispatch FG
 	# / PDI / Rejection) without clashing with the task-seed name-pattern defaults.
 	setup_production_flow()
+	# Ajay review 2026-06-14: Indent -> Planning Manager approval (not Purchase
+	# Manager); Purchase Order -> Purchase Head release approval. Runs last and
+	# upserts both workflows so the desired shape is reasserted every migrate.
+	setup_approvals()
+	# Daily self-test: dashboard Number Card (the Workspace shortcut + reports
+	# ship as files/fixtures; Number Cards do not).
+	setup_health_check()
 
 
 def init_settings():
@@ -62,6 +74,34 @@ def init_settings():
 			changed = True
 	if changed:
 		settings.save(ignore_permissions=True)
+
+
+def setup_health_check():
+	"""Idempotent: ensure the Health dashboard Number Card exists. Safe to run
+	repeatedly; never breaks the migrate if the card cannot be created."""
+	try:
+		if not frappe.db.exists("DocType", "Health Check Run"):
+			return
+		label = "Health: Red Runs"
+		if not frappe.db.exists("Number Card", {"label": label}):
+			frappe.get_doc(
+				{
+					"doctype": "Number Card",
+					"label": label,
+					"module": "Lumirise Custom",
+					"type": "Document Type",
+					"document_type": "Health Check Run",
+					"function": "Count",
+					"is_public": 1,
+					"show_percentage_stats": 0,
+					"filters_json": frappe.as_json(
+						[["Health Check Run", "overall_status", "=", "Red", False]]
+					),
+					"color": "#e24c4c",
+				}
+			).insert(ignore_permissions=True)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "setup_health_check failed")
 
 
 def ensure_roles():

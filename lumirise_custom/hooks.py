@@ -48,6 +48,8 @@ doctype_js = {
 	"Purchase Order": "public/js/purchase_order.js",
 	"Sales Order": "public/js/sales_order.js",
 	"Work Order": "public/js/work_order.js",
+	"Stock Entry": "public/js/stock_entry.js",
+	"Material Receipt": "public/js/material_receipt.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -157,15 +159,15 @@ after_migrate = "lumirise_custom.setup.after_migrate"
 # 	}
 # }
 
-# Ship the Lumirise customisations as fixtures (ordered: states before workflow).
+# Ship the Lumirise customisations as fixtures.
+# NOTE (Ajay review 2026-06-14): Workflows + their states/actions are NO LONGER
+# shipped as fixtures. They are managed idempotently in code via
+# lumirise_custom.setup.approval_setup.setup_approvals (run on after_migrate) so the
+# Indent->Planning Manager and Purchase Order->Purchase Head approval chains are the
+# single source of truth and cannot be overwritten by a stale fixture import.
 fixtures = [
 	{"dt": "Custom Field", "filters": [["module", "=", "Lumirise Custom"]]},
 	{"dt": "Property Setter", "filters": [["module", "=", "Lumirise Custom"]]},
-	{"dt": "Workflow State", "filters": [["name", "in", [
-		"Pending Purchase Manager", "Pending MD", "Approved", "Rejected", "Ordered"]]]},
-	{"dt": "Workflow Action Master", "filters": [["name", "in", [
-		"Submit for Approval", "Purchase Manager Approve", "MD Approve", "Reject"]]]},
-	{"dt": "Workflow", "filters": [["name", "in", ["Indent Approval"]]]},
 	{"dt": "Workspace", "filters": [["module", "=", "Lumirise Custom"]]},
 ]
 
@@ -189,6 +191,11 @@ doc_events = {
 		"before_submit": "lumirise_custom.events.customer_pdi_gate",
 		# Dispatched -> task Accounts to raise the Sales Invoice.
 		"on_submit": "lumirise_custom.task_engine.on_delivery_note_submit",
+	},
+	"Purchase Invoice": {
+		# Bill entered for full received qty -> auto-draft a Debit Note for the
+		# rejected qty (traced from the GRN), pending user approval. Fail-safe.
+		"on_submit": "lumirise_custom.accounts.auto_debit_note_for_rejections",
 	},
 	"Purchase Order": {
 		"on_submit": [
@@ -271,6 +278,10 @@ scheduler_events = {
 		"lumirise_custom.lumirise_custom.doctype.price_sheet.price_sheet.expire_pending_sheets",
 		# Overdue Lumirise Tasks -> escalate to the HOD (missed-deadline alert).
 		"lumirise_custom.task_engine.escalate_overdue_tasks",
+		# Daily self-test: verify the whole flow, pinpoint what broke + the fix,
+		# and push an in-ERP digest. Read-only on prod; synthetic tier on a test
+		# site only (gated). Runs last so the digest reflects the same-day escalation.
+		"lumirise_custom.health_check.run_daily_health_check",
 	],
 }
 

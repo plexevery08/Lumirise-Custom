@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-06-22 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "fg_item",
+  "item_name",
+  "uom",
+  "qty",
+  "available_qty",
+  "col_break_inspection",
+  "result",
+  "accepted_qty",
+  "rejected_qty",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "fg_item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "FG Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "fg_item.item_name",
+   "fetch_if_empty": 1,
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "fg_item.stock_uom",
+   "fetch_if_empty": 1,
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "label": "UOM",
+   "options": "UOM",
+   "read_only": 1
+  },
+  {
+   "description": "Boxes / units sent from the Finished Goods store to the Customer PDI store.",
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty to PDI",
+   "reqd": 1
+  },
+  {
+   "description": "On-hand in the Finished Goods store when the request was raised (informational).",
+   "fieldname": "available_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Available in FG",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_inspection",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Set during inspection. Derived from accepted / rejected qty on Complete Inspection.",
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Result",
+   "options": "\nPass\nFail",
+   "read_only": 1
+  },
+  {
+   "description": "Qty that passed — returns to the Finished Goods store. Defaults to full qty.",
+   "fieldname": "accepted_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Accepted Qty"
+  },
+  {
+   "description": "Qty that failed — routes to the Rejection store on return.",
+   "fieldname": "rejected_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rejected Qty"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Customer PDI Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
