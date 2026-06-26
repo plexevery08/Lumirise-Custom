@@ -10,9 +10,11 @@
   "purchase_order",
   "supplier",
   "mode",
+  "status",
   "col1",
   "pdi_date",
   "pdi_attachment",
+  "pdi_remarks",
   "sec_items",
   "items",
   "amended_from"
@@ -43,6 +45,18 @@
    "options": "Domestic\nImport"
   },
   {
+   "allow_on_submit": 1,
+   "default": "PDI Scheduled",
+   "description": "Driven by the flow buttons. Do not edit manually.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "PDI Scheduled\nPDI In Progress\nPDI Passed\nDispatched\nOn Hold\nFailed",
+   "read_only": 1
+  },
+  {
    "fieldname": "col1",
    "fieldtype": "Column Break",
    "label": "Col1"
@@ -57,6 +71,12 @@
    "fieldname": "pdi_attachment",
    "fieldtype": "Attach",
    "label": "Vendor PDI Report"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "pdi_remarks",
+   "fieldtype": "Small Text",
+   "label": "PDI Remarks"
   },
   {
    "fieldname": "sec_items",

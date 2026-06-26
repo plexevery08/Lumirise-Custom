@@ -10,10 +10,12 @@
   "inbound_logistics",
   "purchase_order",
   "mode",
+  "status",
   "col1",
   "iqc_date",
   "sampling_plan",
   "result",
+  "iqc_remarks",
   "sec_items",
   "items",
   "amended_from"
@@ -44,6 +46,18 @@
    "options": "Domestic\nImport"
   },
   {
+   "allow_on_submit": 1,
+   "default": "IQC Received",
+   "description": "Driven by the flow buttons. IQC Received → Testing → Passed → Moved to RM (set automatically when the GRN posts). Do not edit manually.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "IQC Received\nTesting\nPassed\nMoved to RM\nOn Hold\nRejected",
+   "read_only": 1
+  },
+  {
    "fieldname": "col1",
    "fieldtype": "Column Break",
    "label": "Col1"
@@ -61,11 +75,19 @@
   },
   {
    "default": "Accepted",
+   "description": "Auto-set from the per-line accepted / rejected qty.",
    "fieldname": "result",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Result",
-   "options": "Accepted\nPartial\nRejected"
+   "options": "Accepted\nPartial\nRejected",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "iqc_remarks",
+   "fieldtype": "Small Text",
+   "label": "IQC Remarks"
   },
   {
    "fieldname": "sec_items",

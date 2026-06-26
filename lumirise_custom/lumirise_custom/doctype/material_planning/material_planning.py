@@ -121,7 +121,16 @@ def _blocked_for_other_so(item, exclude_sos):
 	return flt(rows[0][0]) if rows else 0
 
 
-def _pending_po(item):
+# --- Inbound pipeline buckets (single source of truth, no double-count) --------
+# The open PO qty is the anchor. As a qty advances PO -> Vendor PDI -> Logistics ->
+# IQC -> GRN, it is counted at exactly ONE stage (its FURTHEST live document), so
+#   Pending PO + Pending PDI + In Transit + Pending IQC == OPEN  (always).
+# A qty rejected at any stage simply never advances, so it falls back into the
+# Pending PO residual = OPEN − (Pending PDI + In Transit + Pending IQC).
+
+
+def _open_po(item):
+	"""OPEN = qty still owed by vendors (on a submitted, non-closed PO, not GRN'd)."""
 	rows = frappe.db.sql(
 		"""
 		SELECT COALESCE(SUM(poi.qty - poi.received_qty), 0)
@@ -135,19 +144,50 @@ def _pending_po(item):
 
 
 def _pending_pdi(item):
+	"""Vendor PDI approved qty that is NOT yet handed to an Inbound Logistics doc."""
 	rows = frappe.db.sql(
 		"""SELECT COALESCE(SUM(i.approved_qty),0) FROM `tabVendor PDI Item` i
 		   JOIN `tabVendor PDI` p ON p.name=i.parent
-		   WHERE i.item_code=%(item)s AND p.docstatus=1""", {"item": item})
+		   WHERE i.item_code=%(item)s AND p.docstatus < 2
+		     AND NOT EXISTS (SELECT 1 FROM `tabInbound Logistics` l
+		                     WHERE l.vendor_pdi = p.name AND l.docstatus < 2)""",
+		{"item": item})
+	return flt(rows[0][0]) if rows else 0
+
+
+def _in_transit(item):
+	"""Qty dispatched / on-the-water: in a Logistics doc (Dispatched or In Transit)
+	that has NOT yet been handed to an IQC."""
+	rows = frappe.db.sql(
+		"""SELECT COALESCE(SUM(i.qty),0) FROM `tabInbound Logistics Item` i
+		   JOIN `tabInbound Logistics` l ON l.name=i.parent
+		   WHERE i.item_code=%(item)s AND l.docstatus < 2
+		     AND COALESCE(l.status,'') IN ('Dispatched','In Transit')
+		     AND NOT EXISTS (SELECT 1 FROM `tabIQC` q
+		                     WHERE q.inbound_logistics = l.name AND q.docstatus < 2)""",
+		{"item": item})
 	return flt(rows[0][0]) if rows else 0
 
 
 def _pending_iqc(item):
-	rows = frappe.db.sql(
+	"""Reached the warehouse but not yet GRN'd:
+	 (A) Logistics 'Reached Warehouse' with no IQC raised yet, plus
+	 (B) IQC accepted qty not yet moved to RM (GRN posted)."""
+	a = frappe.db.sql(
+		"""SELECT COALESCE(SUM(i.qty),0) FROM `tabInbound Logistics Item` i
+		   JOIN `tabInbound Logistics` l ON l.name=i.parent
+		   WHERE i.item_code=%(item)s AND l.docstatus < 2
+		     AND COALESCE(l.status,'') = 'Reached Warehouse'
+		     AND NOT EXISTS (SELECT 1 FROM `tabIQC` q
+		                     WHERE q.inbound_logistics = l.name AND q.docstatus < 2)""",
+		{"item": item})
+	b = frappe.db.sql(
 		"""SELECT COALESCE(SUM(i.accepted_qty),0) FROM `tabIQC Item` i
-		   JOIN `tabIQC` p ON p.name=i.parent
-		   WHERE i.item_code=%(item)s AND p.docstatus=1""", {"item": item})
-	return flt(rows[0][0]) if rows else 0
+		   JOIN `tabIQC` q ON q.name=i.parent
+		   WHERE i.item_code=%(item)s AND q.docstatus < 2
+		     AND COALESCE(q.status,'') != 'Moved to RM'""",
+		{"item": item})
+	return (flt(a[0][0]) if a else 0) + (flt(b[0][0]) if b else 0)
 
 
 def _indent_balance(item):
@@ -193,14 +233,26 @@ def compute_plan(sales_orders):
 				rm_avail = _stock(comp, rm_wh)
 				blocked = _blocked_for_other_so(comp, exclude)
 				usable = max(0, rm_avail - blocked)
-				to_order = max(0, comp_required - usable)
+
+				# Live inbound pipeline, each qty in exactly one bucket.
+				open_po = _open_po(comp)            # total still owed by vendors
+				p = _pending_pdi(comp)              # at Vendor PDI, not dispatched
+				t = _in_transit(comp)               # dispatched / in transit
+				r = _pending_iqc(comp)              # reached, IQC not passed/GRN'd
+				pending_po = max(0, open_po - (p + t + r))  # residual = not started
+				indent_bal = _indent_balance(comp)  # on indent, not yet PO'd
+
+				# Net the WHOLE incoming pipeline (open PO + indent) so Planning never
+				# re-orders qty already on its way in.
+				to_order = max(0, comp_required - usable - open_po - indent_bal)
+
 				components.append({
 					"sales_order": so, "fg_item": soi.item_code, "component_item": comp,
 					"required_qty": comp_required, "rm_available": rm_avail,
 					"blocked_for_other_so": blocked,
 					"available_after_blocking": usable,
-					"pending_po": _pending_po(comp), "pending_pdi": _pending_pdi(comp),
-					"pending_iqc": _pending_iqc(comp), "indent_balance": _indent_balance(comp),
+					"pending_po": pending_po, "pending_pdi": p, "in_transit": t,
+					"pending_iqc": r, "indent_balance": indent_bal,
 					"to_be_ordered": to_order,
 				})
 	return {"fg_plan": fg_plan, "components": components}

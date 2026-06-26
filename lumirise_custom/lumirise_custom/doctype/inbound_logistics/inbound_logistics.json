@@ -10,12 +10,17 @@
   "vendor_pdi",
   "purchase_order",
   "mode",
+  "status",
+  "shipment_date",
+  "expected_arrival_date",
+  "container_no",
   "col1",
   "lr_number",
   "lr_date",
   "vehicle_no",
   "transporter",
-  "container_no",
+  "no_of_boxes",
+  "current_location",
   "sec_items",
   "items",
   "amended_from"
@@ -43,6 +48,18 @@
    "fieldtype": "Select",
    "label": "Mode",
    "options": "Road\nSea"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Dispatched",
+   "description": "Driven by the flow buttons. Dispatched \u2192 In Transit \u2192 Reached Warehouse. Do not edit manually.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Dispatched\nIn Transit\nReached Warehouse",
+   "read_only": 1
   },
   {
    "fieldname": "col1",
@@ -76,6 +93,31 @@
    "label": "Container No"
   },
   {
+   "allow_on_submit": 1,
+   "fieldname": "shipment_date",
+   "fieldtype": "Date",
+   "label": "Shipment / Dispatch Date"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "expected_arrival_date",
+   "fieldtype": "Date",
+   "label": "Expected Arrival Date"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "no_of_boxes",
+   "fieldtype": "Int",
+   "label": "No. of Boxes"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Latest known location while in transit (updated by Logistics).",
+   "fieldname": "current_location",
+   "fieldtype": "Data",
+   "label": "Current Location"
+  },
+  {
    "fieldname": "sec_items",
    "fieldtype": "Section Break",
    "label": "Items"
@@ -101,7 +143,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-03 19:54:09.621907",
+ "modified": "2026-06-23 19:14:18.335878",
  "modified_by": "Administrator",
  "module": "Lumirise Custom",
  "name": "Inbound Logistics",

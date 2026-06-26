@@ -15,6 +15,7 @@
   "available_after_blocking",
   "pending_po",
   "pending_pdi",
+  "in_transit",
   "pending_iqc",
   "indent_balance",
   "to_be_ordered"
@@ -54,7 +55,7 @@
    "label": "RM Available"
   },
   {
-   "description": "Reserved by submitted Work Orders for other orders.",
+   "description": "Reserved by submitted Work Orders for other orders (Blocked For).",
    "fieldname": "blocked_for_other_so",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -67,16 +68,25 @@
    "label": "Available After Blocking"
   },
   {
+   "description": "On PO, vendor PDI not started = OPEN − (Pending PDI + In Transit + Pending IQC). Residual, so buckets always sum to the open PO qty.",
    "fieldname": "pending_po",
    "fieldtype": "Float",
    "label": "Pending PO"
   },
   {
+   "description": "Vendor PDI approved, not yet handed to Inbound Logistics.",
    "fieldname": "pending_pdi",
    "fieldtype": "Float",
    "label": "Pending PDI"
   },
   {
+   "description": "Dispatched / on-the-water: in an Inbound Logistics doc, not yet reached the warehouse / IQC.",
+   "fieldname": "in_transit",
+   "fieldtype": "Float",
+   "label": "In Transit"
+  },
+  {
+   "description": "Reached the warehouse, IQC not yet passed / GRN'd.",
    "fieldname": "pending_iqc",
    "fieldtype": "Float",
    "label": "Pending IQC"

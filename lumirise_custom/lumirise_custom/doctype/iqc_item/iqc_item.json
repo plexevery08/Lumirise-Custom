@@ -8,8 +8,10 @@
  "field_order": [
   "item_code",
   "received_qty",
+  "under_test_qty",
   "accepted_qty",
   "rejected_qty",
+  "on_hold_qty",
   "reject_reason",
   "disposition"
  ],
@@ -29,6 +31,12 @@
    "label": "Received Qty"
   },
   {
+   "description": "Qty currently under test (not yet accepted / rejected).",
+   "fieldname": "under_test_qty",
+   "fieldtype": "Float",
+   "label": "Under Test Qty"
+  },
+  {
    "fieldname": "accepted_qty",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -40,6 +48,12 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Rejected Qty"
+  },
+  {
+   "description": "Quarantined pending a decision (not accepted, not yet rejected).",
+   "fieldname": "on_hold_qty",
+   "fieldtype": "Float",
+   "label": "On Hold Qty"
   },
   {
    "fieldname": "reject_reason",

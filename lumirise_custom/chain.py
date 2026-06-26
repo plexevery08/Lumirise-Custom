@@ -5,6 +5,7 @@
 # Each is whitelisted for frappe.model.open_mapped_doc on the client.
 
 import frappe
+from frappe.utils import flt
 
 STORES = "Stores - L"
 
@@ -27,8 +28,11 @@ def make_inbound_logistics(source_name, target_doc=None):
 	doc.vendor_pdi = vpdi.name
 	doc.purchase_order = vpdi.purchase_order
 	doc.mode = "Sea" if vpdi.mode == "Import" else "Road"
+	doc.status = "Dispatched"
+	# Only the qty accepted at Vendor PDI moves forward into transit.
 	for it in vpdi.items:
-		doc.append("items", {"item_code": it.item_code, "qty": it.approved_qty})
+		if flt(it.approved_qty) > 0:
+			doc.append("items", {"item_code": it.item_code, "qty": it.approved_qty})
 	return doc
 
 
@@ -38,6 +42,7 @@ def make_iqc(source_name, target_doc=None):
 	doc = frappe.new_doc("IQC")
 	doc.inbound_logistics = log.name
 	doc.purchase_order = log.purchase_order
+	doc.status = "IQC Received"
 	for it in log.items:
 		doc.append("items", {
 			"item_code": it.item_code, "received_qty": it.qty,
@@ -81,6 +86,42 @@ def make_grn(source_name, target_doc=None):
 		if flt(r.rejected_qty) > 0:
 			it.rejected_warehouse = rej_wh
 	return pr
+
+
+# --- GRN -> IQC status sync (closes the inbound chain) -----------------------
+# The GRN (Purchase Receipt) carries no link back to the IQC, but the IQC gate and
+# make_grn both work PO-scoped, so we match the same way: on GRN submit, any passed
+# IQC for the GRN's PO(s) is flipped to "Moved to RM". This is what removes its
+# accepted qty from the "Pending IQC" bucket in Material Planning (the qty has now
+# landed in the RM store as real Bin stock) — without it the qty would double-count.
+# Assumption (v1, same as iqc_gate): one open passed IQC per PO per GRN.
+
+def _grn_pos(doc):
+	return {row.purchase_order for row in doc.items if getattr(row, "purchase_order", None)}
+
+
+def mark_iqc_moved_to_rm(doc, method=None):
+	"""On GRN submit: flip the passed IQC(s) for this PO to 'Moved to RM'."""
+	if doc.get("is_subcontracted"):
+		return  # subcontracting service PR — not an RM GRN, no IQC to close
+	for po in _grn_pos(doc):
+		for iqc in frappe.get_all(
+			"IQC",
+			filters={"purchase_order": po, "docstatus": 1, "status": "Passed"},
+		):
+			frappe.db.set_value("IQC", iqc.name, "status", "Moved to RM")
+
+
+def revert_iqc_moved_to_rm(doc, method=None):
+	"""On GRN cancel: re-open the IQC(s) so the qty returns to 'Pending IQC'."""
+	if doc.get("is_subcontracted"):
+		return
+	for po in _grn_pos(doc):
+		for iqc in frappe.get_all(
+			"IQC",
+			filters={"purchase_order": po, "docstatus": 1, "status": "Moved to RM"},
+		):
+			frappe.db.set_value("IQC", iqc.name, "status", "Passed")
 
 
 @frappe.whitelist()

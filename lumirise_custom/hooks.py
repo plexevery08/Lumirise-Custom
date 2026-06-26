@@ -185,7 +185,12 @@ doc_events = {
 			"lumirise_custom.status_sync.on_purchase_receipt_submit",
 			# GRN posted -> refresh item cost + dependent BOM costs.
 			"lumirise_custom.costing.on_purchase_receipt",
+			# GRN posted -> close the IQC (status Moved to RM) so its accepted qty
+			# leaves the "Pending IQC" bucket in Material Planning (now real stock).
+			"lumirise_custom.chain.mark_iqc_moved_to_rm",
 		],
+		# GRN cancelled -> re-open the IQC so the qty returns to "Pending IQC".
+		"on_cancel": "lumirise_custom.chain.revert_iqc_moved_to_rm",
 	},
 	"Delivery Note": {
 		"before_submit": "lumirise_custom.events.customer_pdi_gate",

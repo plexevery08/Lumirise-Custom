@@ -9,6 +9,9 @@
   "item_code",
   "po_qty",
   "approved_qty",
+  "rejected_qty",
+  "pending_qty",
+  "result",
   "container_no",
   "pi_number",
   "remarks"
@@ -30,12 +33,34 @@
    "read_only": 1
   },
   {
-   "description": "Cannot exceed PO Qty (Focus rule).",
+   "description": "Accepted at vendor inspection — moves forward to Logistics. Cannot exceed PO Qty (Focus rule).",
    "fieldname": "approved_qty",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Approved Qty",
+   "label": "Accepted Qty",
    "reqd": 1
+  },
+  {
+   "description": "Rejected at vendor inspection — vendor re-makes under the same PO (stays in Pending PO).",
+   "fieldname": "rejected_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rejected Qty"
+  },
+  {
+   "description": "PO Qty − Accepted − Rejected (auto).",
+   "fieldname": "pending_qty",
+   "fieldtype": "Float",
+   "label": "Pending Qty",
+   "read_only": 1
+  },
+  {
+   "default": "Pass",
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "label": "Result",
+   "options": "Pass\nFail",
+   "read_only": 1
   },
   {
    "fieldname": "container_no",
