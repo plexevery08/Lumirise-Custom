@@ -32,20 +32,5 @@ function make_plan(indents) {
 	});
 }
 
-frappe.listview_settings["Indent"] = {
-	onload(listview) {
-		listview.page.add_action_item(__("Create Purchase Plan (merge)"), () => {
-			const names = listview.get_checked_items().map((d) => d.name);
-			if (!names.length) {
-				frappe.msgprint(__("Select one or more Indents first."));
-				return;
-			}
-			make_plan(names);
-		});
-	},
-	get_indicator(doc) {
-		if (doc.workflow_state === "Ordered") return [__("Ordered"), "green", "workflow_state,=,Ordered"];
-		if (doc.docstatus === 1) return [__("Approved"), "blue", "docstatus,=,1"];
-		return [__("Draft"), "orange", "docstatus,=,0"];
-	},
-};
+// NOTE: Indent LIST settings (Pending for PO filter, merge action, indicators)
+// live in indent_list.js — the form controller is not loaded on the list page.

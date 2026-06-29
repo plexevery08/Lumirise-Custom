@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:defect_code",
+ "creation": "2026-06-26 00:00:00",
+ "description": "Lumirise defect master (Quality). One row per inspection parameter / defect, each classified A (Critical) / B (Major) / C (Minor) to drive AQL acceptance. Source for the Reject Reason on IQC and Customer PDI. Seeded from the discovery-call AQL spec (IS:2500) — QA to verify the class of each against the page-3/3 defect annexure before go-live.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "defect_code",
+  "parameter",
+  "defect_class",
+  "category",
+  "col_break",
+  "test_reference",
+  "applies_to",
+  "is_active",
+  "sec_desc",
+  "description"
+ ],
+ "fields": [
+  {
+   "description": "Short code, e.g. HV, IR, CTC. Used as the document name.",
+   "fieldname": "defect_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Defect Code",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "Human name of the inspection parameter / defect.",
+   "fieldname": "parameter",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Parameter / Defect",
+   "reqd": 1
+  },
+  {
+   "description": "A = Critical (AQL 0.10), B = Major (AQL 1.50), C = Minor (AQL 2.50).",
+   "fieldname": "defect_class",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Class",
+   "options": "A\nB\nC",
+   "reqd": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Category",
+   "options": "Safety\nElectrical\nPhotometric\nVisual\nDimensional\nMarking\nPackaging"
+  },
+  {
+   "fieldname": "col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Standard / test method reference, e.g. IS 10322, BIS-R.",
+   "fieldname": "test_reference",
+   "fieldtype": "Data",
+   "label": "Test / Standard Reference"
+  },
+  {
+   "default": "Both",
+   "fieldname": "applies_to",
+   "fieldtype": "Select",
+   "label": "Applies To",
+   "options": "Both\nIncoming (IQC)\nFinished Goods (PDI)"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "sec_desc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description / Acceptance Note"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-26 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Lumirise Defect Code",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Lumirise Operations"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "defect_class",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 1
+}

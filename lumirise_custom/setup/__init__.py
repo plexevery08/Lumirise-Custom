@@ -8,6 +8,8 @@ import frappe
 
 from lumirise_custom.setup.costing_fields import create_costing_fields
 from lumirise_custom.setup.flow_fields import create_flow_fields
+from lumirise_custom.setup.bom_fields import create_bom_fields
+from lumirise_custom.setup.purchase_reco_fields import create_purchase_reco_fields
 from lumirise_custom.setup.production_setup import setup_production_flow
 from lumirise_custom.setup.task_seed import seed_task_engine
 from lumirise_custom.setup.approval_setup import setup_approvals
@@ -39,6 +41,9 @@ def after_migrate():
 	ensure_roles()
 	create_costing_fields()
 	create_flow_fields()
+	create_bom_fields()
+	# BOM Reconciliation tab (Tab Break + HTML) on the Purchase Order.
+	create_purchase_reco_fields()
 	seed_credit_terms()
 	init_settings()
 	# Task / Notification / Kanban engine: role, department map, Kanban board.
@@ -55,6 +60,11 @@ def after_migrate():
 	# Daily self-test: dashboard Number Card (the Workspace shortcut + reports
 	# ship as files/fixtures; Number Cards do not).
 	setup_health_check()
+	# Quality: seed the 17-parameter defect master (A/B/C class) that drives the
+	# AQL engine and the IQC / Customer PDI reject-reason link.
+	seed_defect_master()
+	# Quality: seed native QI Parameters + RM-incoming / FG-in-house templates.
+	seed_quality_inspection_templates()
 
 
 def init_settings():
@@ -102,6 +112,28 @@ def setup_health_check():
 			).insert(ignore_permissions=True)
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "setup_health_check failed")
+
+
+def seed_defect_master():
+	"""Idempotent: insert the seed Lumirise Defect Codes (QA edits in-place)."""
+	try:
+		if not frappe.db.exists("DocType", "Lumirise Defect Code"):
+			return
+		from lumirise_custom.lumirise_custom.doctype.lumirise_defect_code.lumirise_defect_code import (
+			seed_defect_codes,
+		)
+		seed_defect_codes()
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "seed_defect_master failed")
+
+
+def seed_quality_inspection_templates():
+	"""Idempotent: seed native QI Parameters + the two Lumirise QI templates."""
+	try:
+		from lumirise_custom.setup.quality_setup import seed_quality_templates
+		seed_quality_templates()
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "seed_quality_inspection_templates failed")
 
 
 def ensure_roles():

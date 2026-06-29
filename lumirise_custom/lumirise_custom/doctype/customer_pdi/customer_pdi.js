@@ -68,6 +68,41 @@ frappe.ui.form.on("Customer PDI", {
 		const status = frm.doc.status;
 		const is_store = cpdi_is_store(frm);
 
+		// AQL sampling plan for the FG lot (how many of the batch to inspect).
+		frm.add_custom_button(__("AQL Sampling Plan"), () => {
+			const lot = (frm.doc.items || []).reduce((s, r) => s + (r.qty || 0), 0);
+			if (!lot) {
+				frappe.msgprint(__("Add the FG item rows (with qty) first."));
+				return;
+			}
+			frappe.call({
+				method: "lumirise_custom.quality.aql_for_lot",
+				args: { lot_size: lot, defect_class: "C" },
+				freeze: true,
+			}).then((r) => {
+				const promises = ["A", "B", "C"].map((c) =>
+					frappe.call({
+						method: "lumirise_custom.quality.aql_for_lot",
+						args: { lot_size: lot, defect_class: c },
+					})
+				);
+				Promise.all(promises).then((res) => {
+					const rows = res.map((x) => x.message).map(
+						(p) =>
+							`Class ${p.defect_class} · AQL ${p.aql} · inspect <b>${p.sample_size}</b> of ${p.lot_size}` +
+							` · Accept ≤${p.accept}, Reject ≥${p.reject}` +
+							(p.inspect_100pct ? " (100%)" : "")
+					);
+					frappe.msgprint({
+						title: __("AQL Sampling Plan (IS:2500, Level I)"),
+						message: rows.join("<br>") +
+							"<br><br><i>Verify Accept/Reject numbers against the IS:2500 master before vendor claims.</i>",
+						indicator: "blue",
+					});
+				});
+			});
+		});
+
 		// Links to the stock entries this PDI posted.
 		// if (frm.doc.send_stock_entry) {
 		// 	frm.add_custom_button(

@@ -83,6 +83,30 @@ frappe.ui.form.on("IQC", {
 			);
 		}
 
+		// AQL sampling plan: lot size -> Level I sample size + Accept/Reject per class.
+		if (["IQC Received", "Testing"].includes(status)) {
+			frm.add_custom_button(__("AQL Sampling Plan"), () => {
+				const go = () =>
+					frappe.call({
+						method: "lumirise_custom.quality.apply_to_iqc",
+						args: { docname: frm.doc.name },
+						freeze: true,
+						freeze_message: __("Computing AQL plan…"),
+					}).then((r) => {
+						frm.reload_doc();
+						if (r && r.message) {
+							frappe.msgprint({
+								title: __("AQL Sampling Plan (IS:2500, Level I)"),
+								message: (r.message.sampling_plan || "").split(" | ").join("<br>"),
+								indicator: "blue",
+							});
+						}
+					});
+				// Persist any received-qty edits first so the lot size is current.
+				return frm.is_dirty() ? frm.save().then(go) : go();
+			});
+		}
+
 		// Park on hold from any open state.
 		if (["IQC Received", "Testing"].includes(status)) {
 			frm.add_custom_button(__("Put On Hold"), () =>

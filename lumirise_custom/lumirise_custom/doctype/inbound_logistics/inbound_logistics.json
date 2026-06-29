@@ -9,6 +9,7 @@
  "field_order": [
   "vendor_pdi",
   "purchase_order",
+  "type",
   "mode",
   "status",
   "shipment_date",
@@ -137,13 +138,19 @@
    "options": "Inbound Logistics",
    "print_hide": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Domestic\nImport"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-23 19:14:18.335878",
+ "modified": "2026-06-27 02:28:45.238138",
  "modified_by": "Administrator",
  "module": "Lumirise Custom",
  "name": "Inbound Logistics",

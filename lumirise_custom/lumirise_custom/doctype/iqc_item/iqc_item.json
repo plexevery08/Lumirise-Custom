@@ -12,6 +12,8 @@
   "accepted_qty",
   "rejected_qty",
   "on_hold_qty",
+  "defect_code",
+  "defect_class",
   "reject_reason",
   "disposition"
  ],
@@ -56,9 +58,24 @@
    "label": "On Hold Qty"
   },
   {
+   "description": "Classified defect from the Lumirise Defect Code master (drives the AQL class).",
+   "fieldname": "defect_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Defect",
+   "options": "Lumirise Defect Code"
+  },
+  {
+   "fetch_from": "defect_code.defect_class",
+   "fieldname": "defect_class",
+   "fieldtype": "Data",
+   "label": "Class",
+   "read_only": 1
+  },
+  {
    "fieldname": "reject_reason",
    "fieldtype": "Data",
-   "label": "Reject Reason"
+   "label": "Reject Reason / Note"
   },
   {
    "fieldname": "disposition",

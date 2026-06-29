@@ -31,6 +31,36 @@ class PurchasePlan(Document):
 
 
 @frappe.whitelist()
+def get_indent_qty(plan_name=None, indent_refs=None):
+	"""Total indented qty per item across the plan's source Indents — the baseline
+	for the Indent-vs-Order balance table (Indent Qty − Order Qty = Balance).
+	Returns {item_code: indent_qty}."""
+	names = set()
+	# Source 1: the plan-level indent_refs (or an explicit override).
+	refs = indent_refs
+	if not refs and plan_name:
+		refs = frappe.db.get_value("Purchase Plan", plan_name, "indent_refs")
+	for n in (refs or "").replace("\n", ",").split(","):
+		if n.strip():
+			names.add(n.strip())
+	# Source 2: per-line source_indents (robust if indent_refs is blank).
+	if plan_name and frappe.db.exists("Purchase Plan", plan_name):
+		for row in frappe.get_all("Purchase Plan Item", filters={"parent": plan_name},
+		                          fields=["source_indents"]):
+			for n in (row.source_indents or "").replace("\n", ",").split(","):
+				if n.strip():
+					names.add(n.strip())
+	qty = {}
+	for name in names:
+		if not frappe.db.exists("Indent", name):
+			continue
+		for row in frappe.get_all("Indent Item", filters={"parent": name},
+		                          fields=["item_code", "qty"]):
+			qty[row.item_code] = flt(qty.get(row.item_code, 0)) + flt(row.qty)
+	return qty
+
+
+@frappe.whitelist()
 def create_purchase_orders(plan_name):
 	"""Group the plan's lines by supplier and create one Draft Purchase Order per
 	supplier. Returns the list of created PO names. Idempotent guard: refuses to run

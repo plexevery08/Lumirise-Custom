@@ -239,12 +239,22 @@ doc_events = {
 		"on_submit": [
 			"lumirise_custom.status_sync.on_work_order_submit",
 			"lumirise_custom.task_engine.on_work_order_submit",
+			# Lock the BOM the floor is now building from.
+			"lumirise_custom.bom_lock.lock_bom_on_work_order",
 		],
 		"on_update": "lumirise_custom.status_sync.on_work_order_update",
 	},
 	"BOM": {
-		"validate": "lumirise_custom.costing.bom_validate",
-		"on_update_after_submit": "lumirise_custom.costing.bom_on_update_after_submit",
+		"validate": [
+			"lumirise_custom.costing.bom_validate",
+			# Keep a locked, live BOM from changing outside a BOM Change Request.
+			"lumirise_custom.bom_lock.guard_bom_change",
+		],
+		"on_update_after_submit": [
+			"lumirise_custom.costing.bom_on_update_after_submit",
+			# A submitted BOM's is_active/is_default toggles run here, not validate.
+			"lumirise_custom.bom_lock.guard_bom_change",
+		],
 	},
 	# ---- Task / Notification / Kanban engine (auto-create operational cards) ----
 	"Sales Order": {
