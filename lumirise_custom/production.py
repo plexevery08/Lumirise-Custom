@@ -112,8 +112,18 @@ def issue_to_shop_floor(work_order, qty=None):
 @frappe.whitelist()
 def transfer_to_line(work_order, line_warehouse, qty):
 	"""Focus 'Internal Stock Transfer to Line': move the kit Shop Floor → the chosen
-	line (native Material Transfer for Manufacture, so WO.transferred increments).
-	Supports splitting one Work Order across several lines."""
+	line (native Material Transfer for Manufacture, so WO.transferred increments on
+	submit). Supports splitting one Work Order across several lines.
+
+	The entry is left as a DRAFT — we route the user to the Stock Entry to review the
+	component rows and warehouses, then they submit it themselves. WO.transferred only
+	moves on submit, so a draft never inflates the accountability.
+
+	Two ceilings protect the qty:
+	  * the Work Order's pending-to-transfer (never build more than the order needs), and
+	  * what is physically on the shop floor — i.e. what the Material Request / pick list
+	    actually delivered. You cannot send a line more kit than the shop floor holds;
+	    to send more, raise another Material Request first."""
 	frappe.has_permission("Work Order", "write", work_order, throw=True)
 	wo = _get_submitted_wo(work_order)
 	_validate_line(line_warehouse)
@@ -124,19 +134,24 @@ def transfer_to_line(work_order, line_warehouse, qty):
 	if qty > pending + 0.001:
 		frappe.throw(_("Transfer qty {0} exceeds the pending qty {1} to transfer on this Work Order.").format(qty, pending))
 
+	available = shop_floor_available_qty(work_order)
+	if qty > available + 0.001:
+		frappe.throw(_("You cannot transfer more than what is available at the shop floor"))
+
 	floor_wh = config.shop_floor_warehouse()
 
-	def _to_line(se):
-		se.from_warehouse = floor_wh
-		se.to_warehouse = line_warehouse
-		se.custom_narration = f"{line_warehouse}"
-		for row in se.items:
-			row.s_warehouse = floor_wh
-			row.t_warehouse = line_warehouse
-
 	se_dict = _native_se_dict(work_order, "Material Transfer for Manufacture", qty=qty)
-	se = _submit_se(se_dict, "Internal Stock Transfer to Line", customise=_to_line)
-	return {"stock_entry": se.name, "line_warehouse": line_warehouse, "qty": qty}
+	se = frappe.get_doc(se_dict)
+	se.stock_entry_type = "Internal Stock Transfer to Line"
+	se.from_warehouse = floor_wh
+	se.to_warehouse = line_warehouse
+	se.custom_narration = f"{line_warehouse}"
+	for row in se.items:
+		row.s_warehouse = floor_wh
+		row.t_warehouse = line_warehouse
+	se.flags.ignore_permissions = True
+	se.insert(ignore_permissions=True)  # DRAFT — user reviews on the SE form and submits
+	return {"stock_entry": se.name, "line_warehouse": line_warehouse, "qty": qty, "docstatus": 0}
 
 
 @frappe.whitelist()
@@ -299,6 +314,97 @@ def move_to_dispatch(work_order=None, item_code=None, qty=None):
 
 def _qty_in_warehouse(item_code, warehouse):
 	return flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty"))
+
+
+@frappe.whitelist()
+def shop_floor_available_qty(work_order):
+	"""How many *lights'* worth of the BOM kit is physically sitting on the Shop
+	Floor for this Work Order right now — the true ceiling for a line transfer.
+
+	The line-transfer qty must default from what was actually issued to (and still
+	on) the shop floor, NOT from the Work Order's planned qty (change-list 16.1).
+	We take the min over the WO's required components of
+	(component qty on the shop floor) ÷ (component qty per light), which is the
+	number of complete kits available to send to a line."""
+	wo = _get_submitted_wo(work_order)
+	floor_wh = config.shop_floor_warehouse()
+	wo_qty = flt(wo.qty)
+	if wo_qty <= 0:
+		return 0.0
+
+	available = None
+	for item in wo.required_items:
+		per_light = flt(item.required_qty) / wo_qty
+		if per_light <= 0:
+			continue
+		on_floor = _qty_in_warehouse(item.item_code, floor_wh)
+		lights = on_floor / per_light
+		available = lights if available is None else min(available, lights)
+
+	# Never suggest more than the Work Order still has left to transfer.
+	pending = wo_qty - flt(wo.material_transferred_for_manufacturing)
+	return flt(min(available or 0.0, pending), 3)
+
+
+@frappe.whitelist()
+def line_transfer_breakdown(work_order):
+	"""Full per-Work-Order qty picture for the Line Transfer tab:
+	  * headline totals (required / transferred / produced / balances / transferable now)
+	  * a per-line table — how much was transferred to each line, how much has been
+	    produced from it, and how much is still WIP on that line.
+
+	Transferred-per-line = sum of fg_completed_qty on the submitted
+	'Internal Stock Transfer to Line' entries (grouped by their target line).
+	Produced-per-line = the 'Receipt from Production' entries, attributed to the line
+	their raw material was consumed from."""
+	wo = frappe.get_doc("Work Order", work_order)
+	wo_qty = flt(wo.qty)
+	transferred_total = flt(wo.material_transferred_for_manufacturing)
+	produced_total = flt(wo.produced_qty)
+
+	if wo.docstatus != 1:
+		return {"not_submitted": True, "wo_qty": wo_qty}
+
+	line_whs = {l["line_warehouse"] for l in config.production_lines()}
+	per_line = {}
+
+	def _row(line):
+		return per_line.setdefault(line, {"line": line, "transferred": 0.0, "produced": 0.0})
+
+	for se in frappe.get_all(
+		"Stock Entry",
+		filters={"work_order": work_order, "stock_entry_type": "Internal Stock Transfer to Line", "docstatus": 1},
+		fields=["to_warehouse", "fg_completed_qty"],
+	):
+		_row(se.to_warehouse)["transferred"] += flt(se.fg_completed_qty)
+
+	for receipt in frappe.get_all(
+		"Stock Entry",
+		filters={"work_order": work_order, "stock_entry_type": "Receipt from Production", "docstatus": 1},
+		fields=["name", "fg_completed_qty"],
+	):
+		rows = frappe.get_all("Stock Entry Detail", filters={"parent": receipt.name}, fields=["s_warehouse"])
+		line = next((r.s_warehouse for r in rows if r.s_warehouse in line_whs), None)
+		if line:
+			_row(line)["produced"] += flt(receipt.fg_completed_qty)
+
+	lines = []
+	for row in per_line.values():
+		row["wip_on_line"] = flt(row["transferred"] - row["produced"], 3)
+		lines.append(row)
+	lines.sort(key=lambda r: r["line"])
+
+	return {
+		"not_submitted": False,
+		"wo_qty": wo_qty,
+		"production_item": wo.production_item,
+		"transferred_total": transferred_total,
+		"produced_total": produced_total,
+		"balance_to_transfer": flt(wo_qty - transferred_total, 3),
+		"balance_to_produce": flt(wo_qty - produced_total, 3),
+		"transferable_now": shop_floor_available_qty(work_order),
+		"lines": lines,
+	}
 
 
 @frappe.whitelist()

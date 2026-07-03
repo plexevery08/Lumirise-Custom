@@ -5,20 +5,32 @@ frappe.ui.form.on("Price Sheet", {
 	},
 
 	refresh(frm) {
-		frm.set_query("master_box_finish", () => ({
-			query: "lumirise_custom.queries.master_box_finish_query",
-		}));
-		// Mono box finish picker limited to finishes priced for the selected items.
-		frm.set_query("box_finish", "mono_box_finishes", () => ({
-			query: "lumirise_custom.queries.mono_box_finish_query",
-			filters: {
-				items: (frm.doc.products || []).map((p) => p.item),
-			},
-		}));
-		// Credit term picker: credit terms only.
-		frm.set_query("credit_term", () => ({
-			filters: { payment_type: "Credit" },
-		}));
+		// Field-query filters, wrapped so a control-query quirk can never abort
+		// refresh() before the approval buttons below are added. (India Compliance's
+		// Form subclass + the child-table set_query form on a Table MultiSelect used
+		// to throw here, silently hiding the Approve / Prepare / Reject buttons.)
+		try {
+			frm.set_query("master_box_finish", () => ({
+				query: "lumirise_custom.queries.master_box_finish_query",
+			}));
+			// Mono box finish picker limited to finishes priced for the selected items.
+			// NOTE: mono_box_finishes is a Table MultiSelect (no .grid), so the query
+			// must be set on the field itself (2-arg form) — the child-table 3-arg form
+			// `set_query("box_finish", "mono_box_finishes", ...)` crashes on `.grid`.
+			frm.set_query("mono_box_finishes", () => ({
+				query: "lumirise_custom.queries.mono_box_finish_query",
+				filters: {
+					items: (frm.doc.products || []).map((p) => p.item),
+				},
+			}));
+			// Credit term picker: credit terms only.
+			frm.set_query("credit_term", () => ({
+				filters: { payment_type: "Credit" },
+			}));
+		} catch (e) {
+			// eslint-disable-next-line no-console
+			console.warn("Price Sheet: skipping field-query setup —", e);
+		}
 		if (frm.doc.docstatus === 0 && !frm.is_new()) {
 			frm.set_intro(
 				__("Rows regenerate from the configuration on every save."),
@@ -33,6 +45,19 @@ frappe.ui.form.on("Price Sheet", {
 				frm.add_custom_button(__("Prepare Approval Lines"), async () => {
 					await frm.call("populate_approval_items");
 					frm.reload_doc();
+				});
+			}
+			// Calculate (preview) the system price for every line WITHOUT approving —
+			// fills base/calculated/variance and seeds a blank customer price with the
+			// calculated price. Enter the agreed qty (>= min) on each line first.
+			if ((frm.doc.approval_items || []).length) {
+				frm.add_custom_button(__("Calculate Prices"), async () => {
+					await frm.call("preview_prices");
+					frm.reload_doc();
+					frappe.show_alert({
+						message: __("Prices calculated — review base/calculated/customer price on each line."),
+						indicator: "blue",
+					});
 				});
 			}
 			frm.add_custom_button(

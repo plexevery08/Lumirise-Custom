@@ -10,6 +10,7 @@ from lumirise_custom.setup.costing_fields import create_costing_fields
 from lumirise_custom.setup.flow_fields import create_flow_fields
 from lumirise_custom.setup.bom_fields import create_bom_fields
 from lumirise_custom.setup.purchase_reco_fields import create_purchase_reco_fields
+from lumirise_custom.setup.wo_line_transfer_fields import create_wo_line_transfer_fields
 from lumirise_custom.setup.production_setup import setup_production_flow
 from lumirise_custom.setup.task_seed import seed_task_engine
 from lumirise_custom.setup.approval_setup import setup_approvals
@@ -44,6 +45,8 @@ def after_migrate():
 	create_bom_fields()
 	# BOM Reconciliation tab (Tab Break + HTML) on the Purchase Order.
 	create_purchase_reco_fields()
+	# Line Transfer tab (Tab Break + HTML) on the Work Order — per-line qty breakdown.
+	create_wo_line_transfer_fields()
 	seed_credit_terms()
 	init_settings()
 	# Task / Notification / Kanban engine: role, department map, Kanban board.

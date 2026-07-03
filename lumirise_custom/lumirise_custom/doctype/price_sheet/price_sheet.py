@@ -102,14 +102,21 @@ class PriceSheet(Document):
 		self.save()
 		return len(self.approval_items)
 
-	def compute_approval_lines(self):
+	def compute_approval_lines(self, for_preview=False):
 		"""Server-side recompute of every selected line — client values are
 		never trusted for calculated prices (the platform recomputed in the
-		RPC the same way)."""
+		RPC the same way).
+
+		for_preview=True is the "Calculate Prices" action: it computes the SYSTEM
+		price (base + calculated) without demanding a customer price first, and
+		defaults a blank customer price to the calculated price so the approver has a
+		starting figure to accept or negotiate. Approval (for_preview=False) still
+		requires a customer price."""
 		settings = get_settings()
 		for line in self.approval_items:
 			if not line.give_to_customer:
 				line.selected_moq = None
+				line.base_price = None
 				line.calculated_price = None
 				line.listening_amount = None
 				line.variance = None
@@ -121,7 +128,7 @@ class PriceSheet(Document):
 						line.idx, line.item, settings.min_agreed_qty
 					)
 				)
-			if not flt(line.customer_price):
+			if not flt(line.customer_price) and not for_preview:
 				frappe.throw(
 					_("Row {0} ({1}): customer price is required").format(line.idx, line.item)
 				)
@@ -147,11 +154,28 @@ class PriceSheet(Document):
 			line.listening_amount = flt(
 				flt(breakdown.calculated_price) * flt(line.listening_percentage) / 100.0, 3
 			)
+			# Preview seeds a blank customer price with the system price (calculated +
+			# listening uplift) so the approver has a figure to accept or negotiate.
+			if for_preview and not flt(line.customer_price):
+				line.customer_price = flt(
+					flt(breakdown.calculated_price) + flt(line.listening_amount), 3
+				)
 			line.variance = flt(
 				flt(line.customer_price)
 				- (flt(breakdown.calculated_price) + flt(line.listening_amount)),
 				3,
 			)
+
+	@frappe.whitelist()
+	def preview_prices(self):
+		"""'Calculate Prices' action — fill base/calculated/variance for every line
+		without approving or creating a Quotation. Lets the approver see the system
+		price (and a defaulted customer price) before committing."""
+		self.check_approver()
+		self.check_window()
+		self.compute_approval_lines(for_preview=True)
+		self.save()
+		return len(self.approval_items)
 
 	@frappe.whitelist()
 	def approve(self):
@@ -185,20 +209,44 @@ class PriceSheet(Document):
 	def make_quotation(self, lines):
 		"""Approved price sheet becomes a real ERPNext Quotation at the
 		negotiated customer price. One-way reference only (design rule:
-		no reverse links between custom doctypes)."""
+		no reverse links between custom doctypes).
+
+		The Price Sheet IS the pricing authority — so the Quotation must NOT let
+		ERPNext's own Item Price / Pricing Rules re-price the line (that once turned
+		a negotiated 150 into a demo Pricing-Rule's 570). We set ignore_pricing_rule
+		and pin price_list_rate = the negotiated rate so the line shows the exact
+		customer price with no phantom discount, then hard-lock it after insert in
+		case set_missing_values re-fetched a list rate."""
 		quotation = frappe.new_doc("Quotation")
 		quotation.quotation_to = "Customer"
 		quotation.party_name = self.customer
 		quotation.transaction_date = nowdate()
 		quotation.custom_price_sheet = self.name
+		quotation.ignore_pricing_rule = 1
 		for line in lines:
 			quotation.append("items", {
 				"item_code": line.item,
 				"qty": line.customer_agreed_qty,
 				"rate": line.customer_price,
+				"price_list_rate": line.customer_price,
 			})
 		quotation.flags.ignore_permissions = True
 		quotation.insert()
+
+		dirty = False
+		for idx, line in enumerate(lines):
+			qi = quotation.items[idx]
+			if flt(qi.rate) != flt(line.customer_price) or flt(qi.price_list_rate) != flt(line.customer_price):
+				qi.rate = line.customer_price
+				qi.price_list_rate = line.customer_price
+				qi.discount_percentage = 0
+				qi.discount_amount = 0
+				qi.margin_type = ""
+				qi.margin_rate_or_amount = 0
+				dirty = True
+		if dirty:
+			quotation.calculate_taxes_and_totals()
+			quotation.save()
 		return quotation
 
 
