@@ -27,6 +27,7 @@ app_license = "mit"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/lumirise_custom/css/lumirise_custom.css"
 # app_include_js = "/assets/lumirise_custom/js/lumirise_custom.js"
+app_include_js = "lumirise_overrides.bundle.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/lumirise_custom/css/lumirise_custom.css"
@@ -50,6 +51,8 @@ doctype_js = {
 	"Work Order": "public/js/work_order.js",
 	"Stock Entry": "public/js/stock_entry.js",
 	"Material Receipt": "public/js/material_receipt.js",
+	"Delivery Note": "public/js/delivery_note.js",
+	"Material Request": "public/js/material_request.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -221,6 +224,9 @@ doc_events = {
 	# advance the material-flow handoff chain (issue -> receive -> transfer ->
 	# produce -> dispatch FG) by raising the next team's task.
 	"Stock Entry": {
+		# Stamp the shop-floor issue type when the SE comes from a (non-Delivery) Pick
+		# List — authoritative server-side mirror of the public/js/stock_entry.js default.
+		"before_validate": "lumirise_custom.stores.set_shopfloor_issue_type",
 		"on_submit": [
 			"lumirise_custom.costing.on_stock_entry",
 			"lumirise_custom.task_engine.on_stock_entry_submit",

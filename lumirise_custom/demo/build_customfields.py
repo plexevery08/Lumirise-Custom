@@ -14,10 +14,8 @@ def execute():
 		"Sales Order": [
 			dict(fieldname="lr_consignee", label="Consignee", fieldtype="Data",
 				 insert_after="customer_name", module=MODULE),
-			dict(fieldname="lr_ppc_date", label="PPC Date", fieldtype="Date",
-				 insert_after="delivery_date", module=MODULE),
 			dict(fieldname="lr_status_sb", label="Lumirise Status", fieldtype="Section Break",
-				 insert_after="lr_ppc_date", module=MODULE, collapsible=1),
+				 insert_after="delivery_date", module=MODULE, collapsible=1),
 			dict(fieldname="lr_planning_status", label="Planning Status", fieldtype="Select",
 				 options="\nPending\nPlanned", default="Pending", insert_after="lr_status_sb", module=MODULE),
 			dict(fieldname="lr_purchase_status", label="Purchase Status", fieldtype="Select",
@@ -30,10 +28,6 @@ def execute():
 		"Purchase Order": [
 			dict(fieldname="lr_indent_refs", label="Indent References", fieldtype="Small Text",
 				 insert_after="supplier", module=MODULE, read_only=1),
-			dict(fieldname="lr_container_no", label="Container No", fieldtype="Data",
-				 insert_after="lr_indent_refs", module=MODULE),
-			dict(fieldname="lr_pi_number", label="PI Number", fieldtype="Data",
-				 insert_after="lr_container_no", module=MODULE),
 		],
 		"Delivery Note": [
 			dict(fieldname="lr_freight_terms", label="Freight Terms", fieldtype="Select",

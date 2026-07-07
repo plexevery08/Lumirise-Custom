@@ -39,7 +39,7 @@ frappe.ui.form.on("IQC", {
 		if (frm.doc.docstatus === 1) {
 			if (frm.doc.status === "Moved to RM") {
 				frm.set_intro(__("GRN posted — accepted stock is in the RM store."), "green");
-			} else if (frm.doc.result !== "Rejected") {
+			} else if ((frm.doc.items || []).some((r) => flt(r.accepted_qty) > 0)) {
 				frm.set_intro(__("IQC passed. Raise the GRN to take the accepted stock into the RM store."), "blue");
 				frm.add_custom_button(__("GRN (Purchase Receipt)"), () => {
 					frappe.model.open_mapped_doc({

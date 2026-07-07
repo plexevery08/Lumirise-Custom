@@ -406,6 +406,49 @@ def authorize_return(docname):
 
 
 @frappe.whitelist()
+def fetch_sales_order_items(sales_order, source_warehouse=None):
+	"""Return the FG rows for a Sales Order so the Customer PDI child table can be
+	populated when the user picks the order. Qty/UOM are the item's *stock* qty and
+	UOM so they stay unit-consistent with the FG on-hand and the FG->PDI transfer
+	(which move stock qty). Available-in-FG is resolved against the source (Dispatch
+	FG) warehouse so the inspector sees on-hand up front."""
+	if not sales_order:
+		return []
+	source_warehouse = source_warehouse or dispatch_fg_default()
+	so = frappe.get_doc("Sales Order", sales_order)
+	rows = []
+	for it in so.items:
+		if not frappe.db.get_value("Item", it.item_code, "is_stock_item"):
+			continue  # only stock FG items can be sent to / inspected in the PDI store
+		rows.append({
+			"fg_item": it.item_code,
+			"item_name": it.item_name,
+			"uom": frappe.db.get_value("Item", it.item_code, "stock_uom") or it.stock_uom,
+			"qty": flt(it.stock_qty) or flt(it.qty),
+			"available_qty": _on_hand(it.item_code, source_warehouse),
+		})
+	return rows
+
+
+@frappe.whitelist()
+def fg_on_hand(item_code, warehouse=None):
+	"""Live on-hand of an FG item in the source (Dispatch FG) store — used to fill
+	'Available in FG' the moment the inspector picks the item, before save."""
+	if not item_code:
+		return 0.0
+	return _on_hand(item_code, warehouse or dispatch_fg_default())
+
+
+def dispatch_fg_default():
+	"""Fail-safe Dispatch FG warehouse for the client fetches — an unconfigured
+	setting returns None (available shows 0) rather than throwing on the form."""
+	try:
+		return config.dispatch_fg_warehouse()
+	except Exception:
+		return None
+
+
+@frappe.whitelist()
 def reopen_as_draft(docname):
 	"""Put a store-rejected request back to Draft so FG can revise and re-raise it."""
 	frappe.has_permission("Customer PDI", "write", docname, throw=True)

@@ -153,7 +153,14 @@ def plan(sales_orders, label):
         for r in data["components"]:
             mp.append("components", r)
         mp.insert(ignore_permissions=True)
-        mp.submit()
+        # Material Planning Approval workflow governs submit: walk the maker->checker
+        # transitions (Submit for Approval -> Planning Manager Approve) so the seeder
+        # Posts the plan (== Work Orders + Indent) non-interactively. The seed runner
+        # needs both workflow roles for get_transitions() to offer the actions.
+        from frappe.model.workflow import apply_workflow
+        frappe.get_doc("User", frappe.session.user).add_roles("Planning User", "Planning Manager")
+        mp = apply_workflow(mp, "Submit for Approval")
+        mp = apply_workflow(mp, "Planning Manager Approve")
         mp.reload()
         _ok(f"Material Planning ({label})", mp.name)
         if mp.created_indent:
@@ -485,12 +492,6 @@ def dispatch_invoice_pay(so, qty, warehouse):
             it.warehouse = warehouse
         dn.insert(ignore_permissions=True)
         dn.submit()
-        # POD attachment field on the DN
-        try:
-            dn.db_set("lr_pod_attachment", "/files/pod-169-boxes.jpg")
-            _ok("Proof of Delivery (POD on DN)", dn.name)
-        except Exception:
-            pass
         _ok("Delivery Note", dn.name)
         holder["dn"] = dn.name
     step("Delivery Note")(_dn)
@@ -498,6 +499,12 @@ def dispatch_invoice_pay(so, qty, warehouse):
     def _si():
         si = frappe.get_doc(chain.make_sales_invoice(holder["dn"]))
         si.insert(ignore_permissions=True); si.submit()
+        # POD attachment field now lives on the Sales Invoice
+        try:
+            si.db_set("lr_pod_attachment", "/files/pod-169-boxes.jpg")
+            _ok("Proof of Delivery (POD on SI)", si.name)
+        except Exception:
+            pass
         _ok("Sales Invoice", si.name)
         holder["si"] = si.name
     if holder.get("dn"):

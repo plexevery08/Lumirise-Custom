@@ -12,3 +12,13 @@ frappe.ui.form.on("Material Receipt", {
 		}
 	},
 });
+
+// Live shortfall = issued - received, recomputed the moment the factory edits the
+// received qty in a row so the mismatch is visible before save. The controller's
+// validate() recomputes the same on save and stays the source of truth.
+frappe.ui.form.on("Material Receipt Item", {
+	received_qty(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		frappe.model.set_value(cdt, cdn, "shortfall_qty", flt(row.issued_qty) - flt(row.received_qty));
+	},
+});

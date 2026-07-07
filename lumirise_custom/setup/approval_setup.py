@@ -21,7 +21,8 @@ Run standalone:  bench --site site.com execute \
 import frappe
 
 # Roles the approval chains reference. Standard "Purchase Manager" already ships.
-APPROVAL_ROLES = ["Planning Manager", "Purchase Head", "MD", "Factory Store Manager"]
+# "Planning User" = the maker who drafts a Material Planning (Planning Manager checks).
+APPROVAL_ROLES = ["Planning User", "Planning Manager", "Purchase Head", "MD", "Factory Store Manager"]
 
 WORKFLOW_STATES = [
 	# (name, style, icon)
@@ -221,6 +222,48 @@ def _rm_price_book_workflow():
 	_upsert_workflow("RM Price Book Approval", "RM Price Book", states, transitions)
 
 
+def _material_planning_workflow():
+	"""Material Planning Approval -> maker/checker (added 2026-07-06).
+
+	The planner (**Planning User**) drafts the plan and "Submit for Approval"; the
+	**Planning Manager** approves, which SUBMITS the document (doc_status 1) and so
+	fires MaterialPlanning.on_submit -> creates the Work Order(s) + the consolidated
+	Indent. In other words, approval == "Post".
+
+	Draft -> Pending Planning Manager -> Approved (submit) | Rejected.
+
+	The child Indent keeps its OWN separate Planning Manager approval (kept
+	deliberately per the 2026-07-06 decision -- Planning Manager approves twice).
+	"""
+	states = [
+		{"state": "Draft", "doc_status": "0", "allow_edit": "Planning User"},
+		{"state": "Pending Planning Manager", "doc_status": "0", "allow_edit": "Planning Manager"},
+		{"state": "Approved", "doc_status": "1", "allow_edit": "Planning Manager"},
+		{"state": "Rejected", "doc_status": "0", "allow_edit": "Planning User"},
+	]
+	transitions = [
+		{
+			"state": "Draft",
+			"action": "Submit for Approval",
+			"next_state": "Pending Planning Manager",
+			"allowed": "Planning User",
+		},
+		{
+			"state": "Pending Planning Manager",
+			"action": "Planning Manager Approve",
+			"next_state": "Approved",
+			"allowed": "Planning Manager",
+		},
+		{
+			"state": "Pending Planning Manager",
+			"action": "Reject",
+			"next_state": "Rejected",
+			"allowed": "Planning Manager",
+		},
+	]
+	_upsert_workflow("Material Planning Approval", "Material Planning", states, transitions)
+
+
 def setup_approvals():
 	"""Entry point -- ensure roles, states, actions, then upsert the workflows."""
 	ensure_approval_roles()
@@ -229,4 +272,5 @@ def setup_approvals():
 	_indent_workflow()
 	_purchase_order_workflow()
 	_rm_price_book_workflow()
+	_material_planning_workflow()
 	frappe.db.commit()

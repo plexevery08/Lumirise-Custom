@@ -15,6 +15,7 @@
   "created_work_orders",
   "workflow_state",
   "sec_fg",
+  "get_sales_orders_btn",
   "fg_plan",
   "sec_comp",
   "components",
@@ -70,6 +71,12 @@
    "label": "FG / Sales Order Plan"
   },
   {
+   "depends_on": "eval:doc.docstatus===0 && (!doc.workflow_state || doc.workflow_state=='Draft')",
+   "fieldname": "get_sales_orders_btn",
+   "fieldtype": "Button",
+   "label": "Get Sales Orders"
+  },
+  {
    "fieldname": "fg_plan",
    "fieldtype": "Table",
    "label": "FG Plan",
@@ -118,6 +125,30 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Planning User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Planning Manager",
    "share": 1,
    "submit": 1,
    "write": 1

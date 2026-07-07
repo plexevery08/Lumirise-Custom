@@ -11,6 +11,7 @@
   "uom",
   "col_break_supplier",
   "supplier",
+  "rate",
   "schedule_date",
   "warehouse",
   "sec_source",
@@ -58,6 +59,13 @@
    "in_list_view": 1,
    "label": "Supplier (Vendor)",
    "options": "Supplier"
+  },
+  {
+   "description": "Negotiated per-unit rate for the assigned vendor. Flows into the generated Purchase Order line when set.",
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Rate"
   },
   {
    "fieldname": "schedule_date",

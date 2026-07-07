@@ -19,6 +19,16 @@ RM_STORE = "Stores - L"
 
 
 class PurchasePlan(Document):
+	def validate(self):
+		"""Cascade the parent Global Supplier onto every line that has no supplier yet
+		(Sai walkthrough 2026-06-30 req 6.2). A line's manually-chosen supplier is a
+		deliberate override and is never overwritten here — the client-side cascade
+		(on changing the Global Supplier) handles the 'apply to all' case."""
+		if self.get("lr_global_supplier"):
+			for row in self.items:
+				if not row.supplier:
+					row.supplier = self.lr_global_supplier
+
 	def before_submit(self):
 		"""Every consolidated line must have a vendor before the plan is released for
 		PO generation -- that is the whole point of this step."""
@@ -61,6 +71,36 @@ def get_indent_qty(plan_name=None, indent_refs=None):
 
 
 @frappe.whitelist()
+def get_kit_bom(plan_name):
+	"""Per-kit BOM component quantities for every model on the plan — the static data
+	the Kit Calculator (change-list 6.3) needs. The client then computes, live from the
+	line quantities, how many COMPLETE kits the ordered components can build
+	(min over components of ordered ÷ per-kit) and what is left over as LOOSE parts.
+
+	Returns {model: {"fg_item": model, "components": {item_code: per_kit_qty}}}."""
+	models = set()
+	if frappe.db.exists("Purchase Plan", plan_name):
+		for row in frappe.get_all("Purchase Plan Item", filters={"parent": plan_name},
+		                          fields=["model"]):
+			if row.model:
+				models.add(row.model)
+
+	out = {}
+	for model in models:
+		bom = frappe.db.get_value("Item", model, "default_bom")
+		if not bom:
+			out[model] = {"fg_item": model, "components": {}, "no_bom": True}
+			continue
+		bom_doc = frappe.get_doc("BOM", bom)
+		per = flt(bom_doc.quantity) or 1
+		comps = {}
+		for bi in bom_doc.items:
+			comps[bi.item_code] = flt(bi.qty) / per
+		out[model] = {"fg_item": model, "bom": bom, "components": comps}
+	return out
+
+
+@frappe.whitelist()
 def create_purchase_orders(plan_name):
 	"""Group the plan's lines by supplier and create one Draft Purchase Order per
 	supplier. Returns the list of created PO names. Idempotent guard: refuses to run
@@ -89,7 +129,7 @@ def create_purchase_orders(plan_name):
 		po.supplier = supplier
 		po.lr_indent_refs = ", ".join(sorted(bucket["indents"]))
 		for row in bucket["rows"]:
-			po.append("items", {
+			po_item = {
 				"item_code": row.item_code,
 				"item_name": row.item_name or row.item_code,
 				"qty": flt(row.qty),
@@ -98,7 +138,12 @@ def create_purchase_orders(plan_name):
 				"conversion_factor": 1,
 				"schedule_date": row.schedule_date or frappe.utils.add_days(frappe.utils.nowdate(), 15),
 				"warehouse": row.warehouse or RM_STORE,
-			})
+			}
+			# Carry the negotiated plan rate onto the PO line. Only when set (>0) so a
+			# blank rate leaves ERPNext to fetch its usual price-list / last-purchase rate.
+			if flt(row.get("rate")) > 0:
+				po_item["rate"] = flt(row.rate)
+			po.append("items", po_item)
 		# Leave the PO in Draft -- Purchase Head releases it via the workflow.
 		po.insert(ignore_permissions=True)
 		created.append(po.name)

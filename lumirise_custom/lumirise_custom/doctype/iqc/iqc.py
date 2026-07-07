@@ -30,7 +30,6 @@ class IQC(Document):
 	def validate(self):
 		if not self.status:
 			self.status = RECEIVED
-		any_reject = False
 		for row in self.items:
 			parts = (flt(row.accepted_qty) + flt(row.rejected_qty)
 			         + flt(row.under_test_qty) + flt(row.on_hold_qty))
@@ -38,26 +37,25 @@ class IQC(Document):
 				frappe.throw(
 					f"Row {row.idx} ({row.item_code}): accepted + rejected + under-test "
 					f"+ on-hold cannot exceed received qty.")
-			if flt(row.rejected_qty) > 0:
-				any_reject = True
-				if not row.disposition:
-					frappe.throw(
-						f"Row {row.idx} ({row.item_code}): set a Disposition "
-						f"(Return to Vendor / Replace / Scrap) for the rejected qty.")
-		# auto-set the overall result
-		if not any_reject:
-			self.result = "Accepted"
-		elif all(flt(r.accepted_qty) == 0 for r in self.items):
-			self.result = "Rejected"
-		else:
-			self.result = "Partial"
+			if flt(row.rejected_qty) > 0 and not row.disposition:
+				frappe.throw(
+					f"Row {row.idx} ({row.item_code}): set a Disposition "
+					f"(Return to Vendor / Replace / Scrap) for the rejected qty.")
+
+	def is_fully_rejected(self):
+		"""True when at least one line was rejected AND no line was accepted — i.e.
+		the whole consignment failed, so no GRN can be raised. Replaces the former
+		stored `result` field (derived live from the line qtys)."""
+		any_reject = any(flt(r.rejected_qty) > 0 for r in self.items)
+		return any_reject and all(flt(r.accepted_qty) == 0 for r in self.items)
 
 	def on_submit(self):
 		# Lock the header status to the inspection outcome on submit (unless the
 		# inspector parked it On Hold).
+		fully_rejected = self.is_fully_rejected()
 		if self.status not in (ON_HOLD, MOVED_TO_RM):
-			self.db_set("status", REJECTED if self.result == "Rejected" else PASSED)
-		if self.result == "Rejected":
+			self.db_set("status", REJECTED if fully_rejected else PASSED)
+		if fully_rejected:
 			frappe.msgprint(
 				"All quantities rejected — no GRN can be raised against this IQC.",
 				indicator="red", alert=True)

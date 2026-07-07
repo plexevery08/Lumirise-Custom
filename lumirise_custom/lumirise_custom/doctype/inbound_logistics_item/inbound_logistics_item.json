@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "item_code",
+  "item_name",
   "qty",
   "remarks"
  ],
@@ -18,6 +19,14 @@
    "label": "Item",
    "options": "Item",
    "reqd": 1
+  },
+  {
+   "fetch_from": "item_code.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "read_only": 1
   },
   {
    "fieldname": "qty",

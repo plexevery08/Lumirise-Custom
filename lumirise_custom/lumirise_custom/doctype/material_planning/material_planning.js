@@ -7,10 +7,13 @@
 
 frappe.ui.form.on("Material Planning", {
 	refresh(frm) {
-		if (frm.doc.docstatus === 0) {
+		// Only while the plan is still with the maker (Draft). Once it is "Submit for
+		// Approval"-ed (Pending Planning Manager) it must not be re-pulled/edited.
+		const is_draft = frm.doc.docstatus === 0 && (!frm.doc.workflow_state || frm.doc.workflow_state === "Draft");
+		if (is_draft) {
 			frm.add_custom_button(__("Get Sales Orders"), () => get_sales_orders(frm));
 			frm.set_intro(
-				__("Click <b>Get Sales Orders</b> to load approved orders, review the blocking columns, then <b>Submit</b> to Post (creates the Production Orders + Indent)."),
+				__("Click <b>Get Sales Orders</b> to load approved orders and review the blocking columns. Then <b>Submit for Approval</b>; the <b>Planning Manager</b> approves to Post (creates the Production Orders + Indent)."),
 				"blue"
 			);
 		}
@@ -22,6 +25,12 @@ frappe.ui.form.on("Material Planning", {
 				frm.add_custom_button(wo, () => frappe.set_route("Form", "Work Order", wo), __("Production Orders"));
 			});
 		}
+	},
+
+	// In-form "Get Sales Orders" button (sits in the FG / Sales Order Plan section,
+	// with the fields) — same behaviour as the top toolbar button.
+	get_sales_orders_btn(frm) {
+		get_sales_orders(frm);
 	},
 });
 

@@ -53,15 +53,78 @@ function cpdi_set_grid_editable(frm) {
 	grid.refresh();
 }
 
+// 18.3 — pre-fill the three warehouses on a NEW Customer PDI so the store/inspector
+// sees them (and 18.2's "available in FG" can compute) BEFORE save. Dynamic values
+// come from Operations Settings via the server helper — the same resolution the
+// controller's validate() uses as a safety net; we only fill blanks, never overwrite.
+function cpdi_prefill_warehouses(frm) {
+	if (!frm.is_new()) return;
+	if (frm.doc.source_warehouse && frm.doc.pdi_warehouse) return;
+	frappe.call({ method: "lumirise_custom.defaults.form_warehouse_defaults" }).then((r) => {
+		const wh = (r && r.message) || {};
+		if (!frm.doc.source_warehouse && wh.dispatch_fg) {
+			frm.set_value("source_warehouse", wh.dispatch_fg);
+		}
+		if (!frm.doc.pdi_warehouse && wh.pdi) {
+			frm.set_value("pdi_warehouse", wh.pdi);
+		}
+		if (!frm.doc.rejection_warehouse && wh.rejection) {
+			frm.set_value("rejection_warehouse", wh.rejection);
+		}
+	});
+}
+
+// Pull every stock FG line off the chosen Sales Order into the items grid. Only in
+// Draft (the grid is locked afterwards); if rows already exist we confirm before
+// replacing so a mis-click can't wipe the inspector's work.
+function cpdi_fetch_so_items(frm) {
+	if (!frm.doc.sales_order || frm.doc.status !== "Draft") return;
+	const populate = () => {
+		frappe.call({
+			method: CPDI_METHOD + "fetch_sales_order_items",
+			args: {
+				sales_order: frm.doc.sales_order,
+				source_warehouse: frm.doc.source_warehouse,
+			},
+			freeze: true,
+			freeze_message: __("Fetching Sales Order items…"),
+		}).then((r) => {
+			const rows = (r && r.message) || [];
+			frm.clear_table("items");
+			rows.forEach((d) => Object.assign(frm.add_child("items"), d));
+			frm.refresh_field("items");
+			frappe.show_alert({
+				message: rows.length
+					? __("Fetched {0} item(s) from {1}", [rows.length, frm.doc.sales_order])
+					: __("No stock items on {0}", [frm.doc.sales_order]),
+				indicator: rows.length ? "green" : "orange",
+			});
+		});
+	};
+	if ((frm.doc.items || []).length) {
+		frappe.confirm(
+			__("Replace the current item rows with the items from {0}?", [frm.doc.sales_order]),
+			populate
+		);
+	} else {
+		populate();
+	}
+}
+
 frappe.ui.form.on("Customer PDI", {
 	setup(frm) {
 		frm.set_query("fg_item", "items", () => ({ filters: { is_stock_item: 1 } }));
+	},
+
+	sales_order(frm) {
+		cpdi_fetch_so_items(frm);
 	},
 
 	refresh(frm) {
 		cpdi_set_grid_editable(frm);
 
 		if (frm.is_new()) {
+			cpdi_prefill_warehouses(frm);
 			return;
 		}
 
@@ -69,39 +132,42 @@ frappe.ui.form.on("Customer PDI", {
 		const is_store = cpdi_is_store(frm);
 
 		// AQL sampling plan for the FG lot (how many of the batch to inspect).
-		frm.add_custom_button(__("AQL Sampling Plan"), () => {
-			const lot = (frm.doc.items || []).reduce((s, r) => s + (r.qty || 0), 0);
-			if (!lot) {
-				frappe.msgprint(__("Add the FG item rows (with qty) first."));
-				return;
-			}
-			frappe.call({
-				method: "lumirise_custom.quality.aql_for_lot",
-				args: { lot_size: lot, defect_class: "C" },
-				freeze: true,
-			}).then((r) => {
-				const promises = ["A", "B", "C"].map((c) =>
-					frappe.call({
-						method: "lumirise_custom.quality.aql_for_lot",
-						args: { lot_size: lot, defect_class: c },
-					})
-				);
-				Promise.all(promises).then((res) => {
-					const rows = res.map((x) => x.message).map(
-						(p) =>
-							`Class ${p.defect_class} · AQL ${p.aql} · inspect <b>${p.sample_size}</b> of ${p.lot_size}` +
-							` · Accept ≤${p.accept}, Reject ≥${p.reject}` +
-							(p.inspect_100pct ? " (100%)" : "")
-					);
-					frappe.msgprint({
-						title: __("AQL Sampling Plan (IS:2500, Level I)"),
-						message: rows.join("<br>") +
-							"<br><br><i>Verify Accept/Reject numbers against the IS:2500 master before vendor claims.</i>",
-						indicator: "blue",
-					});
-				});
-			});
-		});
+		// HIDDEN 2026-07-07 at client request — inspection sampling flow not finalised
+		// yet. Re-enable by uncommenting when the flow is defined (server method
+		// lumirise_custom.quality.aql_for_lot is unchanged and still works).
+		// frm.add_custom_button(__("AQL Sampling Plan"), () => {
+		// 	const lot = (frm.doc.items || []).reduce((s, r) => s + (r.qty || 0), 0);
+		// 	if (!lot) {
+		// 		frappe.msgprint(__("Add the FG item rows (with qty) first."));
+		// 		return;
+		// 	}
+		// 	frappe.call({
+		// 		method: "lumirise_custom.quality.aql_for_lot",
+		// 		args: { lot_size: lot, defect_class: "C" },
+		// 		freeze: true,
+		// 	}).then((r) => {
+		// 		const promises = ["A", "B", "C"].map((c) =>
+		// 			frappe.call({
+		// 				method: "lumirise_custom.quality.aql_for_lot",
+		// 				args: { lot_size: lot, defect_class: c },
+		// 			})
+		// 		);
+		// 		Promise.all(promises).then((res) => {
+		// 			const rows = res.map((x) => x.message).map(
+		// 				(p) =>
+		// 					`Class ${p.defect_class} · AQL ${p.aql} · inspect <b>${p.sample_size}</b> of ${p.lot_size}` +
+		// 					` · Accept ≤${p.accept}, Reject ≥${p.reject}` +
+		// 					(p.inspect_100pct ? " (100%)" : "")
+		// 			);
+		// 			frappe.msgprint({
+		// 				title: __("AQL Sampling Plan (IS:2500, Level I)"),
+		// 				message: rows.join("<br>") +
+		// 					"<br><br><i>Verify Accept/Reject numbers against the IS:2500 master before vendor claims.</i>",
+		// 				indicator: "blue",
+		// 			});
+		// 		});
+		// 	});
+		// });
 
 		// Links to the stock entries this PDI posted.
 		// if (frm.doc.send_stock_entry) {
@@ -195,5 +261,21 @@ frappe.ui.form.on("Customer PDI", {
 				cpdi_run(frm, "reopen_as_draft", {}, __("Reopening…"))
 			);
 		}
+	},
+});
+
+// When the inspector picks an FG item on a row, pull its live on-hand in the FG
+// (Dispatch FG) store into "Available in FG" straight away, before save. validate()
+// still refreshes available_qty server-side on a Draft as the source of truth.
+frappe.ui.form.on("Customer PDI Item", {
+	fg_item(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.fg_item) return;
+		frappe.call({
+			method: CPDI_METHOD + "fg_on_hand",
+			args: { item_code: row.fg_item, warehouse: frm.doc.source_warehouse },
+		}).then((r) => {
+			frappe.model.set_value(cdt, cdn, "available_qty", flt((r && r.message) || 0));
+		});
 	},
 });

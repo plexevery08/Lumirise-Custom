@@ -98,6 +98,29 @@ def item_uom(item_code):
 	return frappe.db.get_value("Item", item_code, "stock_uom")
 
 
+@frappe.whitelist()
+def form_warehouse_defaults():
+	"""Resolved default warehouses for new-form auto-fill (Customer PDI source/PDI/
+	rejection, Delivery Note dispatch source). Client scripts call this on a NEW doc
+	so the warehouse shows *before* save — the dynamic, "nothing static" way to seed
+	a form default (Rule 3: never a hard-coded Property Setter default). Each lookup
+	is fail-safe: an unconfigured warehouse returns null rather than throwing and
+	breaking form load."""
+
+	def _safe(fn):
+		try:
+			return fn()
+		except Exception:
+			return None
+
+	return {
+		"dispatch_fg": _safe(dispatch_fg_warehouse),
+		"production_fg": _safe(fg_warehouse),
+		"pdi": _safe(pdi_warehouse),
+		"rejection": _safe(lambda: rejection_warehouse(required=False)),
+	}
+
+
 def flag(field, default=True):
 	value = _settings().get(field)
 	return bool(value) if value is not None else default

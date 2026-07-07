@@ -9,6 +9,7 @@
   "sales_order",
   "fg_item",
   "component_item",
+  "component_item_name",
   "required_qty",
   "rm_available",
   "blocked_for_other_so",
@@ -41,6 +42,14 @@
    "label": "Component",
    "options": "Item",
    "reqd": 1
+  },
+  {
+   "fetch_from": "component_item.item_name",
+   "fieldname": "component_item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Component Name",
+   "read_only": 1
   },
   {
    "fieldname": "required_qty",

@@ -219,7 +219,8 @@ def compute_plan(sales_orders):
 			fg_available = _stock(soi.item_code, fg_wh)
 			required = max(0, flt(soi.qty) - fg_available)
 			fg_plan.append({
-				"sales_order": so, "fg_item": soi.item_code, "bom": bom,
+				"sales_order": so, "fg_item": soi.item_code,
+				"fg_item_name": soi.item_name, "bom": bom,
 				"aso_qty": flt(soi.qty), "fg_available": fg_available,
 				"required_qty": required,
 			})
@@ -248,6 +249,7 @@ def compute_plan(sales_orders):
 
 				components.append({
 					"sales_order": so, "fg_item": soi.item_code, "component_item": comp,
+					"component_item_name": bi.item_name,
 					"required_qty": comp_required, "rm_available": rm_avail,
 					"blocked_for_other_so": blocked,
 					"available_after_blocking": usable,

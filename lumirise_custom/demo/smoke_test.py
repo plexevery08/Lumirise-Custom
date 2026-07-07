@@ -45,7 +45,14 @@ def _plan(sales_orders):
 	for r in data["components"]:
 		mp.append("components", r)
 	mp.insert(ignore_permissions=True)
-	mp.submit()
+	# Material Planning Approval workflow governs submit: walk the maker->checker
+	# transitions (Submit for Approval -> Planning Manager Approve) so the smoke test
+	# Posts the plan (== Work Orders + Indent) non-interactively. The seed runner needs
+	# both workflow roles for get_transitions() to offer the actions.
+	from frappe.model.workflow import apply_workflow
+	frappe.get_doc("User", frappe.session.user).add_roles("Planning User", "Planning Manager")
+	mp = apply_workflow(mp, "Submit for Approval")
+	mp = apply_workflow(mp, "Planning Manager Approve")
 	return mp.reload()
 
 

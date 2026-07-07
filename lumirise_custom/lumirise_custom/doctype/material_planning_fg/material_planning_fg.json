@@ -8,6 +8,7 @@
  "field_order": [
   "sales_order",
   "fg_item",
+  "fg_item_name",
   "bom",
   "aso_qty",
   "fg_available",
@@ -29,6 +30,14 @@
    "label": "FG Item",
    "options": "Item",
    "reqd": 1
+  },
+  {
+   "fetch_from": "fg_item.item_name",
+   "fieldname": "fg_item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "FG Item Name",
+   "read_only": 1
   },
   {
    "fieldname": "bom",

@@ -20,6 +20,33 @@ from frappe.utils import flt
 from lumirise_custom import defaults as config
 from lumirise_custom.task_engine import create_task
 
+SHOPFLOOR_ISSUE_TYPE = "Material Issue to Shop Floor"
+
+
+def set_shopfloor_issue_type(doc, method=None):
+	"""When Stores creates a Stock Entry from a (non-Delivery) Pick List — the RM
+	issue-to-shopfloor step, e.g. from a Material Request — stamp the Focus
+	'Material Issue to Shop Floor' type so it always posts consistently, even outside
+	the form (API / backdated / programmatic). Server-side mirror of the client default
+	in public/js/stock_entry.js (14.1); the client gives the operator instant feedback,
+	this makes it authoritative. Fail-safe: never blocks the stock entry.
+
+	Only overrides the generic 'Material Transfer' default — never a deliberately
+	chosen type (e.g. 'Material Transfer for Manufacture' Work Order line transfers) and
+	never a Delivery pick list (that is a dispatch, not a shop-floor issue).
+	"""
+	try:
+		if not doc.get("pick_list") or doc.stock_entry_type == SHOPFLOOR_ISSUE_TYPE:
+			return
+		if doc.stock_entry_type and doc.stock_entry_type != "Material Transfer":
+			return
+		if frappe.db.get_value("Pick List", doc.pick_list, "purpose") == "Delivery":
+			return
+		doc.stock_entry_type = SHOPFLOOR_ISSUE_TYPE
+		doc.purpose = "Material Transfer"
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "set_shopfloor_issue_type")
+
 
 @frappe.whitelist()
 def make_work_order_pick_list(work_order):

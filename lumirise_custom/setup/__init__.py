@@ -11,6 +11,7 @@ from lumirise_custom.setup.flow_fields import create_flow_fields
 from lumirise_custom.setup.bom_fields import create_bom_fields
 from lumirise_custom.setup.purchase_reco_fields import create_purchase_reco_fields
 from lumirise_custom.setup.wo_line_transfer_fields import create_wo_line_transfer_fields
+from lumirise_custom.setup.purchase_plan_supplier_fields import create_purchase_plan_supplier_fields
 from lumirise_custom.setup.production_setup import setup_production_flow
 from lumirise_custom.setup.task_seed import seed_task_engine
 from lumirise_custom.setup.approval_setup import setup_approvals
@@ -47,6 +48,11 @@ def after_migrate():
 	create_purchase_reco_fields()
 	# Line Transfer tab (Tab Break + HTML) on the Work Order — per-line qty breakdown.
 	create_wo_line_transfer_fields()
+	# Purchase Plan: parent Global Supplier (cascades to lines) + supplier-wise split.
+	create_purchase_plan_supplier_fields()
+	# Small UI tweaks (Sai walkthrough): field hides / read-only as Property Setters.
+	from lumirise_custom.setup.ui_tweaks import apply_ui_tweaks
+	apply_ui_tweaks()
 	seed_credit_terms()
 	init_settings()
 	# Task / Notification / Kanban engine: role, department map, Kanban board.

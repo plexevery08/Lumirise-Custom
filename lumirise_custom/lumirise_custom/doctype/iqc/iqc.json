@@ -14,7 +14,6 @@
   "col1",
   "iqc_date",
   "sampling_plan",
-  "result",
   "iqc_remarks",
   "sec_items",
   "items",
@@ -72,16 +71,6 @@
    "fieldname": "sampling_plan",
    "fieldtype": "Data",
    "label": "Sampling Plan"
-  },
-  {
-   "default": "Accepted",
-   "description": "Auto-set from the per-line accepted / rejected qty.",
-   "fieldname": "result",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Result",
-   "options": "Accepted\nPartial\nRejected",
-   "read_only": 1
   },
   {
    "allow_on_submit": 1,

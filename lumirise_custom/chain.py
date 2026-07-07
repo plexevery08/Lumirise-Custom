@@ -17,7 +17,8 @@ def make_vendor_pdi(source_name, target_doc=None):
 	doc.purchase_order = po.name
 	doc.mode = "Import" if "Import" in (po.supplier or "") else "Domestic"
 	for it in po.items:
-		doc.append("items", {"item_code": it.item_code, "po_qty": it.qty, "approved_qty": it.qty})
+		doc.append("items", {"item_code": it.item_code, "item_name": it.item_name,
+		                     "po_qty": it.qty, "approved_qty": it.qty})
 	return doc
 
 
@@ -32,7 +33,9 @@ def make_inbound_logistics(source_name, target_doc=None):
 	# Only the qty accepted at Vendor PDI moves forward into transit.
 	for it in vpdi.items:
 		if flt(it.approved_qty) > 0:
-			doc.append("items", {"item_code": it.item_code, "qty": it.approved_qty})
+			doc.append("items", {"item_code": it.item_code,
+			                     "item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
+			                     "qty": it.approved_qty})
 	return doc
 
 
@@ -45,8 +48,9 @@ def make_iqc(source_name, target_doc=None):
 	doc.status = "IQC Received"
 	for it in log.items:
 		doc.append("items", {
-			"item_code": it.item_code, "received_qty": it.qty,
-			"accepted_qty": it.qty, "rejected_qty": 0})
+			"item_code": it.item_code,
+			"item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
+			"received_qty": it.qty, "accepted_qty": it.qty, "rejected_qty": 0})
 	return doc
 
 
