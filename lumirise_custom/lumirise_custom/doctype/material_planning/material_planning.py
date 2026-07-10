@@ -13,7 +13,7 @@ import json
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import flt, nowdate, add_days
+from frappe.utils import flt, nowdate, add_days, cint, getdate
 
 from lumirise_custom import defaults as config
 
@@ -24,13 +24,26 @@ class MaterialPlanning(Document):
 		company = config.get_company(self)
 		fg_wh, wip_wh, rm_wh = config.fg_warehouse(), config.wip_warehouse(), config.rm_warehouse()
 		wo_names = []
+		exp_dates = []
 		for fg in self.fg_plan:
 			if flt(fg.required_qty) <= 0:
 				continue
+			bom_no = fg.bom or frappe.db.get_value("Item", fg.fg_item, "default_bom")
+			# Schedule from lead time: the line can't start before its longest-lead RM
+			# lands, so planned_start = today + max(component lead). Honour the SO's own
+			# delivery date as the target when set, else start + the FG's own lead.
+			horizon = _bom_lead_days(bom_no) or _plan_lead_buffer()
+			planned_start = add_days(nowdate(), horizon)
+			so_delivery = (
+				frappe.db.get_value("Sales Order", fg.sales_order, "delivery_date")
+				if fg.sales_order else None
+			)
+			expected_delivery = so_delivery or add_days(nowdate(), horizon + (_lead_days(fg.fg_item) or 0))
+			exp_dates.append(getdate(expected_delivery))
 			wo = frappe.get_doc({
 				"doctype": "Work Order",
 				"production_item": fg.fg_item,
-				"bom_no": fg.bom or frappe.db.get_value("Item", fg.fg_item, "default_bom"),
+				"bom_no": bom_no,
 				"qty": flt(fg.required_qty),
 				"company": company,
 				"use_multi_level_bom": 0,  # consume the stocked MCPCB sub-assembly directly
@@ -38,6 +51,8 @@ class MaterialPlanning(Document):
 				"fg_warehouse": fg_wh,
 				"wip_warehouse": wip_wh,
 				"source_warehouse": rm_wh,
+				"planned_start_date": planned_start,
+				"expected_delivery_date": expected_delivery,
 				"lr_source_planning": self.name,
 			})
 			wo.insert(ignore_permissions=True)
@@ -49,6 +64,9 @@ class MaterialPlanning(Document):
 		self.db_set("created_work_orders", ", ".join(wo_names))
 		if indent_name:
 			self.db_set("created_indent", indent_name)
+		# The plan's own due date = the latest FG completion it just scheduled.
+		if exp_dates and not self.due_date:
+			self.db_set("due_date", max(exp_dates))
 
 		# Refresh the traceability panels now that the WO(s) + Indent exist as
 		# siblings — so the SO shows its Indent/WO/PO and each WO shows the Indent
@@ -72,8 +90,11 @@ class MaterialPlanning(Document):
 		for c in self.components:
 			if flt(c.to_be_ordered) <= 0:
 				continue
-			row = agg.setdefault(c.component_item, {"qty": 0, "model": c.fg_item, "so": c.sales_order})
+			row = agg.setdefault(c.component_item, {"qty": 0, "model": c.fg_item, "so": c.sales_order, "lead": 0})
 			row["qty"] += flt(c.to_be_ordered)
+			# Track this component's own procurement lead so its Indent line gets a real
+			# required_date (today + its lead), not the flat +15 the code used before.
+			row["lead"] = max(row["lead"], _lead_days(c.component_item))
 		if not agg:
 			return None
 		indent = frappe.get_doc({
@@ -85,7 +106,7 @@ class MaterialPlanning(Document):
 			"source_sales_order": self.fg_plan[0].sales_order if self.fg_plan else None,
 			"items": [{
 				"item_code": item, "qty": d["qty"], "uom": config.item_uom(item),
-				"required_date": add_days(nowdate(), 15),
+				"required_date": add_days(nowdate(), d["lead"] or _plan_lead_buffer()),
 				"source_bom": frappe.db.get_value("Item", d["model"], "default_bom"),
 				"model": d["model"], "for_sales_order": d["so"],
 			} for item, d in agg.items()],
@@ -113,6 +134,28 @@ class MaterialPlanning(Document):
 # --------------------------------------------------------------------- helpers
 def _stock(item, warehouse):
 	return flt(frappe.db.get_value("Bin", {"item_code": item, "warehouse": warehouse}, "actual_qty"))
+
+
+def _lead_days(item):
+	"""Procurement/production lead time (days) from the Item master (native field)."""
+	return cint(frappe.db.get_value("Item", item, "lead_time_days"))
+
+
+def _plan_lead_buffer():
+	"""Fallback horizon (days) for an item with no lead_time_days. Configurable via
+	Lumirise Operations Settings → default_plan_lead_days if that field is added;
+	otherwise 15 — the value the Indent required_date was previously hard-coded to."""
+	return cint(frappe.db.get_single_value("Lumirise Operations Settings", "default_plan_lead_days")) or 15
+
+
+def _bom_lead_days(bom_no):
+	"""Longest lead time among a BOM's DIRECT components (top-level only — this flow
+	consumes stocked sub-assemblies with use_multi_level_bom=0, so sub-BOM leads
+	don't gate the line)."""
+	if not bom_no:
+		return 0
+	leads = [_lead_days(bi.item_code) for bi in frappe.get_doc("BOM", bom_no).items]
+	return max(leads) if leads else 0
 
 
 def _blocked_for_other_so(item, exclude_sos):

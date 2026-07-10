@@ -977,3 +977,28 @@ def _check_jobcard_miss_task():
 		"", "", "", "pass",
 		detail=f"All {len(missed)} missed Job Cards raised an escalation task.",
 	)
+
+
+@readonly_check("wo_dates_set", "Open Work Orders have schedule dates", PRODUCTION)
+def _check_wo_dates():
+	rows = frappe.get_all(
+		"Work Order",
+		filters={"docstatus": 1, "status": ["not in", ["Completed", "Stopped", "Closed"]]},
+		or_filters={
+			"planned_start_date": ["is", "not set"],
+			"expected_delivery_date": ["is", "not set"],
+		},
+		pluck="name",
+		limit_page_length=0,
+	)
+	if rows:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail=f"{len(rows)} open Work Order(s) have no planned-start / expected-delivery date.",
+			remediation="Material Planning stamps these from item lead time on Post (WP-1.2). Work Orders created before that fix, or by hand, lack them — set the dates or let them complete.",
+			evidence=", ".join(rows[:8]),
+		)
+	return _result("", "", "", "pass", detail="All open Work Orders carry schedule dates.")
