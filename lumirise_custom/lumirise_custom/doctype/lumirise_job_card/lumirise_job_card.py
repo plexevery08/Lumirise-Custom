@@ -43,6 +43,10 @@ class LumiriseJobCard(Document):
 				f"target of {flt(self.target_qty):g} on {self.production_date} "
 				f"(shortfall {short:g}). Investigate and re-plan."
 			),
+			# The miss is already late, so date the task to the production day. Without a
+			# due_date, task_engine.escalate_overdue_tasks (which filters due_date is-set
+			# AND < today) can never escalate this to the Production HOD.
+			due_date=self.production_date,
 			source_event="job_card_missed_target",
 		)
 
