@@ -875,3 +875,105 @@ def _check_over_receipt_guard():
 			remediation="GRN/DN can exceed ordered qty — lower Stock Settings → Over Delivery/Receipt Allowance.",
 		)
 	return _result("", "", "", "pass", detail=f"Over-receipt allowance {allowance}% (≤ {cap}%).")
+
+
+@readonly_check(
+	"auto_reserve_on_purchase_off", "Auto-reserve FG for SO on purchase is off", STOCK
+)
+def _check_auto_reserve_on_purchase():
+	if cint(
+		frappe.db.get_single_value(
+			"Stock Settings", "auto_reserve_stock_for_sales_order_on_purchase"
+		)
+	):
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail="Stock Settings → Auto Reserve Stock for Sales Order on Purchase is ON.",
+			remediation=(
+				"Turn it OFF. Lumirise reserves FG late/opt-in at Dispatch FG; auto-reserving "
+				"pins a Stock Reservation Entry at a transit warehouse and blocks move_to_dispatch "
+				"(the 2026-06-17 incident)."
+			),
+		)
+	return _result(
+		"", "", "", "pass",
+		detail="Auto-reserve FG for SO on purchase is off (late/opt-in reservation).",
+	)
+
+
+@readonly_check(
+	"dept_map_users_filled", "Active Department Map rows have supervisor/HOD users", TASKS
+)
+def _check_dept_map_users():
+	rows = frappe.get_all(
+		"Lumirise Department Map",
+		filters={"is_active": 1},
+		fields=["name", "supervisor_user", "hod_user"],
+		limit_page_length=0,
+	)
+	if not rows:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail="No active Lumirise Department Map rows.",
+			remediation="Seed departments: bench --site site.com execute lumirise_custom.setup.task_seed.seed_departments",
+		)
+	unfilled = [r.name for r in rows if not (r.supervisor_user or r.hod_user)]
+	if unfilled:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail=f"{len(unfilled)} of {len(rows)} active departments have no supervisor/HOD user — their handoff tasks are created unassigned.",
+			remediation="Fill supervisor_user + hod_user on each Lumirise Department Map row so Kanban handoffs get an owner.",
+			evidence=", ".join(unfilled[:8]),
+		)
+	return _result(
+		"", "", "", "pass",
+		detail=f"All {len(rows)} active departments have at least one user mapped.",
+	)
+
+
+@readonly_check(
+	"jobcard_miss_has_task", "Missed Job Cards raised an escalation task", TASKS
+)
+def _check_jobcard_miss_task():
+	missed = frappe.get_all(
+		"Lumirise Job Card",
+		filters={"docstatus": 1, "status": "Missed"},
+		pluck="name",
+	)
+	if not missed:
+		return _result("", "", "", "pass", detail="No missed Job Cards.")
+	tasked = set(
+		frappe.get_all(
+			"Lumirise Task",
+			filters={
+				"source_event": "job_card_missed_target",
+				"reference_doctype": "Lumirise Job Card",
+				"reference_name": ["in", missed],
+			},
+			pluck="reference_name",
+		)
+	)
+	missing = [m for m in missed if m not in tasked]
+	if missing:
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail=f"{len(missing)} of {len(missed)} missed Job Cards have no escalation task.",
+			remediation="Job Card _raise_miss_alert did not fire — check task_engine.create_task and the Error Log.",
+			evidence=", ".join(missing[:8]),
+		)
+	return _result(
+		"", "", "", "pass",
+		detail=f"All {len(missed)} missed Job Cards raised an escalation task.",
+	)
