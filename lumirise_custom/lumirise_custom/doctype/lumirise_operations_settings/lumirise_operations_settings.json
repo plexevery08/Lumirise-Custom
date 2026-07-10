@@ -23,6 +23,8 @@
   "sec_stores",
   "enable_pick_list_task",
   "enable_grn_putaway_task",
+  "sec_sales",
+  "po_rate_tolerance_pct",
   "sec_health",
   "enable_destructive_health_tests",
   "production_site_name",
@@ -223,6 +225,18 @@
    "fieldname": "baseline_custom_fields",
    "fieldtype": "Int",
    "label": "Baseline: Custom Fields"
+  },
+  {
+   "fieldname": "sec_sales",
+   "fieldtype": "Section Break",
+   "label": "Sales / Order Desk"
+  },
+  {
+   "default": "5",
+   "description": "Flag a Sales Order line as a PO-match exception when its rate differs from the source Quotation by more than this percentage.",
+   "fieldname": "po_rate_tolerance_pct",
+   "fieldtype": "Float",
+   "label": "PO/Quotation rate tolerance (%)"
   }
  ],
  "grid_page_length": 50,

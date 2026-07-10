@@ -1002,3 +1002,24 @@ def _check_wo_dates():
 			evidence=", ".join(rows[:8]),
 		)
 	return _result("", "", "", "pass", detail="All open Work Orders carry schedule dates.")
+
+
+@readonly_check("so_po_exceptions", "Submitted Sales Orders have no open PO-match exception", STATUS)
+def _check_so_po_exceptions():
+	rows = frappe.get_all(
+		"Sales Order",
+		filters={"docstatus": 1, "lr_po_match_status": "Exception"},
+		pluck="name",
+		limit_page_length=0,
+	)
+	if rows:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail=f"{len(rows)} submitted Sales Order(s) flagged as a PO-match exception (blank/duplicate customer PO, or a line drifting from its Quotation).",
+			remediation="Open each SO's 'PO Match Note' and reconcile with the customer PO. Advisory in v1 — structured line-level PO capture is v2.",
+			evidence=", ".join(rows[:8]),
+		)
+	return _result("", "", "", "pass", detail="No submitted Sales Orders in PO-match exception.")

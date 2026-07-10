@@ -57,6 +57,9 @@ def after_migrate():
 	# Purchase Invoice: GRN Date field (auto-filled from the linked Purchase Receipt).
 	from lumirise_custom.setup.purchase_invoice_fields import create_purchase_invoice_fields
 	create_purchase_invoice_fields()
+
+	from lumirise_custom.setup.sales_po_fields import create_sales_po_fields
+	create_sales_po_fields()
 	# Small UI tweaks (Sai walkthrough): field hides / read-only as Property Setters.
 	from lumirise_custom.setup.ui_tweaks import apply_ui_tweaks
 	apply_ui_tweaks()

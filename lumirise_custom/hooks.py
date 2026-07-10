@@ -291,9 +291,13 @@ doc_events = {
 	"Sales Order": {
 		# SO approved -> hand off to Planning.
 		"on_update": "lumirise_custom.task_engine.on_sales_order_update",
-		# Stamp the traceability panel (Indent/WO/PO fill in once Planning posts;
-		# traceability.restamp refreshes the SO at that point).
-		"validate": "lumirise_custom.traceability.stamp",
+		"validate": [
+			# Stamp the traceability panel (Indent/WO/PO fill in once Planning posts;
+			# traceability.restamp refreshes the SO at that point).
+			"lumirise_custom.traceability.stamp",
+			# Annotate PO-match status vs the customer PO + source Quotation (WP-1.4).
+			"lumirise_custom.sales_po_match.validate_po_match",
+		],
 	},
 	"Material Planning": {
 		"on_submit": [
