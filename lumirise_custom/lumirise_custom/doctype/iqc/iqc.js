@@ -29,11 +29,104 @@ function iqc_run(frm, method, args, freeze_message) {
 	return call();
 }
 
+const SAMPLE_METHOD = "lumirise_custom.samples.";
+
+function sample_run(frm, method, args, freeze_message) {
+	return frappe
+		.call({
+			method: SAMPLE_METHOD + method,
+			args: args,
+			freeze: true,
+			freeze_message: freeze_message || __("Working…"),
+		})
+		.then((r) => {
+			frm.reload_doc();
+			if (r && r.message) {
+				frappe.show_alert({ message: __("Done"), indicator: "green" });
+			}
+		});
+}
+
+function issue_sample_prompt(frm) {
+	const item_codes = [...new Set((frm.doc.items || []).map((r) => r.item_code).filter(Boolean))];
+	if (!item_codes.length) {
+		frappe.msgprint(__("Add the IQC item lines first — samples are drawn against them."));
+		return;
+	}
+	frappe.prompt(
+		[
+			{ fieldname: "item_code", label: __("Item"), fieldtype: "Select", options: item_codes.join("\n"), reqd: 1, default: item_codes[0] },
+			{ fieldname: "sample_qty", label: __("Sample Qty"), fieldtype: "Float", reqd: 1 },
+			{ fieldname: "taken_by", label: __("Taken By"), fieldtype: "Link", options: "User", reqd: 1, default: frappe.session.user },
+			{ fieldname: "remarks", label: __("Remarks"), fieldtype: "Small Text" },
+		],
+		(v) =>
+			sample_run(
+				frm,
+				"issue_sample",
+				{ docname: frm.doc.name, item_code: v.item_code, sample_qty: v.sample_qty, taken_by: v.taken_by, remarks: v.remarks },
+				__("Recording sample…")
+			),
+		__("Issue Sample (pre-GRN)"),
+		__("Record")
+	);
+}
+
+function return_sample_prompt(frm) {
+	const open = (frm.doc.sample_items || []).filter((r) => r.status !== "Returned");
+	if (!open.length) {
+		frappe.msgprint(__("No open samples to return."));
+		return;
+	}
+	const options = open.map((r) => `${r.name} — ${r.item_code} · ${r.sample_qty} ${r.uom || ""} · ${r.taken_by || ""} [${r.status}]`);
+	const by_label = {};
+	open.forEach((r, i) => (by_label[options[i]] = r.name));
+	frappe.prompt(
+		[
+			{ fieldname: "row", label: __("Sample"), fieldtype: "Select", options: options.join("\n"), reqd: 1, default: options[0] },
+			{
+				fieldname: "disposition",
+				label: __("Disposition"),
+				fieldtype: "Select",
+				options: ["Returned Intact", "Built into Finished Unit", "Scrapped"].join("\n"),
+				reqd: 1,
+			},
+		],
+		(v) =>
+			sample_run(
+				frm,
+				"return_sample",
+				{ docname: frm.doc.name, row_name: by_label[v.row], disposition: v.disposition },
+				__("Dispositioning sample…")
+			),
+		__("Return / Dispose Sample"),
+		__("Post")
+	);
+}
+
+function add_sample_buttons(frm) {
+	if (frm.doc.docstatus === 2) {
+		return; // cancelled
+	}
+	const status = frm.doc.status;
+	// Issue is pre-GRN only (goods not owned until the GRN posts).
+	if (!["Moved to RM", "Rejected"].includes(status)) {
+		frm.add_custom_button(__("Issue Sample"), () => issue_sample_prompt(frm), __("Sample"));
+	}
+	// Return needs a logged sample; the disposition stock move requires the GRN
+	// (server enforces "Moved to RM"), so only offer it once there is one to return.
+	if ((frm.doc.sample_items || []).some((r) => r.status !== "Returned")) {
+		frm.add_custom_button(__("Return Sample"), () => return_sample_prompt(frm), __("Sample"));
+	}
+}
+
 frappe.ui.form.on("IQC", {
 	refresh(frm) {
 		if (frm.is_new()) {
 			return;
 		}
+
+		add_sample_buttons(frm);
 
 		// Submitted: GRN is the next step (unless wholly rejected or already done).
 		if (frm.doc.docstatus === 1) {

@@ -191,21 +191,42 @@ doc_events = {
 			# GRN posted -> close the IQC (status Moved to RM) so its accepted qty
 			# leaves the "Pending IQC" bucket in Material Planning (now real stock).
 			"lumirise_custom.chain.mark_iqc_moved_to_rm",
+			# GRN posted -> realise any pre-GRN IQC samples into the IQC Lab store
+			# (RM Store -> IQC Lab), now that the goods are owned. Fail-safe (10.1).
+			"lumirise_custom.samples.realise_samples_to_lab",
 		],
-		# GRN cancelled -> re-open the IQC so the qty returns to "Pending IQC".
-		"on_cancel": "lumirise_custom.chain.revert_iqc_moved_to_rm",
+		# GRN cancelled -> re-open the IQC so the qty returns to "Pending IQC", and
+		# reverse any un-dispositioned IQC Lab sample transfers.
+		"on_cancel": [
+			"lumirise_custom.chain.revert_iqc_moved_to_rm",
+			"lumirise_custom.samples.revert_samples_from_lab",
+		],
+		# Stamp the SO/Indent/WO/PO traceability panel (fail-safe).
+		"validate": "lumirise_custom.traceability.stamp",
 	},
 	"Delivery Note": {
 		"before_submit": "lumirise_custom.events.customer_pdi_gate",
 		# Dispatched -> task Accounts to raise the Sales Invoice.
 		"on_submit": "lumirise_custom.task_engine.on_delivery_note_submit",
+		"validate": "lumirise_custom.traceability.stamp",
+	},
+	"Sales Invoice": {
+		# Stamp the SO/Indent/WO/PO traceability panel (fail-safe).
+		"validate": "lumirise_custom.traceability.stamp",
 	},
 	"Purchase Invoice": {
+		"validate": [
+			# Stamp the SO/Indent/WO/PO traceability panel from the PI's Purchase Order(s).
+			"lumirise_custom.traceability.stamp",
+			# Stamp the GRN Date from the linked Purchase Receipt(s) (latest receipt).
+			"lumirise_custom.accounts.set_grn_date",
+		],
 		# Bill entered for full received qty -> auto-draft a Debit Note for the
 		# rejected qty (traced from the GRN), pending user approval. Fail-safe.
 		"on_submit": "lumirise_custom.accounts.auto_debit_note_for_rejections",
 	},
 	"Purchase Order": {
+		"validate": "lumirise_custom.traceability.stamp",
 		"on_submit": [
 			# Flag the source Indents Ordered once the PO they fed is submitted.
 			"lumirise_custom.lumirise_custom.doctype.indent.indent.mark_indents_ordered",
@@ -227,6 +248,8 @@ doc_events = {
 		# Stamp the shop-floor issue type when the SE comes from a (non-Delivery) Pick
 		# List — authoritative server-side mirror of the public/js/stock_entry.js default.
 		"before_validate": "lumirise_custom.stores.set_shopfloor_issue_type",
+		# Stamp the SO/Indent/WO/PO traceability panel from the SE's Work Order.
+		"validate": "lumirise_custom.traceability.stamp",
 		"on_submit": [
 			"lumirise_custom.costing.on_stock_entry",
 			"lumirise_custom.task_engine.on_stock_entry_submit",
@@ -242,6 +265,8 @@ doc_events = {
 	},
 	# Work Order drives the SO production status + a per-WO build task.
 	"Work Order": {
+		# Stamp the SO/Indent/WO/PO traceability panel (fail-safe).
+		"validate": "lumirise_custom.traceability.stamp",
 		"on_submit": [
 			"lumirise_custom.status_sync.on_work_order_submit",
 			"lumirise_custom.task_engine.on_work_order_submit",
@@ -266,6 +291,9 @@ doc_events = {
 	"Sales Order": {
 		# SO approved -> hand off to Planning.
 		"on_update": "lumirise_custom.task_engine.on_sales_order_update",
+		# Stamp the traceability panel (Indent/WO/PO fill in once Planning posts;
+		# traceability.restamp refreshes the SO at that point).
+		"validate": "lumirise_custom.traceability.stamp",
 	},
 	"Material Planning": {
 		"on_submit": [
@@ -279,14 +307,28 @@ doc_events = {
 		# Indent fully approved -> Purchase raises the PO.
 		"on_update": "lumirise_custom.task_engine.on_indent_update",
 		"on_update_after_submit": "lumirise_custom.task_engine.on_indent_update",
+		"validate": "lumirise_custom.traceability.stamp",
 	},
 	"IQC": {
 		# Rejection at incoming QC -> Defect card to Purchase (vendor claim).
 		"on_submit": "lumirise_custom.task_engine.on_iqc_submit",
+		"validate": "lumirise_custom.traceability.stamp",
 	},
 	"Customer PDI": {
 		# Pre-dispatch inspection failed -> Rework card to Production.
 		"on_submit": "lumirise_custom.task_engine.on_customer_pdi_submit",
+		"validate": "lumirise_custom.traceability.stamp",
+	},
+	# Inbound-chain custom doctypes: stamp the panel from their Purchase Order.
+	"Vendor PDI": {
+		"validate": "lumirise_custom.traceability.stamp",
+	},
+	"Inbound Logistics": {
+		"validate": "lumirise_custom.traceability.stamp",
+	},
+	# Accountable material issue: stamp the panel from its Work Order.
+	"Material Receipt": {
+		"validate": "lumirise_custom.traceability.stamp",
 	},
 }
 

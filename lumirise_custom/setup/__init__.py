@@ -50,6 +50,13 @@ def after_migrate():
 	create_wo_line_transfer_fields()
 	# Purchase Plan: parent Global Supplier (cascades to lines) + supplier-wise split.
 	create_purchase_plan_supplier_fields()
+	# Lumirise Traceability panel (SO / Indent / WO / PO refs) on the standard chain
+	# doctypes. The custom chain doctypes carry the same four fields in their JSON.
+	from lumirise_custom.setup.traceability_fields import create_traceability_fields
+	create_traceability_fields()
+	# Purchase Invoice: GRN Date field (auto-filled from the linked Purchase Receipt).
+	from lumirise_custom.setup.purchase_invoice_fields import create_purchase_invoice_fields
+	create_purchase_invoice_fields()
 	# Small UI tweaks (Sai walkthrough): field hides / read-only as Property Setters.
 	from lumirise_custom.setup.ui_tweaks import apply_ui_tweaks
 	apply_ui_tweaks()

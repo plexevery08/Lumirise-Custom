@@ -16,6 +16,7 @@
   "col_wh",
   "rejection_warehouse",
   "pdi_warehouse",
+  "iqc_lab_warehouse",
   "receiving_warehouse",
   "sec_lines",
   "production_lines",
@@ -98,6 +99,13 @@
    "fieldname": "pdi_warehouse",
    "fieldtype": "Link",
    "label": "Customer PDI Store",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Sample-custody warehouse the IQC lab holds pre-GRN inbound samples in (10.1). The sample is logged pre-GRN, moved here RM Store → IQC Lab once the GRN posts, then dispositioned back to RM / Production FG / scrap.",
+   "fieldname": "iqc_lab_warehouse",
+   "fieldtype": "Link",
+   "label": "IQC Lab Store",
    "options": "Warehouse"
   },
   {

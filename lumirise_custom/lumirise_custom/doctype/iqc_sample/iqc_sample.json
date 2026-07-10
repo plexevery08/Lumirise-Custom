@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-07 00:00:00.000000",
+ "description": "Pre-GRN sample accountability (change-list 10.1). One row per sample drawn from the inbound lot for testing: item, qty, who took it, when, its lab-custody status and final disposition. Pre-GRN it is a pure custody log (goods not owned yet); the stock movements fire once the GRN posts.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "item_name",
+  "sample_qty",
+  "uom",
+  "taken_by",
+  "issued_on",
+  "status",
+  "disposition",
+  "returned_on",
+  "stock_entry",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Item",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fetch_from": "item_code.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sample_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Sample Qty",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "uom",
+   "fieldtype": "Data",
+   "label": "UOM",
+   "read_only": 1
+  },
+  {
+   "description": "Who physically took the sample to the lab.",
+   "fieldname": "taken_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Taken By",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "issued_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Issued On",
+   "read_only": 1
+  },
+  {
+   "default": "Issued",
+   "description": "Issued = logged pre-GRN, no stock yet. In Lab = GRN posted, sample moved RM Store to IQC Lab. Returned = dispositioned out of the lab.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Issued\nIn Lab\nReturned",
+   "read_only": 1
+  },
+  {
+   "description": "Set at return. Returned Intact = back to RM Store; Built into Finished Unit = to Production FG; Scrapped = written off.",
+   "fieldname": "disposition",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Disposition",
+   "options": "\nReturned Intact\nBuilt into Finished Unit\nScrapped",
+   "read_only": 1
+  },
+  {
+   "fieldname": "returned_on",
+   "fieldtype": "Datetime",
+   "label": "Returned On",
+   "read_only": 1
+  },
+  {
+   "description": "Stock Entry that realised this sample's movement (RM to Lab, or Lab to its disposition). Stored as text, not a Link, so cancelling/reversing the entry is never blocked.",
+   "fieldname": "stock_entry",
+   "fieldtype": "Data",
+   "label": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-07 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "IQC Sample",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

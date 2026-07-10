@@ -36,11 +36,16 @@
   "return_stock_entry",
   "rejection_stock_entry",
   "authorization_remarks",
+  "lr_traceability_sec",
+  "lr_source_so",
+  "lr_source_indent",
+  "lr_source_wo",
+  "lr_source_po",
   "amended_from"
  ],
  "fields": [
   {
-   "description": "Optional. Links the inspection to the order it dispatches against — a passed, submitted Customer PDI on this Sales Order is what unlocks the Delivery Note.",
+   "description": "Optional. Links the inspection to the order it dispatches against \u2014 a passed, submitted Customer PDI on this Sales Order is what unlocks the Delivery Note.",
    "fieldname": "sales_order",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -252,6 +257,44 @@
    "options": "Customer PDI",
    "print_hide": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "lr_traceability_sec",
+   "label": "Lumirise Traceability",
+   "fieldtype": "Section Break",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "lr_source_so",
+   "label": "Sales Order Ref",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "lr_source_indent",
+   "label": "Indent Ref",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "lr_source_wo",
+   "label": "Work Order Ref",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "lr_source_po",
+   "label": "Purchase Order Ref",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
   }
  ],
  "grid_page_length": 50,

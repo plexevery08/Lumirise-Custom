@@ -50,6 +50,17 @@ class MaterialPlanning(Document):
 		if indent_name:
 			self.db_set("created_indent", indent_name)
 
+		# Refresh the traceability panels now that the WO(s) + Indent exist as
+		# siblings — so the SO shows its Indent/WO/PO and each WO shows the Indent
+		# (they weren't all created yet when each doc first validated). Fail-safe.
+		from lumirise_custom import traceability
+		for so in {fg.sales_order for fg in self.fg_plan if fg.get("sales_order")}:
+			traceability.restamp("Sales Order", so)
+		for wo in wo_names:
+			traceability.restamp("Work Order", wo)
+		if indent_name:
+			traceability.restamp("Indent", indent_name)
+
 		msg = f"Posted: {len(wo_names)} Production Order(s)"
 		if indent_name:
 			msg += f" + Indent {indent_name}"

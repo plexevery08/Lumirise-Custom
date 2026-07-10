@@ -24,6 +24,11 @@
   "current_location",
   "sec_items",
   "items",
+  "lr_traceability_sec",
+  "lr_source_so",
+  "lr_source_indent",
+  "lr_source_wo",
+  "lr_source_po",
   "amended_from"
  ],
  "fields": [
@@ -144,6 +149,44 @@
    "fieldtype": "Select",
    "label": "Type",
    "options": "Domestic\nImport"
+  },
+  {
+   "fieldname": "lr_traceability_sec",
+   "label": "Lumirise Traceability",
+   "fieldtype": "Section Break",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "lr_source_so",
+   "label": "Sales Order Ref",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "lr_source_indent",
+   "label": "Indent Ref",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "lr_source_wo",
+   "label": "Work Order Ref",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "lr_source_po",
+   "label": "Purchase Order Ref",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
   }
  ],
  "grid_page_length": 50,

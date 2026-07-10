@@ -150,4 +150,21 @@ def create_purchase_orders(plan_name):
 
 	plan.db_set("po_status", "POs Created")
 	plan.db_set("created_pos", ", ".join(created))
+
+	# Now that the PO(s) exist and carry lr_indent_refs, refresh the traceability
+	# panel on every upstream doc (SO / Indent / WO) so they show the PO too.
+	# Fail-safe (restamp swallows errors).
+	from lumirise_custom import traceability
+	sos = set()
+	for po in created:
+		refs = frappe.db.get_value("Purchase Order", po, "lr_indent_refs") or ""
+		for iname in [x.strip() for x in refs.split(",") if x.strip()]:
+			traceability.restamp("Indent", iname)
+			so = frappe.db.get_value("Indent", iname, "source_sales_order")
+			if so:
+				sos.add(so)
+	for so in sos:
+		traceability.restamp("Sales Order", so)
+		for wo in frappe.get_all("Work Order", {"sales_order": so}, pluck="name"):
+			traceability.restamp("Work Order", wo)
 	return created

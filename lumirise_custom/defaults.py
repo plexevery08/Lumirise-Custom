@@ -63,6 +63,11 @@ def pdi_warehouse():
 	return _warehouse("pdi_warehouse", "Customer PDI Store")
 
 
+def iqc_lab_warehouse():
+	"""Sample-custody warehouse the IQC lab draws pre-GRN samples into (10.1)."""
+	return _warehouse("iqc_lab_warehouse", "IQC Lab")
+
+
 def wip_warehouse():
 	return _warehouse("wip_warehouse", "Default Line WIP")
 

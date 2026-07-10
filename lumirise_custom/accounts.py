@@ -27,6 +27,25 @@ import frappe
 from frappe.utils import flt
 
 
+def set_grn_date(doc, method=None):
+	"""Purchase Invoice validate -> stamp lr_grn_date from the linked GRN(s).
+
+	The GRN date is the date the goods were actually received (Purchase Receipt
+	posting_date). A PI can be billed from several GRNs; we use the LATEST receipt
+	date. Only fills when empty, so a manually-entered date (e.g. a PI not made from
+	a GRN) is preserved. Fail-safe: never blocks the bill."""
+	try:
+		if not doc.meta.has_field("lr_grn_date") or doc.get("lr_grn_date"):
+			return
+		prs = {it.purchase_receipt for it in doc.items if it.get("purchase_receipt")}
+		dates = [frappe.db.get_value("Purchase Receipt", pr, "posting_date") for pr in prs]
+		dates = [d for d in dates if d]
+		if dates:
+			doc.lr_grn_date = max(dates)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "lumirise set_grn_date")
+
+
 def auto_debit_note_for_rejections(doc, method=None):
 	"""Purchase Invoice on_submit -> draft a Debit Note for any rejected qty traced
 	back through the linked Purchase Receipt(s). Fail-safe: never throws."""
