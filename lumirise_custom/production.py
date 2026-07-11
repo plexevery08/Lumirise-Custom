@@ -346,6 +346,26 @@ def shop_floor_available_qty(work_order):
 	return flt(min(available or 0.0, pending), 3)
 
 
+def shop_floor_total_qty(work_order):
+	"""Kit-equivalent of the production item CURRENTLY on the Shop Floor for this WO —
+	the SAME min-over-components as transferable, but UNCAPPED by WO pending, so
+	pre-existing stock shows too. The client's example: 500 just issued + 200 already
+	there = 700 total on the floor (of which 500 is being transferred, 200 remains)."""
+	wo = _get_submitted_wo(work_order)
+	floor_wh = config.shop_floor_warehouse()
+	wo_qty = flt(wo.qty)
+	if wo_qty <= 0:
+		return 0.0
+	available = None
+	for item in wo.required_items:
+		per_light = flt(item.required_qty) / wo_qty
+		if per_light <= 0:
+			continue
+		lights = _qty_in_warehouse(item.item_code, floor_wh) / per_light
+		available = lights if available is None else min(available, lights)
+	return flt(available or 0.0, 3)
+
+
 @frappe.whitelist()
 def line_transfer_breakdown(work_order):
 	"""Full per-Work-Order qty picture for the Line Transfer tab:
@@ -403,6 +423,7 @@ def line_transfer_breakdown(work_order):
 		"balance_to_transfer": flt(wo_qty - transferred_total, 3),
 		"balance_to_produce": flt(wo_qty - produced_total, 3),
 		"transferable_now": shop_floor_available_qty(work_order),
+		"shop_floor_total": shop_floor_total_qty(work_order),
 		"lines": lines,
 	}
 

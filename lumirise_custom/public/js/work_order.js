@@ -200,7 +200,8 @@ function lumirise_line_transfer_html(d) {
 			${chip(__("Transferred to lines"), d.transferred_total, "#1f7a1f")}
 			${chip(__("Produced"), d.produced_total, "#1f6fd6")}
 			${chip(__("Balance to produce"), d.balance_to_produce, d.balance_to_produce > 0 ? "#d68a1f" : "#1f7a1f")}
-			${chip(__("Transferable now (shop floor)"), d.transferable_now, d.transferable_now > 0 ? "#d68a1f" : "#8d95a0")}
+			${chip(__("Total on shop floor"), d.shop_floor_total, d.shop_floor_total > 0 ? "#1f6fd6" : "#8d95a0")}
+			${chip(__("Transferable now"), d.transferable_now, d.transferable_now > 0 ? "#d68a1f" : "#8d95a0")}
 		</div>`;
 
 	let rows;
