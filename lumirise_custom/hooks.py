@@ -217,6 +217,9 @@ doc_events = {
 	"Sales Invoice": {
 		# Stamp the SO/Indent/WO/PO traceability panel (fail-safe).
 		"validate": "lumirise_custom.traceability.stamp",
+		# On invoice -> move FG Production FG -> Dispatch FG (behind auto_move_fg_on_si,
+		# default OFF; only the one unambiguous hop — WP-3.3). Fail-safe.
+		"on_submit": "lumirise_custom.accounts.auto_move_fg_to_dispatch",
 	},
 	"Purchase Invoice": {
 		"validate": [

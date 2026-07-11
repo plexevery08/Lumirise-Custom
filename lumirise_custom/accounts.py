@@ -26,6 +26,8 @@ Design notes
 import frappe
 from frappe.utils import flt
 
+from lumirise_custom import defaults as config
+
 
 def set_grn_date(doc, method=None):
 	"""Purchase Invoice validate -> stamp lr_grn_date from the linked GRN(s).
@@ -149,3 +151,25 @@ def _auto_debit_note(doc):
 		   if rej_wh else "It is financial-only (no rejection warehouse configured). ")
 		+ "It is pending approval — open and submit it.",
 		title="Debit Note raised (approval required)", indicator="orange")
+
+
+def auto_move_fg_to_dispatch(doc, method=None):
+	"""On Sales Invoice submit, move each FG line's qty Production FG -> Dispatch FG —
+	the one unambiguous FG hop. Behind the auto_move_fg_on_si flag (default OFF): the
+	multi-store FG routing table is a pending client decision (WP-3.3), so only this hop
+	ships and only when the client turns it on. Fail-safe — never blocks the invoice."""
+	try:
+		if not config.flag("auto_move_fg_on_si", default=False):
+			return
+		from lumirise_custom import production
+
+		prod_fg = config.production_fg_warehouse()
+		for it in doc.items:
+			if not it.item_code or not frappe.db.get_value("Item", it.item_code, "is_stock_item"):
+				continue
+			avail = production._qty_in_warehouse(it.item_code, prod_fg)
+			move_qty = min(flt(it.qty), flt(avail))
+			if move_qty > 0:
+				production.move_to_dispatch(item_code=it.item_code, qty=move_qty)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "auto_move_fg_to_dispatch failed")

@@ -27,6 +27,7 @@
   "block_grn_without_container_release",
   "sec_sales",
   "po_rate_tolerance_pct",
+  "auto_move_fg_on_si",
   "sec_health",
   "enable_destructive_health_tests",
   "production_site_name",
@@ -261,6 +262,13 @@
    "fieldname": "health_variance_qty_cap",
    "fieldtype": "Int",
    "label": "Stock variance alert cap (qty)"
+  },
+  {
+   "default": "0",
+   "description": "When ON, submitting a Sales Invoice moves each FG line Production FG -> Dispatch FG. OFF by default — enable once the client confirms FG routing (WP-3.3).",
+   "fieldname": "auto_move_fg_on_si",
+   "fieldtype": "Check",
+   "label": "Auto-move FG to Dispatch on Sales Invoice"
   }
  ],
  "grid_page_length": 50,
