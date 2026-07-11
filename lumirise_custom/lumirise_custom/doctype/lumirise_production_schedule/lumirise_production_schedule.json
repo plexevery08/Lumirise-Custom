@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "autoname": "format:PSCH-{#####}",
+ "creation": "2026-07-10 00:00:00",
+ "description": "PPC monthly/weekly/daily production schedule. Planner dates each FG slice by SO priority; the system computes lines-needed (qty/CPH), material availability, and capacity/delivery warnings (advisory, never blocking).",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "period_label",
+  "from_date",
+  "to_date",
+  "col_sch",
+  "release_status",
+  "sec_lines",
+  "schedule_lines",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "description": "e.g. July 2026 or Week 06-12 Jul.",
+   "fieldname": "period_label",
+   "fieldtype": "Data",
+   "label": "Period Label"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_sch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Not Released",
+   "fieldname": "release_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Release Status",
+   "options": "Not Released\nReleased",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_lines",
+   "fieldtype": "Section Break",
+   "label": "Schedule Lines"
+  },
+  {
+   "fieldname": "schedule_lines",
+   "fieldtype": "Table",
+   "label": "Schedule Lines",
+   "options": "Production Schedule Line"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Lumirise Production Schedule",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-07-10 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Lumirise Production Schedule",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Planning Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Planning User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lumirise Operations",
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

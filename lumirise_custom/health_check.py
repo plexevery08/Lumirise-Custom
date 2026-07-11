@@ -1050,3 +1050,36 @@ def _check_lines_have_supervisor():
 			evidence=", ".join(missing[:8]),
 		)
 	return _result("", "", "", "pass", detail=f"All {len(rows)} active production lines have a supervisor.")
+
+
+@readonly_check("schedule_within_so_qty", "Production Schedule slices stay within SO quantity", PRODUCTION)
+def _check_schedule_within_so_qty():
+	# For each submitted schedule, the sum of slice_qty per (SO, FG) must not exceed the
+	# SO line quantity — otherwise the plan schedules more than was ordered.
+	over = []
+	lines = frappe.get_all(
+		"Production Schedule Line",
+		filters={"docstatus": 1, "sales_order": ["is", "set"]},
+		fields=["sales_order", "fg_item", "slice_qty"],
+		limit_page_length=0,
+	)
+	scheduled = {}
+	for ln in lines:
+		scheduled[(ln.sales_order, ln.fg_item)] = scheduled.get((ln.sales_order, ln.fg_item), 0) + flt(ln.slice_qty)
+	for (so, fg), qty in scheduled.items():
+		so_qty = flt(
+			frappe.db.get_value("Sales Order Item", {"parent": so, "item_code": fg}, "qty")
+		)
+		if so_qty and qty > so_qty + 0.001:
+			over.append(f"{so}/{fg}: scheduled {qty:g} > ordered {so_qty:g}")
+	if over:
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail=f"{len(over)} SO/FG slice(s) scheduled beyond the ordered quantity.",
+			remediation="Reduce the over-scheduled slices — the plan must not exceed the Sales Order quantity.",
+			evidence="; ".join(over[:6]),
+		)
+	return _result("", "", "", "pass", detail="All scheduled slices are within their Sales Order quantity.")
