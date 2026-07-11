@@ -180,7 +180,11 @@ fixtures = [
 # defect Kanban card. The task-engine handlers are fail-safe and never block.
 doc_events = {
 	"Purchase Receipt": {
-		"before_submit": "lumirise_custom.events.iqc_gate",
+		"before_submit": [
+			"lumirise_custom.events.iqc_gate",
+			# Warn/block if the PO's Inbound Logistics wasn't released by Purchase (WP-2.3).
+			"lumirise_custom.events.container_release_gate",
+		],
 		"on_submit": [
 			# GRN posted -> RM Stores put-away card.
 			"lumirise_custom.task_engine.on_purchase_receipt_submit",

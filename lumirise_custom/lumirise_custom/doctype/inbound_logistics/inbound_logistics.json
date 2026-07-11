@@ -15,6 +15,9 @@
   "shipment_date",
   "expected_arrival_date",
   "container_no",
+  "release_status",
+  "released_by",
+  "released_on",
   "col1",
   "lr_number",
   "lr_date",
@@ -49,6 +52,12 @@
    "read_only": 1
   },
   {
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Domestic\nImport"
+  },
+  {
    "default": "Road",
    "fieldname": "mode",
    "fieldtype": "Select",
@@ -58,13 +67,58 @@
   {
    "allow_on_submit": 1,
    "default": "Dispatched",
-   "description": "Driven by the flow buttons. Dispatched \u2192 In Transit \u2192 Reached Warehouse. Do not edit manually.",
+   "description": "Driven by the flow buttons. Dispatched → In Transit → Reached Warehouse. Do not edit manually.",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
    "options": "Dispatched\nIn Transit\nReached Warehouse",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "shipment_date",
+   "fieldtype": "Date",
+   "label": "Shipment / Dispatch Date"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "expected_arrival_date",
+   "fieldtype": "Date",
+   "label": "Expected Arrival Date"
+  },
+  {
+   "fieldname": "container_no",
+   "fieldtype": "Data",
+   "label": "Container No"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Pending Authorization",
+   "description": "Purchase authorizes container release once the consignment has reached the dock.",
+   "fieldname": "release_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Container Release",
+   "options": "Pending Authorization\nReleased",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "released_by",
+   "fieldtype": "Link",
+   "label": "Released By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "released_on",
+   "fieldtype": "Datetime",
+   "label": "Released On",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -94,23 +148,6 @@
    "label": "Transporter"
   },
   {
-   "fieldname": "container_no",
-   "fieldtype": "Data",
-   "label": "Container No"
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "shipment_date",
-   "fieldtype": "Date",
-   "label": "Shipment / Dispatch Date"
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "expected_arrival_date",
-   "fieldtype": "Date",
-   "label": "Expected Arrival Date"
-  },
-  {
    "allow_on_submit": 1,
    "fieldname": "no_of_boxes",
    "fieldtype": "Int",
@@ -136,6 +173,44 @@
    "reqd": 1
   },
   {
+   "collapsible": 1,
+   "fieldname": "lr_traceability_sec",
+   "fieldtype": "Section Break",
+   "label": "Lumirise Traceability"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "lr_source_so",
+   "fieldtype": "Small Text",
+   "label": "Sales Order Ref",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "lr_source_indent",
+   "fieldtype": "Small Text",
+   "label": "Indent Ref",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "lr_source_wo",
+   "fieldtype": "Small Text",
+   "label": "Work Order Ref",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "lr_source_po",
+   "fieldtype": "Small Text",
+   "label": "Purchase Order Ref",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -143,50 +218,6 @@
    "options": "Inbound Logistics",
    "print_hide": 1,
    "read_only": 1
-  },
-  {
-   "fieldname": "type",
-   "fieldtype": "Select",
-   "label": "Type",
-   "options": "Domestic\nImport"
-  },
-  {
-   "fieldname": "lr_traceability_sec",
-   "label": "Lumirise Traceability",
-   "fieldtype": "Section Break",
-   "collapsible": 1
-  },
-  {
-   "fieldname": "lr_source_so",
-   "label": "Sales Order Ref",
-   "fieldtype": "Small Text",
-   "read_only": 1,
-   "no_copy": 1,
-   "allow_on_submit": 1
-  },
-  {
-   "fieldname": "lr_source_indent",
-   "label": "Indent Ref",
-   "fieldtype": "Small Text",
-   "read_only": 1,
-   "no_copy": 1,
-   "allow_on_submit": 1
-  },
-  {
-   "fieldname": "lr_source_wo",
-   "label": "Work Order Ref",
-   "fieldtype": "Small Text",
-   "read_only": 1,
-   "no_copy": 1,
-   "allow_on_submit": 1
-  },
-  {
-   "fieldname": "lr_source_po",
-   "label": "Purchase Order Ref",
-   "fieldtype": "Small Text",
-   "read_only": 1,
-   "no_copy": 1,
-   "allow_on_submit": 1
   }
  ],
  "grid_page_length": 50,

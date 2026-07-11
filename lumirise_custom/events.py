@@ -6,6 +6,57 @@
 
 import frappe
 
+from lumirise_custom import defaults as config
+
+
+def container_release_gate(doc, method=None):
+	"""Warn/block a GRN whose PO's Inbound Logistics has not been released by Purchase.
+	Strength is config-driven (Lumirise Operations Settings.block_grn_without_container_
+	release, default OFF = warn + a Purchase task; ON = hard block). Skips subcontracting
+	and domestic direct receipts (a PO with no Inbound Logistics)."""
+	if doc.get("is_subcontracted"):
+		return
+	pos = {row.purchase_order for row in doc.items if getattr(row, "purchase_order", None)}
+	unreleased = []
+	for po in pos:
+		logs = frappe.get_all(
+			"Inbound Logistics",
+			filters={"purchase_order": po, "docstatus": 1},
+			fields=["name", "release_status"],
+		)
+		if logs and not any((l.release_status == "Released") for l in logs):
+			unreleased.append((po, logs[0].name))
+	if not unreleased:
+		return
+	detail = ", ".join(f"PO {po} (logistics {log})" for po, log in unreleased)
+	if config.flag("block_grn_without_container_release", default=False):
+		frappe.throw(
+			f"Container not released by Purchase for: {detail}. "
+			f"Release the Inbound Logistics before the GRN.",
+			title="Container Release Gate",
+		)
+	# soft mode: let the GRN through but flag it to Purchase
+	frappe.msgprint(
+		f"Container not yet released by Purchase for: {detail}.",
+		title="Container Release", indicator="orange",
+	)
+	try:
+		from lumirise_custom.task_engine import create_task
+
+		for po, log in unreleased:
+			create_task(
+				title=f"Confirm container release — {log} (PO {po})",
+				department="Purchase",
+				task_type="Handoff",
+				priority="Medium",
+				reference_doctype="Inbound Logistics",
+				reference_name=log,
+				description=f"A GRN was posted for PO {po} before its Inbound Logistics {log} was released. Confirm/authorize.",
+				source_event="container_release_pending",
+			)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "container_release_gate: task failed")
+
 
 def iqc_gate(doc, method=None):
 	"""Block GRN (Purchase Receipt) submission unless IQC passed for the PO."""

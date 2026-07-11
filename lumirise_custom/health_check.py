@@ -1158,3 +1158,33 @@ def _check_rm_rejection_overdue():
 			evidence=", ".join(missing[:8]),
 		)
 	return _result("", "", "", "pass", detail=f"All {len(overdue)} overdue RM rejection(s) have a scrap-review task.")
+
+
+@readonly_check("container_release_gate_wired", "Container-release gate is wired on GRN", GATES)
+def _check_container_release_wired():
+	if not _hooked("Purchase Receipt", "before_submit", "lumirise_custom.events.container_release_gate"):
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail="events.container_release_gate is not wired on Purchase Receipt before_submit.",
+			remediation="Restore the container_release_gate handler in hooks.py and run bench migrate.",
+		)
+	stuck = frappe.get_all(
+		"Inbound Logistics",
+		filters={"docstatus": 1, "status": "Reached Warehouse", "release_status": "Pending Authorization"},
+		pluck="name",
+		limit_page_length=0,
+	)
+	if stuck:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail=f"{len(stuck)} consignment(s) Reached Warehouse but not released by Purchase.",
+			remediation="Purchase should Release Container on those Inbound Logistics, or explain the hold.",
+			evidence=", ".join(stuck[:8]),
+		)
+	return _result("", "", "", "pass", detail="Container-release gate wired; no consignments stuck unreleased.")

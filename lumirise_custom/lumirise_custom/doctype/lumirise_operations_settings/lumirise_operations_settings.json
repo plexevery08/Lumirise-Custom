@@ -24,6 +24,7 @@
   "enable_pick_list_task",
   "enable_grn_putaway_task",
   "rm_rejection_hold_days",
+  "block_grn_without_container_release",
   "sec_sales",
   "po_rate_tolerance_pct",
   "sec_health",
@@ -245,6 +246,13 @@
    "fieldname": "rm_rejection_hold_days",
    "fieldtype": "Int",
    "label": "RM Rejection Hold Days"
+  },
+  {
+   "default": "0",
+   "description": "When ON, a GRN cannot submit until Purchase releases the PO's Inbound Logistics container. OFF (default) = warn + a Purchase task only.",
+   "fieldname": "block_grn_without_container_release",
+   "fieldtype": "Check",
+   "label": "Block GRN without container release"
   }
  ],
  "grid_page_length": 50,

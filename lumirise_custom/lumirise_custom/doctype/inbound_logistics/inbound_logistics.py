@@ -12,12 +12,14 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, now_datetime
 
 # --- Status values (single source of truth) ---------------------------------
 DISPATCHED = "Dispatched"
 IN_TRANSIT = "In Transit"
 REACHED = "Reached Warehouse"
+
+RELEASE_ROLES = ("Purchase User", "Purchase Manager", "Purchase Head", "System Manager")
 
 
 class InboundLogistics(Document):
@@ -65,3 +67,21 @@ def mark_reached(docname):
 		frappe.throw(_("Mark a dispatched / in-transit consignment as reached."))
 	doc.db_set("status", REACHED)
 	return {"status": REACHED}
+
+
+@frappe.whitelist()
+def release_container(docname):
+	"""Purchase authorizes container release once the goods have reached the dock —
+	the gate a not-yet-released consignment's GRN checks (WP-2.3)."""
+	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
+	if not any(r in frappe.get_roles() for r in RELEASE_ROLES):
+		frappe.throw(_("Only Purchase can release a container."))
+	doc = _load(docname)
+	if doc.docstatus != 1:
+		frappe.throw(_("Submit the Inbound Logistics before releasing the container."))
+	if doc.status != REACHED:
+		frappe.throw(_("Release the container only after the consignment has Reached Warehouse."))
+	doc.db_set("release_status", "Released")
+	doc.db_set("released_by", frappe.session.user)
+	doc.db_set("released_on", now_datetime())
+	return {"release_status": "Released"}
