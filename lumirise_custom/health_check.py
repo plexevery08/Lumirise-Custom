@@ -1188,3 +1188,32 @@ def _check_container_release_wired():
 			evidence=", ".join(stuck[:8]),
 		)
 	return _result("", "", "", "pass", detail="Container-release gate wired; no consignments stuck unreleased.")
+
+
+@readonly_check("stock_variance_open", "No large uncounted stock variance pending", STOCK)
+def _check_stock_variance_open():
+	# A DRAFT Stock Reconciliation implying a big system-vs-counted gap not yet posted.
+	cap = flt(frappe.db.get_single_value(SETTINGS, "health_variance_qty_cap")) or 50.0
+	rows = frappe.db.sql(
+		"""SELECT sri.item_code, sri.warehouse, sri.qty AS counted
+		   FROM `tabStock Reconciliation Item` sri
+		   JOIN `tabStock Reconciliation` sr ON sr.name = sri.parent
+		   WHERE sr.docstatus = 0""",
+		as_dict=True,
+	)
+	big = []
+	for r in rows:
+		system = flt(frappe.db.get_value("Bin", {"item_code": r.item_code, "warehouse": r.warehouse}, "actual_qty"))
+		if abs(system - flt(r.counted)) > cap:
+			big.append(f"{r.item_code}@{r.warehouse}: {flt(system - flt(r.counted)):g}")
+	if big:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail=f"{len(big)} draft Stock Reconciliation variance(s) above the {cap:g}-unit cap awaiting adjustment.",
+			remediation="Review the Stock Variance Worklist and submit/correct the Stock Reconciliation to post the adjustment.",
+			evidence="; ".join(big[:6]),
+		)
+	return _result("", "", "", "pass", detail="No large pending stock variances.")

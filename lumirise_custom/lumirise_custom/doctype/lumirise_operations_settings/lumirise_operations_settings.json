@@ -36,6 +36,7 @@
   "sec_health_thresholds",
   "health_error_log_threshold",
   "health_over_receipt_cap",
+  "health_variance_qty_cap",
   "col_health2",
   "baseline_server_scripts",
   "baseline_client_scripts",
@@ -253,6 +254,13 @@
    "fieldname": "block_grn_without_container_release",
    "fieldtype": "Check",
    "label": "Block GRN without container release"
+  },
+  {
+   "default": "50",
+   "description": "The daily health check warns when a DRAFT Stock Reconciliation implies a variance larger than this many units. Default 50.",
+   "fieldname": "health_variance_qty_cap",
+   "fieldtype": "Int",
+   "label": "Stock variance alert cap (qty)"
   }
  ],
  "grid_page_length": 50,
