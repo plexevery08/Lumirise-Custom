@@ -15,7 +15,7 @@ PUT-AWAY (inbound):
 
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import flt, getdate, nowdate, date_diff
 
 from lumirise_custom import defaults as config
 from lumirise_custom.task_engine import create_task
@@ -137,3 +137,85 @@ def on_pick_list_insert(doc, method=None):
 		)
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "Stores: on_pick_list_insert failed")
+
+
+# --------------------------------------------------------------------------- #
+# RM Rejection hold-timer (WP-2.4)
+# One source of truth for the "held ~1 month then scrap" ageing, shared by the RM
+# Rejection Ageing report and the daily hold-timer scheduler so they never disagree.
+# --------------------------------------------------------------------------- #
+def rejection_warehouse():
+	try:
+		wh = frappe.db.get_single_value("Lumirise Operations Settings", "rejection_warehouse")
+		if wh:
+			return wh
+	except Exception:
+		pass
+	return frappe.db.get_value("Warehouse", {"warehouse_name": "RM Rejection"}, "name")
+
+
+def rejection_hold_days():
+	# Distinguish an explicit 0 (scrap-review immediately) from unset — `or 30` would
+	# silently turn a configured 0 into 30.
+	v = frappe.db.get_single_value("Lumirise Operations Settings", "rm_rejection_hold_days")
+	return int(v) if v not in (None, "") else 30
+
+
+def aged_rejection_rows(warehouse=None, hold_days=None):
+	"""Items in the rejection warehouse with held qty, age, and a Scrap-due flag past
+	the hold window. Shared by the report and the scheduler."""
+	warehouse = warehouse or rejection_warehouse()
+	if not warehouse:
+		return []
+	hold_days = int(hold_days) if hold_days not in (None, "") else rejection_hold_days()
+	today = getdate(nowdate())
+	rows = []
+	for b in frappe.get_all("Bin", filters={"warehouse": warehouse, "actual_qty": [">", 0]},
+							fields=["item_code", "actual_qty"]):
+		oldest = frappe.db.sql(
+			"""SELECT MIN(posting_date) FROM `tabStock Ledger Entry`
+			   WHERE warehouse=%(wh)s AND item_code=%(it)s AND actual_qty > 0 AND is_cancelled = 0""",
+			{"wh": warehouse, "it": b.item_code})
+		oldest_in = oldest[0][0] if oldest and oldest[0] else None
+		age = date_diff(today, getdate(oldest_in)) if oldest_in else 0
+		rows.append({
+			"item_code": b.item_code,
+			"item_name": frappe.db.get_value("Item", b.item_code, "item_name"),
+			"warehouse": warehouse,
+			"qty": flt(b.actual_qty),
+			"oldest_in": oldest_in,
+			"age_days": age,
+			"status": "Scrap due" if age >= hold_days else "Holding",
+		})
+	rows.sort(key=lambda r: r["age_days"], reverse=True)
+	return rows
+
+
+def flag_overdue_rm_rejections():
+	"""Daily scheduler: raise ONE deduped task per item past the rejection hold window.
+	NEVER auto-scraps — disposition needs Praveen + Quality (human stays in the loop).
+	Dedup is automatic on (Item, item_code, source_event) so exactly one open card per
+	item persists until Stores closes it."""
+	from lumirise_custom.task_engine import create_task
+
+	hold = rejection_hold_days()
+	for r in aged_rejection_rows(hold_days=hold):
+		if r["status"] != "Scrap due":
+			continue
+		try:
+			create_task(
+				title=f"RM rejection past hold window: {r['item_code']} ({r['qty']:g}, {r['age_days']}d)",
+				department="Stores - RM",
+				task_type="Defect / Rejection",
+				priority="High",
+				reference_doctype="Item",
+				reference_name=r["item_code"],
+				description=(
+					f"{r['qty']:g} of {r['item_code']} held in {r['warehouse']} for {r['age_days']}d "
+					f"(window {hold}d). Needs Praveen + Quality disposition (scrap/return). "
+					f"Do NOT auto-scrap."
+				),
+				source_event="rm_rejection_hold",
+			)
+		except Exception:
+			frappe.log_error(frappe.get_traceback(), "RM rejection hold-timer failed")

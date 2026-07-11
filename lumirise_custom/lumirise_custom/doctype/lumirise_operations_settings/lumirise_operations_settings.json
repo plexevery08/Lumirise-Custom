@@ -23,6 +23,7 @@
   "sec_stores",
   "enable_pick_list_task",
   "enable_grn_putaway_task",
+  "rm_rejection_hold_days",
   "sec_sales",
   "po_rate_tolerance_pct",
   "sec_health",
@@ -237,6 +238,13 @@
    "fieldname": "po_rate_tolerance_pct",
    "fieldtype": "Float",
    "label": "PO/Quotation rate tolerance (%)"
+  },
+  {
+   "default": "30",
+   "description": "Days rejected RM may sit in the rejection warehouse before the daily hold-timer raises a scrap-review task. Default 30.",
+   "fieldname": "rm_rejection_hold_days",
+   "fieldtype": "Int",
+   "label": "RM Rejection Hold Days"
   }
  ],
  "grid_page_length": 50,

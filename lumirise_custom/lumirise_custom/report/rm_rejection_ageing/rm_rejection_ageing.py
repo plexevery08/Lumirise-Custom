@@ -36,35 +36,8 @@ def get_columns():
 
 
 def get_data(filters):
-	warehouse = filters.get("warehouse") or _default_rejection_warehouse()
-	if not warehouse:
-		return []
-	hold_days = int(filters.get("hold_days") or 30)
+	# Single source of truth shared with the daily hold-timer scheduler — hold_days
+	# defaults from Lumirise Operations Settings when the filter is blank (WP-2.4).
+	from lumirise_custom.stores import aged_rejection_rows
 
-	bins = frappe.get_all(
-		"Bin",
-		filters={"warehouse": warehouse, "actual_qty": [">", 0]},
-		fields=["item_code", "actual_qty"],
-	)
-	rows = []
-	today = getdate(nowdate())
-	for b in bins:
-		oldest = frappe.db.sql(
-			"""SELECT MIN(posting_date) FROM `tabStock Ledger Entry`
-			   WHERE warehouse=%(wh)s AND item_code=%(it)s AND actual_qty > 0
-			     AND is_cancelled = 0""",
-			{"wh": warehouse, "it": b.item_code},
-		)
-		oldest_in = oldest[0][0] if oldest and oldest[0] else None
-		age = date_diff(today, getdate(oldest_in)) if oldest_in else 0
-		rows.append({
-			"item_code": b.item_code,
-			"item_name": frappe.db.get_value("Item", b.item_code, "item_name"),
-			"warehouse": warehouse,
-			"qty": flt(b.actual_qty),
-			"oldest_in": oldest_in,
-			"age_days": age,
-			"status": "Scrap due" if age >= hold_days else "Holding",
-		})
-	rows.sort(key=lambda r: r["age_days"], reverse=True)
-	return rows
+	return aged_rejection_rows(filters.get("warehouse"), filters.get("hold_days"))

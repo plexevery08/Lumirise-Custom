@@ -345,6 +345,9 @@ scheduler_events = {
 		"lumirise_custom.lumirise_custom.doctype.price_sheet.price_sheet.expire_pending_sheets",
 		# Overdue Lumirise Tasks -> escalate to the HOD (missed-deadline alert).
 		"lumirise_custom.task_engine.escalate_overdue_tasks",
+		# RM sitting in the rejection warehouse past the hold window -> one deduped
+		# task to Stores (never auto-scraps; disposition stays with Praveen + Quality).
+		"lumirise_custom.stores.flag_overdue_rm_rejections",
 		# Daily self-test: verify the whole flow, pinpoint what broke + the fix,
 		# and push an in-ERP digest. Read-only on prod; synthetic tier on a test
 		# site only (gated). Runs last so the digest reflects the same-day escalation.

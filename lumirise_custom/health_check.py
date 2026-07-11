@@ -1130,3 +1130,31 @@ def _check_rm_price_ranges():
 			evidence=", ".join(f"{b.parent}:{b.item_code}" for b in bad[:6]),
 		)
 	return _result("", "", "", "pass", detail="RM Price Book qty ranges are consistent.")
+
+
+@readonly_check("rm_rejection_overdue", "Overdue RM rejections have a scrap-review task", STOCK)
+def _check_rm_rejection_overdue():
+	from lumirise_custom.stores import aged_rejection_rows
+
+	overdue = [r["item_code"] for r in aged_rejection_rows() if r["status"] == "Scrap due"]
+	if not overdue:
+		return _result("", "", "", "pass", detail="No RM rejections past the hold window.")
+	tasked = set(
+		frappe.get_all(
+			"Lumirise Task",
+			filters={"source_event": "rm_rejection_hold", "reference_name": ["in", overdue]},
+			pluck="reference_name",
+		)
+	)
+	missing = [i for i in overdue if i not in tasked]
+	if missing:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail=f"{len(missing)} item(s) past the rejection hold window with no scrap-review task — the hold-timer may not have run.",
+			remediation="Check the daily scheduler; run lumirise_custom.stores.flag_overdue_rm_rejections. Disposition stays manual (Praveen + Quality).",
+			evidence=", ".join(missing[:8]),
+		)
+	return _result("", "", "", "pass", detail=f"All {len(overdue)} overdue RM rejection(s) have a scrap-review task.")
