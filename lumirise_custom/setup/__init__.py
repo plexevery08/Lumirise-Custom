@@ -82,6 +82,7 @@ def after_migrate():
 	# Daily self-test: dashboard Number Card (the Workspace shortcut + reports
 	# ship as files/fixtures; Number Cards do not).
 	setup_health_check()
+	setup_line_dashboard()
 	# Quality: seed the 17-parameter defect master (A/B/C class) that drives the
 	# AQL engine and the IQC / Customer PDI reject-reason link.
 	seed_defect_master()
@@ -134,6 +135,34 @@ def setup_health_check():
 			).insert(ignore_permissions=True)
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "setup_health_check failed")
+
+
+def setup_line_dashboard():
+	"""Idempotent: seed the control-tower line Number Cards (WP-3.2). Number Cards are
+	not fixtures in Frappe, so they are (re)created here on migrate. Never breaks migrate."""
+	cards = [
+		("Lines: Open Job Cards", "Lumirise Job Card", [["Lumirise Job Card", "status", "=", "Open", False]], "#ffa00a"),
+		("Lines: Missed Job Cards", "Lumirise Job Card", [["Lumirise Job Card", "status", "=", "Missed", False]], "#e24c4c"),
+		("Lines: Unbalanced Closings", "Line Daily Closing", [["Line Daily Closing", "is_balanced", "=", 0, False]], "#e24c4c"),
+	]
+	for label, dt, filters, color in cards:
+		try:
+			if not frappe.db.exists("DocType", dt) or frappe.db.exists("Number Card", {"label": label}):
+				continue
+			frappe.get_doc({
+				"doctype": "Number Card",
+				"label": label,
+				"module": "Lumirise Custom",
+				"type": "Document Type",
+				"document_type": dt,
+				"function": "Count",
+				"is_public": 1,
+				"show_percentage_stats": 0,
+				"filters_json": frappe.as_json(filters),
+				"color": color,
+			}).insert(ignore_permissions=True)
+		except Exception:
+			frappe.log_error(frappe.get_traceback(), f"setup_line_dashboard: {label} failed")
 
 
 def seed_defect_master():
