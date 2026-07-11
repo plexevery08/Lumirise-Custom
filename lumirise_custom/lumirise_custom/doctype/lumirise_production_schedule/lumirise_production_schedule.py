@@ -110,3 +110,109 @@ def get_suggested_order(sales_orders):
 	urgent.sort(key=lambda r: r["priority"])
 	normal.sort(key=lambda r: r["priority"])
 	return urgent + normal
+
+
+def _assign_jobcard(jc_name, user):
+	"""ToDo + notification to the line supervisor (mirrors task_engine._assign, for a
+	Job Card). Fail-safe — a missing/disabled user just means an unassigned card."""
+	if not user:
+		return
+	try:
+		from frappe.desk.form.assign_to import add as assign_add
+
+		assign_add({
+			"assign_to": [user],
+			"doctype": "Lumirise Job Card",
+			"name": jc_name,
+			"description": f"Daily production target — {jc_name}",
+			"notify": 1,
+		})
+	except frappe.exceptions.DuplicateEntryError:
+		pass
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "Production Schedule: Job Card assign failed")
+
+
+@frappe.whitelist()
+def release_day(schedule_name, production_date):
+	"""Create a Lumirise Job Card per schedule line dated `production_date`, assigned to
+	that line's supervisor. Deduped on (schedule_ref, line, date, fg) so re-releasing a
+	day is safe. plan_qty + the initial target = the scheduled slice (the supervisor's
+	Carry-Fwd + New-RM later overrides target to the material-driven number)."""
+	sched = frappe.get_doc("Lumirise Production Schedule", schedule_name)
+	if sched.docstatus != 1:
+		frappe.throw("Submit the schedule before releasing a day.")
+	target = getdate(production_date)
+	created = []
+	for ln in sched.schedule_lines:
+		if not ln.scheduled_date or getdate(ln.scheduled_date) != target:
+			continue
+		# Dedup per schedule LINE (row name) — re-releasing a day is safe and no slice is
+		# ever collapsed/lost, even if two lines share the same line/date/product.
+		if frappe.db.exists("Lumirise Job Card", {"schedule_line": ln.name, "docstatus": ["<", 2]}):
+			continue
+		customer = frappe.db.get_value("Sales Order", ln.sales_order, "customer") if ln.sales_order else None
+		jc = frappe.get_doc({
+			"doctype": "Lumirise Job Card",
+			"production_line": ln.production_line,
+			"production_date": ln.scheduled_date,
+			"fg_item": ln.fg_item,
+			"work_order": ln.work_order or None,
+			"sales_order": ln.sales_order,
+			"customer": customer,
+			"schedule_ref": schedule_name,
+			"schedule_line": ln.name,
+			"plan_qty": flt(ln.slice_qty),
+			"target_qty": flt(ln.slice_qty),
+		})
+		jc.insert(ignore_permissions=True)
+		created.append(jc.name)
+		sup = frappe.db.get_value("Lumirise Production Line", ln.production_line, "supervisor_user")
+		_assign_jobcard(jc.name, sup)
+	if created and sched.release_status != "Released":
+		sched.db_set("release_status", "Released")
+	frappe.db.commit()
+	frappe.msgprint(f"Released {len(created)} Job Card(s) for {target}.", indicator="green", alert=True)
+	return created
+
+
+@frappe.whitelist()
+def roll_backlog(schedule_name, from_date, to_date):
+	"""Roll each Missed Job Card from `from_date` into a backlog Job Card on `to_date`
+	(qty = the shortfall), assigned to the same line supervisor. Deduped on backlog_of."""
+	missed = frappe.get_all(
+		"Lumirise Job Card",
+		filters={
+			"schedule_ref": schedule_name,
+			"production_date": getdate(from_date),
+			"status": "Missed",
+			"docstatus": 1,
+		},
+		fields=["name", "production_line", "fg_item", "sales_order", "customer", "target_qty", "produced_qty"],
+	)
+	created = []
+	for m in missed:
+		shortfall = flt(m.target_qty) - flt(m.produced_qty)
+		if shortfall <= 0:
+			continue
+		if frappe.db.exists("Lumirise Job Card", {"backlog_of": m.name, "docstatus": ["<", 2]}):
+			continue
+		jc = frappe.get_doc({
+			"doctype": "Lumirise Job Card",
+			"production_line": m.production_line,
+			"production_date": getdate(to_date),
+			"fg_item": m.fg_item,
+			"sales_order": m.sales_order,
+			"customer": m.customer,
+			"schedule_ref": schedule_name,
+			"backlog_of": m.name,
+			"plan_qty": shortfall,
+			"target_qty": shortfall,
+		})
+		jc.insert(ignore_permissions=True)
+		created.append(jc.name)
+		sup = frappe.db.get_value("Lumirise Production Line", m.production_line, "supervisor_user")
+		_assign_jobcard(jc.name, sup)
+	frappe.db.commit()
+	frappe.msgprint(f"Rolled {len(created)} backlog Job Card(s) to {getdate(to_date)}.", indicator="orange", alert=True)
+	return created

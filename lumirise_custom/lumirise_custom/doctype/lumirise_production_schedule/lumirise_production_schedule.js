@@ -1,6 +1,41 @@
 frappe.ui.form.on("Lumirise Production Schedule", {
 	refresh(frm) {
 		if (frm.doc.docstatus === 2) return;
+
+		if (frm.doc.docstatus === 1) {
+			frm.add_custom_button(__("Release Day → Job Cards"), () => {
+				frappe.prompt(
+					{ fieldname: "d", label: __("Production Date"), fieldtype: "Date", reqd: 1 },
+					(v) => {
+						frappe.call({
+							method: "lumirise_custom.lumirise_custom.doctype.lumirise_production_schedule.lumirise_production_schedule.release_day",
+							args: { schedule_name: frm.doc.name, production_date: v.d },
+							callback: () => frm.reload_doc(),
+						});
+					},
+					__("Release a day's plan"),
+					__("Release")
+				);
+			}, __("Actions"));
+
+			frm.add_custom_button(__("Roll Backlog"), () => {
+				frappe.prompt(
+					[
+						{ fieldname: "f", label: __("From (missed) Date"), fieldtype: "Date", reqd: 1 },
+						{ fieldname: "t", label: __("To (backlog) Date"), fieldtype: "Date", reqd: 1 },
+					],
+					(v) => {
+						frappe.call({
+							method: "lumirise_custom.lumirise_custom.doctype.lumirise_production_schedule.lumirise_production_schedule.roll_backlog",
+							args: { schedule_name: frm.doc.name, from_date: v.f, to_date: v.t },
+						});
+					},
+					__("Roll yesterday's shortfall forward"),
+					__("Roll")
+				);
+			}, __("Actions"));
+		}
+
 		frm.add_custom_button(__("Suggested Order"), () => {
 			const sos = [...new Set((frm.doc.schedule_lines || [])
 				.map(r => r.sales_order).filter(Boolean))];

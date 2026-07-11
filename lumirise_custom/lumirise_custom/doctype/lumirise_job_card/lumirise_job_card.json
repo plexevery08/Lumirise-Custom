@@ -18,7 +18,10 @@
   "work_order",
   "sales_order",
   "schedule_ref",
+  "backlog_of",
+  "schedule_line",
   "sec_output",
+  "plan_qty",
   "carry_fwd_qty",
   "new_rm_issued",
   "target_qty",
@@ -106,9 +109,32 @@
    "read_only": 1
   },
   {
+   "description": "The Job Card whose shortfall rolled into this one.",
+   "fieldname": "backlog_of",
+   "fieldtype": "Data",
+   "label": "Backlog Of",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "description": "The Production Schedule child row that released this card (dedup anchor — one card per schedule line).",
+   "fieldname": "schedule_line",
+   "fieldtype": "Data",
+   "label": "Schedule Line Ref",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "sec_output",
    "fieldtype": "Section Break",
    "label": "Targets & Output"
+  },
+  {
+   "description": "The scheduled plan quantity (from the Production Schedule). Separate from the material-driven Target — drives the Plan-vs-Actual ratio.",
+   "fieldname": "plan_qty",
+   "fieldtype": "Float",
+   "label": "Plan Qty (scheduled)",
+   "read_only": 1
   },
   {
    "description": "Left over from the previous day.",

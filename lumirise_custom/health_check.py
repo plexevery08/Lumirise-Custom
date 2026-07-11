@@ -1083,3 +1083,29 @@ def _check_schedule_within_so_qty():
 			evidence="; ".join(over[:6]),
 		)
 	return _result("", "", "", "pass", detail="All scheduled slices are within their Sales Order quantity.")
+
+
+@readonly_check("jobcard_schedule_ref_valid", "Scheduled Job Cards reference a live schedule", PRODUCTION)
+def _check_jobcard_schedule_ref():
+	jcs = frappe.get_all(
+		"Lumirise Job Card",
+		filters={"schedule_ref": ["is", "set"], "docstatus": ["<", 2]},
+		fields=["name", "schedule_ref"],
+		limit_page_length=0,
+	)
+	orphan = [
+		j.name
+		for j in jcs
+		if not frappe.db.exists("Lumirise Production Schedule", {"name": j.schedule_ref, "docstatus": 1})
+	]
+	if orphan:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail=f"{len(orphan)} released Job Card(s) point to a missing/cancelled Production Schedule.",
+			remediation="A schedule was cancelled after its day was released. Reconcile the orphaned Job Cards (cancel or re-attach).",
+			evidence=", ".join(orphan[:8]),
+		)
+	return _result("", "", "", "pass", detail="All scheduled Job Cards reference a live schedule.")

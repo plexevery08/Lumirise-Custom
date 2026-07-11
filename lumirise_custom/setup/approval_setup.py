@@ -22,7 +22,7 @@ import frappe
 
 # Roles the approval chains reference. Standard "Purchase Manager" already ships.
 # "Planning User" = the maker who drafts a Material Planning (Planning Manager checks).
-APPROVAL_ROLES = ["Planning User", "Planning Manager", "Purchase Head", "MD", "Factory Store Manager"]
+APPROVAL_ROLES = ["Planning User", "Planning Manager", "Purchase Head", "MD", "Factory Store Manager", "Line Supervisor"]
 
 WORKFLOW_STATES = [
 	# (name, style, icon)
