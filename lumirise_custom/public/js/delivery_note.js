@@ -36,3 +36,21 @@ frappe.ui.form.on("Delivery Note", {
 		});
 	},
 });
+
+
+// WP-3.4 — Packing approval: a Factory Store Manager signs off packing on a draft
+// Delivery Note. The gate (before_submit) enforces it only when require_packing_approval
+// is ON. Separate handler because the block above early-returns on non-new forms.
+frappe.ui.form.on("Delivery Note", {
+	refresh(frm) {
+		if (frm.doc.docstatus === 0 && !frm.is_new() && !frm.doc.lr_packing_approved) {
+			frm.add_custom_button(__("Approve Packing"), () => {
+				frappe.call({
+					method: "lumirise_custom.events.approve_packing",
+					args: { delivery_note: frm.doc.name },
+					callback: () => frm.reload_doc(),
+				});
+			}, __("Actions"));
+		}
+	},
+});

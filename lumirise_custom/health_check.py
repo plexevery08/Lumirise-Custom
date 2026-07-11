@@ -1217,3 +1217,17 @@ def _check_stock_variance_open():
 			evidence="; ".join(big[:6]),
 		)
 	return _result("", "", "", "pass", detail="No large pending stock variances.")
+
+
+@readonly_check("packing_gate_wired", "Packing-approval gate is wired on Delivery Note", GATES)
+def _check_packing_gate_wired():
+	if not _hooked("Delivery Note", "before_submit", "lumirise_custom.events.packing_gate"):
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail="events.packing_gate is not wired on Delivery Note before_submit.",
+			remediation="Restore the packing_gate handler in hooks.py and run bench migrate.",
+		)
+	return _result("", "", "", "pass", detail="Packing-approval gate wired (enforced only when require_packing_approval is ON).")

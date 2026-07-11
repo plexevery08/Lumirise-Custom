@@ -63,6 +63,9 @@ def after_migrate():
 
 	from lumirise_custom.setup.planning_fields import create_planning_fields
 	create_planning_fields()
+
+	from lumirise_custom.setup.dispatch_fields import create_dispatch_fields
+	create_dispatch_fields()
 	# Small UI tweaks (Sai walkthrough): field hides / read-only as Property Setters.
 	from lumirise_custom.setup.ui_tweaks import apply_ui_tweaks
 	apply_ui_tweaks()

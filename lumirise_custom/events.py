@@ -58,6 +58,36 @@ def container_release_gate(doc, method=None):
 		frappe.log_error(frappe.get_traceback(), "container_release_gate: task failed")
 
 
+PACKING_APPROVER_ROLES = ("Factory Store Manager", "System Manager")
+
+
+def packing_gate(doc, method=None):
+	"""Block a Delivery Note submit until packing is approved — ONLY when Lumirise
+	Operations Settings.require_packing_approval is ON (default OFF). Inert otherwise."""
+	if not config.flag("require_packing_approval", default=False):
+		return
+	if not doc.get("lr_packing_approved"):
+		frappe.throw(
+			"Packing is not approved for this Delivery Note. A Factory Store Manager "
+			"must approve packing before dispatch.",
+			title="Packing Approval Gate",
+		)
+
+
+@frappe.whitelist()
+def approve_packing(delivery_note):
+	"""Factory Store Manager signs off packing on a (draft) Delivery Note."""
+	frappe.has_permission("Delivery Note", "write", delivery_note, throw=True)
+	if not any(r in frappe.get_roles() for r in PACKING_APPROVER_ROLES):
+		frappe.throw("Only a Factory Store Manager can approve packing.")
+	doc = frappe.get_doc("Delivery Note", delivery_note)
+	if doc.docstatus != 0:
+		frappe.throw("Approve packing while the Delivery Note is still a draft.")
+	doc.db_set("lr_packing_approved", 1)
+	doc.db_set("lr_packing_approved_by", frappe.session.user)
+	return {"lr_packing_approved": 1}
+
+
 def iqc_gate(doc, method=None):
 	"""Block GRN (Purchase Receipt) submission unless IQC passed for the PO."""
 	# Subcontracting job-work billing creates a non-stock Purchase Receipt (for the

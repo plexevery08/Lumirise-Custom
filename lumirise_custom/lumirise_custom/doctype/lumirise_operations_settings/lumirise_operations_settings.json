@@ -28,6 +28,7 @@
   "sec_sales",
   "po_rate_tolerance_pct",
   "auto_move_fg_on_si",
+  "require_packing_approval",
   "sec_health",
   "enable_destructive_health_tests",
   "production_site_name",
@@ -269,6 +270,13 @@
    "fieldname": "auto_move_fg_on_si",
    "fieldtype": "Check",
    "label": "Auto-move FG to Dispatch on Sales Invoice"
+  },
+  {
+   "default": "0",
+   "description": "When ON, a Delivery Note cannot submit until a Factory Store Manager approves packing. OFF by default (WP-3.4) — enable once the client confirms packing sign-off is required.",
+   "fieldname": "require_packing_approval",
+   "fieldtype": "Check",
+   "label": "Require packing approval before dispatch"
   }
  ],
  "grid_page_length": 50,

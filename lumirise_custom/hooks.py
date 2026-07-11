@@ -209,7 +209,11 @@ doc_events = {
 		"validate": "lumirise_custom.traceability.stamp",
 	},
 	"Delivery Note": {
-		"before_submit": "lumirise_custom.events.customer_pdi_gate",
+		"before_submit": [
+			"lumirise_custom.events.customer_pdi_gate",
+			# Packing sign-off gate — inert unless require_packing_approval is ON (WP-3.4).
+			"lumirise_custom.events.packing_gate",
+		],
 		# Dispatched -> task Accounts to raise the Sales Invoice.
 		"on_submit": "lumirise_custom.task_engine.on_delivery_note_submit",
 		"validate": "lumirise_custom.traceability.stamp",
