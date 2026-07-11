@@ -1023,3 +1023,30 @@ def _check_so_po_exceptions():
 			evidence=", ".join(rows[:8]),
 		)
 	return _result("", "", "", "pass", detail="No submitted Sales Orders in PO-match exception.")
+
+
+@readonly_check("lines_have_supervisor", "Active production lines have a supervisor user", PRODUCTION)
+def _check_lines_have_supervisor():
+	settings = frappe.get_cached_doc("Lumirise Operations Settings")
+	rows = [r for r in settings.production_lines if r.is_active]
+	if not rows:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail="No active production lines configured.",
+			remediation="Add production lines (each = a Warehouse) on Lumirise Operations Settings.",
+		)
+	missing = [r.line_name for r in rows if not r.supervisor_user]
+	if missing:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail=f"{len(missing)} of {len(rows)} active production lines have no supervisor user.",
+			remediation="Set supervisor_user on each line row in Lumirise Operations Settings so daily Job Cards auto-assign to the line supervisor.",
+			evidence=", ".join(missing[:8]),
+		)
+	return _result("", "", "", "pass", detail=f"All {len(rows)} active production lines have a supervisor.")

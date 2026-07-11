@@ -8,7 +8,8 @@
  "field_order": [
   "line_name",
   "line_warehouse",
-  "is_active"
+  "is_active",
+  "supervisor_user"
  ],
  "fields": [
   {
@@ -35,6 +36,14 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Active"
+  },
+  {
+   "description": "Line supervisor login — daily Job Cards for this line auto-assign here.",
+   "fieldname": "supervisor_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Supervisor (User)",
+   "options": "User"
   }
  ],
  "grid_page_length": 50,

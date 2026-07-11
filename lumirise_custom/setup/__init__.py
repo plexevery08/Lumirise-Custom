@@ -60,6 +60,9 @@ def after_migrate():
 
 	from lumirise_custom.setup.sales_po_fields import create_sales_po_fields
 	create_sales_po_fields()
+
+	from lumirise_custom.setup.planning_fields import create_planning_fields
+	create_planning_fields()
 	# Small UI tweaks (Sai walkthrough): field hides / read-only as Property Setters.
 	from lumirise_custom.setup.ui_tweaks import apply_ui_tweaks
 	apply_ui_tweaks()

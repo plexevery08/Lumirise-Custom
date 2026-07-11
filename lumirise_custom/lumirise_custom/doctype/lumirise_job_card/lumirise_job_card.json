@@ -7,18 +7,33 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "is_submittable": 1,
  "field_order": [
   "production_line",
   "production_date",
   "shift",
+  "operators",
+  "col_details",
+  "customer",
   "fg_item",
   "work_order",
-  "col_break",
+  "sales_order",
+  "schedule_ref",
+  "sec_output",
+  "carry_fwd_qty",
+  "new_rm_issued",
   "target_qty",
+  "col_output",
   "produced_qty",
   "variance",
+  "achievement_pct",
   "status",
+  "sec_stages",
+  "qty_on_line",
+  "qty_on_aging",
+  "qty_at_packing",
+  "col_stages",
+  "rejection_qty",
+  "rejection_reason",
   "sec_notes",
   "remarks",
   "amended_from"
@@ -48,6 +63,21 @@
    "label": "Shift"
   },
   {
+   "fieldname": "operators",
+   "fieldtype": "Int",
+   "label": "Operators"
+  },
+  {
+   "fieldname": "col_details",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer (Brand)",
+   "options": "Customer"
+  },
+  {
    "fieldname": "fg_item",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -62,29 +92,66 @@
    "options": "Work Order"
   },
   {
-   "fieldname": "col_break",
-   "fieldtype": "Column Break"
+   "fieldname": "sales_order",
+   "fieldtype": "Data",
+   "label": "Sales Order Ref",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
-   "description": "Units the line is expected to finish on this date.",
+   "fieldname": "schedule_ref",
+   "fieldtype": "Data",
+   "label": "Schedule Ref",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_output",
+   "fieldtype": "Section Break",
+   "label": "Targets & Output"
+  },
+  {
+   "description": "Left over from the previous day.",
+   "fieldname": "carry_fwd_qty",
+   "fieldtype": "Float",
+   "label": "Carry Fwd Qty"
+  },
+  {
+   "description": "RM issued to this line today.",
+   "fieldname": "new_rm_issued",
+   "fieldtype": "Float",
+   "label": "New RM Issued"
+  },
+  {
+   "description": "Material-driven target: auto = Carry Fwd + New RM Issued when those are set; editable otherwise.",
    "fieldname": "target_qty",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Target Qty",
+   "label": "Target Qty (Carry Fwd + New RM)",
    "reqd": 1
   },
   {
-   "description": "Units actually finished (entered at close, or fetched from the Work Order).",
+   "fieldname": "col_output",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Final packed finished goods = the day's actual production.",
    "fieldname": "produced_qty",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Produced Qty"
+   "label": "FG Packed (Actual Production)"
   },
   {
    "description": "Produced minus target. Negative = shortfall.",
    "fieldname": "variance",
    "fieldtype": "Float",
    "label": "Variance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "achievement_pct",
+   "fieldtype": "Percent",
+   "label": "Achievement %",
    "read_only": 1
   },
   {
@@ -96,6 +163,42 @@
    "label": "Status",
    "options": "Open\nMet\nMissed",
    "read_only": 1
+  },
+  {
+   "description": "Supervisor types these at close — plain counts, no stock movement (per client: manual entry).",
+   "fieldname": "sec_stages",
+   "fieldtype": "Section Break",
+   "label": "WIP Stages (typed daily)"
+  },
+  {
+   "fieldname": "qty_on_line",
+   "fieldtype": "Float",
+   "label": "Assembled on Line"
+  },
+  {
+   "fieldname": "qty_on_aging",
+   "fieldtype": "Float",
+   "label": "Assembled on Aging"
+  },
+  {
+   "fieldname": "qty_at_packing",
+   "fieldtype": "Float",
+   "label": "Assembled at Packing"
+  },
+  {
+   "fieldname": "col_stages",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rejection_qty",
+   "fieldtype": "Float",
+   "label": "Rejection Qty"
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Link",
+   "label": "Rejection Reason",
+   "options": "Lumirise Defect Code"
   },
   {
    "fieldname": "sec_notes",
@@ -118,6 +221,7 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
  "modified": "2026-06-26 00:00:00",
  "modified_by": "Administrator",
@@ -127,6 +231,7 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -137,8 +242,7 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
-   "write": 1,
-   "cancel": 1
+   "write": 1
   },
   {
    "create": 1,

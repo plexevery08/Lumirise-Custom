@@ -14,7 +14,17 @@ from frappe.utils import flt
 
 class LumiriseJobCard(Document):
 	def validate(self):
+		# Material-driven daily target (client rule, 2026-07-08): Carry Fwd + New RM
+		# Issued. The supervisor is judged on what the line actually received, not the
+		# plan — the plan-vs-material gap is Planning/Stores'. Falls back to a manually
+		# entered target_qty when no material figures are present.
+		material_target = flt(self.carry_fwd_qty) + flt(self.new_rm_issued)
+		if material_target > 0:
+			self.target_qty = material_target
 		self.variance = flt(self.produced_qty) - flt(self.target_qty)
+		self.achievement_pct = (
+			flt(self.produced_qty) / flt(self.target_qty) * 100.0 if flt(self.target_qty) else 0
+		)
 		if flt(self.produced_qty) <= 0:
 			self.status = "Open"
 		elif self.variance < 0:
