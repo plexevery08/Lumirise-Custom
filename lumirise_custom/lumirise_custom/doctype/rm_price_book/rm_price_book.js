@@ -16,6 +16,21 @@ frappe.ui.form.on("RM Price Book", {
 				});
 			});
 		}
+		frm.add_custom_button(__("Download Template"), () => {
+			frappe.call({
+				method: "lumirise_custom.lumirise_custom.doctype.rm_price_book.rm_price_book.get_rm_price_template",
+				callback(r) {
+					const blob = new Blob([r.message || ""], { type: "text/csv" });
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement("a");
+					a.href = url;
+					a.download = "rm_price_book_template.csv";
+					a.click();
+					URL.revokeObjectURL(url);
+				},
+			});
+		});
+
 		if (frm.doc.docstatus === 1) {
 			frm.set_intro(__("Approved — these raw-material rates are now used by costing/BOMs."), "green");
 		}

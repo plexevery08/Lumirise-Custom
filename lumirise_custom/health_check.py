@@ -1109,3 +1109,24 @@ def _check_jobcard_schedule_ref():
 			evidence=", ".join(orphan[:8]),
 		)
 	return _result("", "", "", "pass", detail="All scheduled Job Cards reference a live schedule.")
+
+
+@readonly_check("rm_price_ranges_valid", "RM Price Book qty ranges are sane", COSTING)
+def _check_rm_price_ranges():
+	bad = frappe.db.sql(
+		"""SELECT i.parent, i.item_code FROM `tabRM Price Book Item` i
+		   JOIN `tabRM Price Book` p ON p.name = i.parent
+		   WHERE p.docstatus = 1 AND i.min_qty > 0 AND i.max_qty > 0 AND i.min_qty > i.max_qty""",
+		as_dict=True,
+	)
+	if bad:
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail=f"{len(bad)} RM Price Book row(s) have Min Qty > Max Qty (the qty-range rate can never match).",
+			remediation="Fix the min/max on those RM Price Book rows so the qty-range price resolves.",
+			evidence=", ".join(f"{b.parent}:{b.item_code}" for b in bad[:6]),
+		)
+	return _result("", "", "", "pass", detail="RM Price Book qty ranges are consistent.")

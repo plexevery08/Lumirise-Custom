@@ -8,7 +8,11 @@
   "item_code",
   "item_name",
   "uom",
-  "rate"
+  "supplier",
+  "min_qty",
+  "max_qty",
+  "rate",
+  "preferred"
  ],
  "fields": [
   {
@@ -35,6 +39,29 @@
    "options": "UOM"
   },
   {
+   "description": "Vendor this rate is from (v2: multiple vendors per item).",
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Supplier",
+   "options": "Supplier"
+  },
+  {
+   "description": "Lower bound of the qty range this rate applies to (blank = any).",
+   "fieldname": "min_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Min Qty"
+  },
+  {
+   "description": "Upper bound of the qty range (blank = any).",
+   "fieldname": "max_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Max Qty"
+  },
+  {
    "description": "Purchase rate (INR) effective this price book.",
    "fieldname": "rate",
    "fieldtype": "Currency",
@@ -42,6 +69,12 @@
    "label": "Rate (INR)",
    "precision": "3",
    "reqd": 1
+  },
+  {
+   "description": "Prefer this vendor when several match the qty range.",
+   "fieldname": "preferred",
+   "fieldtype": "Check",
+   "label": "Preferred"
   }
  ],
  "grid_page_length": 50,

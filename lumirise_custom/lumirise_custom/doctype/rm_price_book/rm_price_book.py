@@ -87,7 +87,19 @@ def import_rows(price_book, file_url=None):
 		if not frappe.db.exists("Item", code):
 			skipped.append(code)
 			continue
-		doc.append("items", {"item_code": code, "rate": rate, "uom": (d.get("uom") or "Nos")})
+		# v2 columns (all optional): supplier / min_qty / max_qty / preferred.
+		sup = (d.get("supplier") or "").strip()
+		if sup and not frappe.db.exists("Supplier", sup):
+			sup = None  # unknown supplier — leave blank rather than fail the whole import
+		doc.append("items", {
+			"item_code": code,
+			"rate": rate,
+			"uom": (d.get("uom") or "Nos"),
+			"supplier": sup or None,
+			"min_qty": flt(d.get("min_qty") or d.get("min") or 0),
+			"max_qty": flt(d.get("max_qty") or d.get("max") or 0),
+			"preferred": 1 if str(d.get("preferred") or "").strip().lower() in ("1", "yes", "y", "true") else 0,
+		})
 		added += 1
 	doc.save()
 	msg = f"Imported {added} price row(s)."
@@ -95,3 +107,10 @@ def import_rows(price_book, file_url=None):
 		msg += f" Skipped unknown item(s): {', '.join(skipped[:10])}"
 	frappe.msgprint(msg, indicator="blue")
 	return added
+
+
+@frappe.whitelist()
+def get_rm_price_template():
+	"""CSV template (header row) for the RM Price Book v2 upload — item, vendor,
+	qty-range, rate, preferred. Purchase downloads this, fills it, re-uploads."""
+	return "item_code,item_name,uom,supplier,min_qty,max_qty,rate,preferred\n"

@@ -26,16 +26,43 @@ def _indent_names(po):
 	return [n.strip() for n in refs.split(",") if n.strip()]
 
 
-def _rm_price(item_code):
-	"""Latest MD-approved RM Price Book rate for the item — the live price source."""
+def _rm_price(item_code, qty=None):
+	"""MD-approved RM Price Book rate for the item, from the LATEST approved book that
+	prices it. v2 supports multiple vendor / qty-range rows: among the rows matching the
+	qty range, pick the Preferred vendor, else the lowest rate.
+
+	NOTE: preferred-then-lowest is a deterministic INTERIM rule so costing never picks an
+	arbitrary row; the final vendor-selection policy is confirmed at the purchase meeting
+	(lumirise-decision-gates). Backward compatible — a single legacy row returns as before.
+	"""
 	rows = frappe.db.sql(
-		"""SELECT i.rate FROM `tabRM Price Book Item` i
+		"""SELECT i.rate, i.min_qty, i.max_qty, i.preferred
+		   FROM `tabRM Price Book Item` i
 		   JOIN `tabRM Price Book` p ON p.name = i.parent
 		   WHERE i.item_code = %s AND p.docstatus = 1
-		   ORDER BY p.modified DESC LIMIT 1""",
-		item_code,
+		     AND p.name = (
+		        SELECT p2.name FROM `tabRM Price Book Item` i2
+		        JOIN `tabRM Price Book` p2 ON p2.name = i2.parent
+		        WHERE i2.item_code = %s AND p2.docstatus = 1
+		        ORDER BY p2.modified DESC LIMIT 1)""",
+		(item_code, item_code),
+		as_dict=True,
 	)
-	return flt(rows[0][0]) if rows else 0.0
+	if not rows:
+		return 0.0
+	q = flt(qty)
+
+	def in_range(r):
+		lo, hi = flt(r.min_qty), flt(r.max_qty)
+		if q and lo and q < lo:
+			return False
+		if q and hi and q > hi:
+			return False
+		return True
+
+	candidates = [r for r in rows if in_range(r)] or rows
+	candidates.sort(key=lambda r: (0 if r.preferred else 1, flt(r.rate)))
+	return flt(candidates[0].rate)
 
 
 def _rm_stock(item_code):
