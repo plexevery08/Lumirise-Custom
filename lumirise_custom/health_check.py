@@ -331,8 +331,20 @@ def trigger_health_check():
 
 def _synthetic_allowed():
 	"""The destructive tier runs ONLY when explicitly enabled AND the site is not
-	production. Fails CLOSED — any doubt and it does not run."""
+	production. Fails CLOSED — any doubt and it does not run.
+
+	TWO independent locks are required so a stray UI/settings toggle (or a reseed) can
+	NEVER wipe a bench that holds real transaction data:
+	  1. the Operations Settings flag `enable_destructive_health_tests`, AND
+	  2. a site_config.json key `enable_destructive_health_tests` — a dev-only file that
+	     no scheduler, reseed, or desk user can change.
+	The synthetic tier calls smoke_test.cleanup() which force-deletes ALL transactional
+	docs, so this gate is the guard between it and real data. (2026-07-13: two production
+	wipes traced to this flag being left ON — the site_config lock closes that hole.)
+	"""
 	try:
+		if not frappe.conf.get("enable_destructive_health_tests"):
+			return False
 		if not frappe.db.get_single_value(SETTINGS, "enable_destructive_health_tests"):
 			return False
 		prod_site = (frappe.db.get_single_value(SETTINGS, "production_site_name") or "").strip()
