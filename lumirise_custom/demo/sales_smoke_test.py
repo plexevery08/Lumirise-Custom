@@ -35,6 +35,8 @@ def check(label, ok, detail=""):
 
 
 def cleanup():
+	from lumirise_custom import defaults as config
+	config.assert_destructive_seeder_allowed("sales_smoke_test.cleanup (deletes Price Sheets/Quotations/BOMs/Items)")
 	for sheet in frappe.get_all("Price Sheet", filters={"customer": CUSTOMER}, pluck="name"):
 		doc = frappe.get_doc("Price Sheet", sheet)
 		if doc.quotation and frappe.db.exists("Quotation", doc.quotation):
@@ -225,6 +227,8 @@ def approve(sheet):
 
 
 def run():
+	from lumirise_custom import defaults as config
+	config.assert_destructive_seeder_allowed("sales_smoke_test.run")
 	frappe.flags.in_test = False
 	cleanup()
 	ensure_masters()

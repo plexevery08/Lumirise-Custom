@@ -140,6 +140,8 @@ def _dispatch(so, qty, warehouse):
 
 
 def run():
+	from lumirise_custom import defaults as config
+	config.assert_destructive_seeder_allowed("smoke_test.run")
 	so1 = _approved_so("Starlight Electricals", "LED-PANEL-24W", 3000, 410)
 	so2 = _approved_so("Bright Lights Distributors", "LED-PANEL-36W", 2000, 595)
 	print(f"SO1={so1}  SO2={so2}")
@@ -211,6 +213,8 @@ def run():
 def cleanup():
 	"""Roll back ALL transactional docs (keeps masters + opening stock) so the
 	bench is clean for filming or a fresh smoke run."""
+	from lumirise_custom import defaults as config
+	config.assert_destructive_seeder_allowed("smoke_test.cleanup (deletes ALL transactions)")
 	order = [
 		"Payment Entry", "Sales Invoice", "Delivery Note", "Customer PDI",
 		"Purchase Receipt", "Purchase Invoice", "IQC", "Inbound Logistics",

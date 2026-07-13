@@ -129,3 +129,32 @@ def form_warehouse_defaults():
 def flag(field, default=True):
 	value = _settings().get(field)
 	return bool(value) if value is not None else default
+
+
+def assert_destructive_seeder_allowed(action="this destructive seeder"):
+	"""HARD kill-switch for ANY seeder/cleanup that bulk-deletes or mass-creates docs
+	(smoke_test / sales_smoke_test / full_flow_all_forms run() + cleanup(), and the
+	health-check synthetic tier). Refuses on EVERY site unless it is an explicitly
+	marked throwaway:
+
+	  1. NEVER on the production site — site_config `is_production_site`, or the
+	     configured Operations Settings `production_site_name`; and
+	  2. ONLY when site_config.json carries `allow_destructive_seeders: 1` — a dev-only
+	     file that no desk user, scheduler, reseed, or settings toggle can change.
+
+	This is the guard between a "delete every transaction" routine and real client data,
+	independent of HOW it is invoked (bench execute, scheduler, health tier). It throws
+	(does nothing) on any bench that isn't a deliberately-armed throwaway.
+	(2026-07-13: added after the unguarded synthetic tier twice wiped real dev data.)
+	"""
+	site = getattr(frappe.local, "site", None)
+	prod_name = (frappe.db.get_single_value("Lumirise Operations Settings", "production_site_name") or "").strip()
+	if frappe.conf.get("is_production_site") or (prod_name and site == prod_name):
+		frappe.throw(f"REFUSED — {action} must NEVER run on the production site ({site}).")
+	if not frappe.conf.get("allow_destructive_seeders"):
+		frappe.throw(
+			f"REFUSED — {action} bulk-deletes/creates data and is DISABLED on this site "
+			f"({site}); it can wipe real transactions. To run it on a THROWAWAY test site "
+			f"only, first set 'allow_destructive_seeders': 1 in that site's site_config.json. "
+			f"Never set it on a bench that holds real data."
+		)

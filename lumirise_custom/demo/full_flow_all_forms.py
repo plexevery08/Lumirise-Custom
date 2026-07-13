@@ -601,6 +601,8 @@ def notes_for_unbuildable():
 # Orchestrate
 # --------------------------------------------------------------------------- #
 def run():
+    from lumirise_custom import defaults as config
+    config.assert_destructive_seeder_allowed("full_flow_all_forms.run")
     line_id = frappe.db.get_value("Lumirise Production Line", {}, "name")
     tasks_before = frappe.db.count("Lumirise Task")
 
@@ -744,6 +746,8 @@ def counts():
 
 def cleanup():
     """Roll back all transactional docs created by this run (keeps masters)."""
+    from lumirise_custom import defaults as config
+    config.assert_destructive_seeder_allowed("full_flow_all_forms.cleanup (deletes ALL transactions)")
     order = [
         "Payment Entry", "Journal Entry", "Sales Invoice", "Delivery Note", "Customer PDI",
         "Purchase Invoice", "Purchase Receipt", "IQC", "Inbound Logistics", "Vendor PDI",

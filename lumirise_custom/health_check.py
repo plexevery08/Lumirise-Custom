@@ -343,7 +343,9 @@ def _synthetic_allowed():
 	wipes traced to this flag being left ON — the site_config lock closes that hole.)
 	"""
 	try:
-		if not frappe.conf.get("enable_destructive_health_tests"):
+		# Universal kill-switch (also guards every seeder cleanup via
+		# defaults.assert_destructive_seeder_allowed) — a dev-only site_config key.
+		if not frappe.conf.get("allow_destructive_seeders"):
 			return False
 		if not frappe.db.get_single_value(SETTINGS, "enable_destructive_health_tests"):
 			return False
@@ -1229,6 +1231,32 @@ def _check_stock_variance_open():
 			evidence="; ".join(big[:6]),
 		)
 	return _result("", "", "", "pass", detail="No large pending stock variances.")
+
+
+@readonly_check("destructive_seeders_disarmed", "Destructive seeders/cleanups are disarmed", SCHEDULER)
+def _check_destructive_disarmed():
+	# The site_config `allow_destructive_seeders` kill-switch must be ABSENT on any bench
+	# that holds real data — it is what lets smoke_test/full_flow cleanups wipe ALL
+	# transactions. If it is set, scream (red) when there is live data to lose.
+	if not frappe.conf.get("allow_destructive_seeders"):
+		return _result("", "", "", "pass", detail="Destructive seeders/cleanups are disarmed (site_config allow_destructive_seeders not set).")
+	txn = (
+		frappe.db.count("Sales Order")
+		+ frappe.db.count("Work Order")
+		+ frappe.db.count("Stock Entry")
+	)
+	return _result(
+		"",
+		"",
+		"",
+		"fail" if txn else "warn",
+		detail=(
+			"site_config allow_destructive_seeders is ARMED — smoke_test / full_flow cleanups "
+			"can wipe ALL transactions on this site"
+			+ (f", and it currently holds {txn} live transaction(s)." if txn else " (site is empty)." )
+		),
+		remediation="Remove 'allow_destructive_seeders' from this site's site_config.json unless it is a throwaway test site with no real data.",
+	)
 
 
 @readonly_check("packing_gate_wired", "Packing-approval gate is wired on Delivery Note", GATES)
