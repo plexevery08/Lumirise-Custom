@@ -224,7 +224,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-27 02:28:45.238138",
+ "modified": "2026-07-13 19:22:57.565897",
  "modified_by": "Administrator",
  "module": "Lumirise Custom",
  "name": "Inbound Logistics",
@@ -251,6 +251,19 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Blue",
+   "title": "Dispatched"
+  },
+  {
+   "color": "Orange",
+   "title": "In Transit"
+  },
+  {
+   "color": "Green",
+   "title": "Reached Warehouse"
+  }
+ ],
  "track_changes": 1
 }

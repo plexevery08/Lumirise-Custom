@@ -51,13 +51,6 @@ frappe.ui.form.on("Inbound Logistics", {
 			frm.set_intro(__("Reached the warehouse. Raise IQC to inspect the consignment."), "green");
 		}
 
-		// Purchase authorizes container release once the goods have arrived.
-		if (status === "Reached Warehouse" && frm.doc.release_status !== "Released") {
-			frm.add_custom_button(__("Release Container (Purchase)"), () =>
-				log_run(frm, "release_container", __("Releasing…"))
-			).removeClass("btn-default").addClass("btn-primary");
-		}
-
 		// Next-stage doc — manual, only after the goods have arrived.
 		if (status === "Reached Warehouse") {
 			frm.add_custom_button(__("IQC"), () => {

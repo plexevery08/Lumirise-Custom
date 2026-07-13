@@ -54,7 +54,7 @@
   {
    "allow_on_submit": 1,
    "default": "IQC Received",
-   "description": "Driven by the flow buttons. IQC Received \u2192 Testing \u2192 Passed \u2192 Moved to RM (set automatically when the GRN posts). Do not edit manually.",
+   "description": "Driven by the flow buttons. IQC Received → Testing → Passed → Moved to RM (set automatically when the GRN posts). Do not edit manually.",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -122,42 +122,42 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "lr_traceability_sec",
-   "label": "Lumirise Traceability",
    "fieldtype": "Section Break",
-   "collapsible": 1
+   "label": "Lumirise Traceability"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "lr_source_so",
+   "fieldtype": "Small Text",
    "label": "Sales Order Ref",
-   "fieldtype": "Small Text",
-   "read_only": 1,
    "no_copy": 1,
-   "allow_on_submit": 1
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "lr_source_indent",
+   "fieldtype": "Small Text",
    "label": "Indent Ref",
-   "fieldtype": "Small Text",
-   "read_only": 1,
    "no_copy": 1,
-   "allow_on_submit": 1
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "lr_source_wo",
-   "label": "Work Order Ref",
    "fieldtype": "Small Text",
-   "read_only": 1,
+   "label": "Work Order Ref",
    "no_copy": 1,
-   "allow_on_submit": 1
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "lr_source_po",
-   "label": "Purchase Order Ref",
    "fieldtype": "Small Text",
-   "read_only": 1,
+   "label": "Purchase Order Ref",
    "no_copy": 1,
-   "allow_on_submit": 1
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -191,6 +191,31 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Gray",
+   "title": "IQC Received"
+  },
+  {
+   "color": "Orange",
+   "title": "Testing"
+  },
+  {
+   "color": "Green",
+   "title": "Passed"
+  },
+  {
+   "color": "Cyan",
+   "title": "Moved to RM"
+  },
+  {
+   "color": "Yellow",
+   "title": "On Hold"
+  },
+  {
+   "color": "Red",
+   "title": "Rejected"
+  }
+ ],
  "track_changes": 1
 }
