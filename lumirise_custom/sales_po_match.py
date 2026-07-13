@@ -3,16 +3,16 @@
 Focus 9 lets a coordinator hand-type a Sales Order with no validation against the
 customer's PO — off-PO items/qty/rates slip through. There is no structured customer-PO
 document to line-match against yet (that is v2, a client decision), so v1 annotates the
-Sales Order with what IS checkable today:
+Sales Order with what IS checkable today, keyed off the dedicated `lr_customer_po`
+field (NOT the standard `po_no`, which ERPNext also uses for the internal-transfer /
+inter-company flow):
 
-  1. customer PO number present (native `po_no`); and
-  2. per-line qty/rate sanity against the SOURCE Quotation (SO Item.prevdoc_docname),
+  1. customer PO number present in `lr_customer_po`;
+  2. that PO number not already used on another SO for the same customer (Lumirise's
+     "one customer PO = one SO" rule) — a soft note, since we no longer rely on the
+     native po_no duplicate guard (the customer PO now lives in a custom field); and
+  3. per-line qty/rate sanity against the SOURCE Quotation (SO Item.prevdoc_docname),
      within a configurable rate tolerance; silently skipped for a direct SO with no quote.
-
-Duplicate customer-PO numbers are deliberately NOT re-checked here — ERPNext already
-guards that natively via Selling Settings → "Allow Multiple Sales Orders Against a
-Customer's Purchase Order" (OFF by default = one SO per customer PO, which matches
-Lumirise's "one customer PO = one SO" rule). Borrow Before You Build.
 
 Fail-safe: anything unexpected is logged and never blocks the Sales Order.
 """
@@ -24,8 +24,22 @@ from frappe.utils import flt
 def validate_po_match(doc, method=None):
 	try:
 		notes = []
-		if not (doc.get("po_no") or "").strip():
-			notes.append("Customer PO number is blank.")
+		po = (doc.get("lr_customer_po") or "").strip()
+		if not po:
+			notes.append("Customer Purchase Order number is blank.")
+		else:
+			dupes = frappe.get_all(
+				"Sales Order",
+				filters={
+					"lr_customer_po": po,
+					"customer": doc.customer,
+					"name": ["!=", doc.name or "new"],
+					"docstatus": ["<", 2],
+				},
+				pluck="name",
+			)
+			if dupes:
+				notes.append(f"Customer PO {po} already used on: {', '.join(dupes[:5])}.")
 		notes.extend(_sanity_vs_quotation(doc))
 		doc.lr_po_match_status = "Exception" if notes else "Matched"
 		doc.lr_po_match_note = (" ".join(notes))[:500]
