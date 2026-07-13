@@ -29,6 +29,7 @@
   "po_rate_tolerance_pct",
   "auto_move_fg_on_si",
   "require_packing_approval",
+  "default_plan_lead_days",
   "sec_health",
   "enable_destructive_health_tests",
   "production_site_name",
@@ -277,6 +278,13 @@
    "fieldname": "require_packing_approval",
    "fieldtype": "Check",
    "label": "Require packing approval before dispatch"
+  },
+  {
+   "default": "15",
+   "description": "Fallback lead time (days) used to schedule Work Order start / Indent required-date when an item has no lead_time_days on its Item master. Default 15.",
+   "fieldname": "default_plan_lead_days",
+   "fieldtype": "Int",
+   "label": "Default Planning Lead Days"
   }
  ],
  "grid_page_length": 50,
