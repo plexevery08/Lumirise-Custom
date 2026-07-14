@@ -13,6 +13,7 @@
   "required_qty",
   "rm_available",
   "blocked_for_other_so",
+  "blocked_against_sos",
   "available_after_blocking",
   "pending_po",
   "pending_pdi",
@@ -69,6 +70,15 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Blocked (other SOs)"
+  },
+  {
+   "columns": 2,
+   "description": "Which other Sales Order(s) the blocked qty is reserved against, with the reserved qty per SO.",
+   "fieldname": "blocked_against_sos",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Blocked Against SO(s)",
+   "read_only": 1
   },
   {
    "fieldname": "available_after_blocking",

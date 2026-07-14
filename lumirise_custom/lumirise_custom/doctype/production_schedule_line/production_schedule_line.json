@@ -5,15 +5,20 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "category",
   "sales_order",
+  "mr_no",
   "fg_item",
   "fg_item_name",
+  "slice_qty",
+  "cph",
+  "lines_needed",
+  "scheduled_date",
+  "delivery_date",
+  "production_line",
   "priority",
   "urgent_flag",
-  "slice_qty",
-  "scheduled_date",
-  "production_line",
-  "lines_needed",
+  "remark",
   "material_status",
   "warnings",
   "work_order",
@@ -21,11 +26,25 @@
  ],
  "fields": [
   {
+   "description": "Product family, taken from the FG item's Item Group (their sheet's CATEGORY column).",
+   "fieldname": "category",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Category",
+   "read_only": 1
+  },
+  {
    "fieldname": "sales_order",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Sales Order",
    "options": "Sales Order"
+  },
+  {
+   "description": "Material Request reference (optional; blank for make-to-stock slices).",
+   "fieldname": "mr_no",
+   "fieldtype": "Data",
+   "label": "MR No"
   },
   {
    "fieldname": "fg_item",
@@ -39,13 +58,58 @@
    "fetch_from": "fg_item.item_name",
    "fieldname": "fg_item_name",
    "fieldtype": "Data",
-   "label": "FG Name",
+   "label": "Item Name",
    "read_only": 1
   },
   {
+   "description": "Production qty for this slice (defaults to the SO's pending-to-produce qty; editable).",
+   "fieldname": "slice_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Production Qty",
+   "reqd": 1
+  },
+  {
+   "description": "Capacity/day for this FG (Item.lr_cph). Auto-fetched.",
+   "fieldname": "cph",
+   "fieldtype": "Float",
+   "label": "CPH (units/day)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lines_needed",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Lines (Qty/CPH)",
+   "read_only": 1
+  },
+  {
+   "description": "Production date for this slice (planner sets it).",
+   "fieldname": "scheduled_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Production Date"
+  },
+  {
+   "description": "Customer delivery date from the Sales Order (auto).",
+   "fieldname": "delivery_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Delivery Date",
+   "read_only": 1
+  },
+  {
+   "description": "Line = its own Warehouse; only Operations Settings → Production Lines warehouses are selectable.",
+   "fieldname": "production_line",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Line",
+   "options": "Warehouse"
+  },
+  {
+   "fetch_from": "sales_order.lr_priority",
    "fieldname": "priority",
    "fieldtype": "Int",
-   "in_list_view": 1,
    "label": "Priority"
   },
   {
@@ -54,31 +118,10 @@
    "label": "Urgent"
   },
   {
-   "fieldname": "slice_qty",
-   "fieldtype": "Float",
-   "in_list_view": 1,
-   "label": "Slice Qty",
-   "reqd": 1
-  },
-  {
-   "fieldname": "scheduled_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Scheduled Date"
-  },
-  {
-   "fieldname": "production_line",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Line",
-   "options": "Lumirise Production Line"
-  },
-  {
-   "fieldname": "lines_needed",
-   "fieldtype": "Float",
-   "in_list_view": 1,
-   "label": "Lines Needed (qty/CPH)",
-   "read_only": 1
+   "description": "Auto material / container-release note (e.g. 'NEED CONTAINER RELEASE'); editable.",
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "Remark"
   },
   {
    "fieldname": "material_status",
@@ -111,7 +154,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-10 00:00:00",
+ "modified": "2026-07-14 00:00:00",
  "modified_by": "Administrator",
  "module": "Lumirise Custom",
  "name": "Production Schedule Line",

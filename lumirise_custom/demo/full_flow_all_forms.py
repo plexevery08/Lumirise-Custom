@@ -603,7 +603,10 @@ def notes_for_unbuildable():
 def run():
     from lumirise_custom import defaults as config
     config.assert_destructive_seeder_allowed("full_flow_all_forms.run")
-    line_id = frappe.db.get_value("Lumirise Production Line", {}, "name")
+    # Job Card / Line Daily Closing key the line by its WAREHOUSE now (a real,
+    # openable master), not the Operations Settings child-row hash.
+    _lines = config.production_lines()
+    line_id = _lines[0]["line_warehouse"] if _lines else None
     tasks_before = frappe.db.count("Lumirise Task")
 
     print("\n=== 0. Seed opening RM stock ===")

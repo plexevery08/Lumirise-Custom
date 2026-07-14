@@ -11,6 +11,8 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from lumirise_custom import defaults as config
+
 
 class LumiriseJobCard(Document):
 	def validate(self):
@@ -40,7 +42,7 @@ class LumiriseJobCard(Document):
 		from lumirise_custom.task_engine import create_task
 
 		short = abs(flt(self.variance))
-		line = self.production_line
+		line = config.line_name(self.production_line)
 		create_task(
 			title=f"Line {line}: missed daily target by {short:g} on {self.production_date}",
 			department="Production",

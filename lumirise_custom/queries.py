@@ -46,3 +46,29 @@ def mono_box_finish_query(doctype, txt, searchfield, start, page_len, filters):
 		""",
 		values,
 	)
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def line_warehouse_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Constrain a Warehouse Link to just the warehouses configured as production
+	lines under Operations Settings → Production Lines. Lets the "Production Line"
+	field be a real, openable Warehouse master (no more "document not found" from
+	Link-ing at a child table) while keeping that child table the single config
+	source."""
+	settings = frappe.get_cached_doc("Lumirise Operations Settings")
+	line_whs = [r.line_warehouse for r in settings.production_lines if r.line_warehouse and r.is_active]
+	if not line_whs:
+		return []
+	return frappe.db.sql(
+		"""
+		SELECT name
+		FROM `tabWarehouse`
+		WHERE name IN %(whs)s
+		  AND disabled = 0
+		  AND name LIKE %(txt)s
+		ORDER BY name
+		LIMIT %(page_len)s OFFSET %(start)s
+		""",
+		{"whs": tuple(line_whs), "txt": f"%{txt}%", "start": start, "page_len": page_len},
+	)

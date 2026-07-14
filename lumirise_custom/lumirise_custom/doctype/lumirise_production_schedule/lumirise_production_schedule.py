@@ -2,9 +2,13 @@
 # For license information, please see license.txt
 
 # Lumirise Production Schedule = the PPC monthly/weekly/daily plan (2026-07-08 call).
-# The planner DATES each FG slice manually (client answer #3 — no auto-scheduler in
-# v1); on validate the system computes, per line, advisory-only decorations:
-#   - lines_needed  = slice_qty / Item.lr_cph      (their sheet's "LINES" column)
+# "Get Sales Orders" (fetch_sales_orders) auto-populates every row from open Sales
+# Orders — the native-Production-Plan pattern: SO, FG item, pending qty, Category,
+# CPH, LINES, delivery date, priority/urgent, and an auto material/container remark.
+# The planner then only sets the Production Date + Line manually (client answer #3 —
+# no auto-scheduler in v1). On validate the system (re)computes advisory-only:
+#   - cph / lines_needed = slice_qty / Item.lr_cph  (their sheet's "LINES" column)
+#   - category (FG Item Group), delivery_date, remark (material/container hint)
 #   - material_status: makeable-now vs incoming, from the shared MRP helpers
 #   - warnings: capacity (lines needed on a date > active lines) + delivery-date slip
 # Nothing here blocks a save/submit — the algorithm advises, the human decides.
@@ -30,8 +34,16 @@ class LumiriseProductionSchedule(Document):
 		per_date = {}
 		for ln in self.schedule_lines:
 			cph = flt(frappe.db.get_value("Item", ln.fg_item, "lr_cph")) if ln.fg_item else 0
+			ln.cph = cph
 			ln.lines_needed = (flt(ln.slice_qty) / cph) if cph else 0
 			ln.material_status = _material_status(ln.fg_item, flt(ln.slice_qty)) if ln.fg_item else ""
+			# Auto-decorate the "July Sales" columns (all editable afterwards).
+			if ln.fg_item and not ln.category:
+				ln.category = frappe.db.get_value("Item", ln.fg_item, "item_group")
+			if ln.sales_order and not ln.delivery_date:
+				ln.delivery_date = frappe.db.get_value("Sales Order", ln.sales_order, "delivery_date")
+			if not (ln.remark or "").strip():
+				ln.remark = _material_remark(ln.fg_item, flt(ln.slice_qty)) if ln.fg_item else ""
 			if ln.scheduled_date:
 				per_date[ln.scheduled_date] = per_date.get(ln.scheduled_date, 0) + flt(ln.lines_needed)
 
@@ -81,6 +93,84 @@ def _material_status(fg_item, qty):
 	if makeable_inc >= qty:
 		return f"Short {int(qty - makeable)} now — incoming covers it ({comp})"
 	return f"SHORT: only ~{int(makeable_inc)} makeable incl. in-transit ({comp})"
+
+
+def _material_remark(fg_item, qty):
+	"""Short auto note for the REMARK column — surfaces a material/container-release
+	dependency the way the client's sheet does ('NEED CONTAINER RELEASE DATE'), so the
+	planner sees the blocker without free-typing it. Blank when RM is enough now."""
+	status = _material_status(fg_item, flt(qty))
+	if status.startswith("RM enough") or status in ("No components", ""):
+		return ""
+	if status.startswith("Short") and "incoming covers" in status:
+		return "MATERIAL INCOMING — check container-release date"
+	if status.startswith("SHORT"):
+		return "NEEDS MATERIAL / CONTAINER RELEASE"
+	if status == "No BOM on FG":
+		return "No BOM on FG — cannot check material"
+	return ""
+
+
+@frappe.whitelist()
+def fetch_sales_orders(schedule_name, from_date=None, to_date=None, customer=None, only_pending=1):
+	"""Native-Production-Plan-style fetch: pull every open Sales Order FG line and
+	populate the schedule automatically (SO, item, pending qty, category, CPH, LINES,
+	delivery date, priority/urgent, and an auto material/container remark). The planner
+	then only sets the Production Date + Line (client answer #3 — manual dating in v1).
+
+	Dedupes on (sales_order, fg_item) so re-fetching is safe. Returns the count added.
+	Rate-less/advisory — never blocks; a bad row is skipped, not thrown."""
+	sched = frappe.get_doc("Lumirise Production Schedule", schedule_name)
+	if sched.docstatus != 0:
+		frappe.throw("Fetch Sales Orders only on a draft schedule.")
+
+	only_pending = int(only_pending or 0)
+	existing = {(ln.sales_order, ln.fg_item) for ln in sched.schedule_lines}
+
+	so_filters = {"docstatus": 1, "status": ["not in", ["Closed", "Completed"]]}
+	if customer:
+		so_filters["customer"] = customer
+	if from_date:
+		so_filters["delivery_date"] = [">=", from_date]
+	if from_date and to_date:
+		so_filters["delivery_date"] = ["between", [from_date, to_date]]
+	elif to_date:
+		so_filters["delivery_date"] = ["<=", to_date]
+
+	sales_orders = frappe.get_all("Sales Order", filters=so_filters, pluck="name")
+	added = 0
+	for so in sales_orders:
+		so_doc = frappe.get_doc("Sales Order", so)
+		priority = int(so_doc.get("lr_priority") or 0)
+		urgent = 1 if flt(so_doc.get("lr_urgent_percent")) > 0 else 0
+		for it in so_doc.items:
+			pending = flt(it.qty) - flt(it.delivered_qty)
+			if only_pending and pending <= 0:
+				continue
+			qty = pending if only_pending else flt(it.qty)
+			if (so, it.item_code) in existing:
+				continue
+			cph = flt(frappe.db.get_value("Item", it.item_code, "lr_cph"))
+			sched.append("schedule_lines", {
+				"sales_order": so,
+				"fg_item": it.item_code,
+				"fg_item_name": it.item_name,
+				"category": frappe.db.get_value("Item", it.item_code, "item_group"),
+				"slice_qty": qty,
+				"cph": cph,
+				"lines_needed": (qty / cph) if cph else 0,
+				"delivery_date": it.delivery_date or so_doc.delivery_date,
+				"priority": priority,
+				"urgent_flag": urgent,
+				"remark": _material_remark(it.item_code, qty),
+				"material_status": _material_status(it.item_code, qty),
+			})
+			existing.add((so, it.item_code))
+			added += 1
+
+	if added:
+		sched.save()
+	return {"added": added, "sales_orders": len(sales_orders)}
 
 
 @frappe.whitelist()
@@ -167,8 +257,7 @@ def release_day(schedule_name, production_date):
 		})
 		jc.insert(ignore_permissions=True)
 		created.append(jc.name)
-		sup = frappe.db.get_value("Lumirise Production Line", ln.production_line, "supervisor_user")
-		_assign_jobcard(jc.name, sup)
+		_assign_jobcard(jc.name, config.line_supervisor(ln.production_line))
 	if created and sched.release_status != "Released":
 		sched.db_set("release_status", "Released")
 	frappe.db.commit()
@@ -211,8 +300,7 @@ def roll_backlog(schedule_name, from_date, to_date):
 		})
 		jc.insert(ignore_permissions=True)
 		created.append(jc.name)
-		sup = frappe.db.get_value("Lumirise Production Line", m.production_line, "supervisor_user")
-		_assign_jobcard(jc.name, sup)
+		_assign_jobcard(jc.name, config.line_supervisor(m.production_line))
 	frappe.db.commit()
 	frappe.msgprint(f"Rolled {len(created)} backlog Job Card(s) to {getdate(to_date)}.", indicator="orange", alert=True)
 	return created

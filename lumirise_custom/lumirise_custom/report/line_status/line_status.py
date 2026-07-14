@@ -44,7 +44,7 @@ def execute(filters=None):
 			"""SELECT COALESCE(SUM(target_qty), 0), COALESCE(SUM(produced_qty), 0)
 			   FROM `tabLumirise Job Card`
 			   WHERE production_line = %s AND production_date = %s AND docstatus < 2""",
-			(r.name, today),
+			(line_wh, today),
 		)[0]
 		t_target, t_prod = flt(jc[0]), flt(jc[1])
 		ach = (t_prod / t_target * 100.0) if t_target else 0.0
@@ -53,7 +53,7 @@ def execute(filters=None):
 			"""SELECT closing_date, variance, is_balanced FROM `tabLine Daily Closing`
 			   WHERE production_line = %s AND docstatus = 1
 			   ORDER BY closing_date DESC, creation DESC LIMIT 1""",
-			r.name,
+			line_wh,
 			as_dict=True,
 		)
 		lc = lc[0] if lc else None

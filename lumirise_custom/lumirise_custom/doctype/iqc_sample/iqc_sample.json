@@ -14,6 +14,7 @@
   "taken_by",
   "issued_on",
   "status",
+  "source_warehouse",
   "disposition",
   "returned_on",
   "stock_entry",
@@ -78,7 +79,15 @@
    "read_only": 1
   },
   {
-   "description": "Set at return. Returned Intact = back to RM Store; Built into Finished Unit = to Production FG; Scrapped = written off.",
+   "description": "Warehouse the GRN actually received this item into (an RM rack/bin) — the sample is drawn from here into the lab, and 'Returned Intact' goes back here. Falls back to the configured RM store.",
+   "fieldname": "source_warehouse",
+   "fieldtype": "Link",
+   "label": "Source Warehouse (GRN)",
+   "options": "Warehouse",
+   "read_only": 1
+  },
+  {
+   "description": "Set at return. Returned Intact = back to the GRN source warehouse; Built into Finished Unit = to Production FG; Scrapped = written off.",
    "fieldname": "disposition",
    "fieldtype": "Select",
    "in_list_view": 1,

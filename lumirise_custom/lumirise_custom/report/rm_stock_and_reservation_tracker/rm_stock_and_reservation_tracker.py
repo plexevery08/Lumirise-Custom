@@ -24,6 +24,21 @@ from lumirise_custom.lumirise_custom.doctype.material_planning.material_planning
 
 CLOSED_WO = ("Completed", "Stopped", "Closed")
 
+# Always-on hard scope: this is the RAW-MATERIAL tracker, so it only ever shows items
+# in the raw-material item groups. Both groups exist on the Lumirise masters and real
+# BOM components are split across them. Edit this tuple if the RM group naming changes.
+RM_ITEM_GROUPS = ("Raw Material", "LED Raw Material")
+
+
+def _effective_rm_groups(filters):
+    """The RM item groups this run should show. Always restricted to RM_ITEM_GROUPS
+    (hard scope); a user-picked Item Group narrows further but only WITHIN the RM set
+    (picking a non-RM group yields nothing, by design)."""
+    ig = filters.get("item_group")
+    if ig:
+        return [ig] if ig in RM_ITEM_GROUPS else []
+    return list(RM_ITEM_GROUPS)
+
 
 def execute(filters=None):
     filters = frappe._dict(filters or {})
@@ -204,12 +219,14 @@ def _candidate_items(filters):
     if not codes:
         return set()
 
-    # narrow to stock items + honour the item / item-group filters
-    cond = {"name": ["in", list(codes)], "is_stock_item": 1}
+    # narrow to stock items in the raw-material groups (always-on), then honour the
+    # item / item-group filters (item_group can only narrow further within RM)
+    groups = _effective_rm_groups(filters)
+    if not groups:
+        return set()
+    cond = {"name": ["in", list(codes)], "is_stock_item": 1, "item_group": ["in", groups]}
     if filters.get("item_code"):
         cond["name"] = filters["item_code"]
-    if filters.get("item_group"):
-        cond["item_group"] = filters["item_group"]
     result = {r.name for r in frappe.get_all("Item", filters=cond, fields=["name"])}
 
     # scope to a single Sales Order's raw materials when that filter is set
@@ -266,9 +283,9 @@ def _reservation_detail(filters):
         cond.append("wo.company = %(company)s"); params["company"] = filters["company"]
     if filters.get("item_code"):
         cond.append("woi.item_code = %(item)s"); params["item"] = filters["item_code"]
-    if filters.get("item_group"):
-        cond.append("woi.item_code IN (SELECT name FROM `tabItem` WHERE item_group = %(ig)s)")
-        params["ig"] = filters["item_group"]
+    # always-on raw-material scope (item_group narrows within RM only)
+    cond.append("woi.item_code IN (SELECT name FROM `tabItem` WHERE item_group IN %(rm_groups)s)")
+    params["rm_groups"] = tuple(_effective_rm_groups(filters)) or ("",)
     if filters.get("sales_order"):
         cond.append("wo.sales_order = %(so)s"); params["so"] = filters["sales_order"]
     if filters.get("work_order"):
@@ -319,14 +336,14 @@ def _pipeline_detail(filters):
     ]
 
     item = filters.get("item_code")
-    ig = filters.get("item_group")
+    rm_groups = set(_effective_rm_groups(filters))  # always-on raw-material scope
     so = filters.get("sales_order")
     so_items = _so_item_set(so) if so else None  # scope pipeline to this SO's RM
 
     def _ok(code):
         if item and code != item:
             return False
-        if ig and frappe.db.get_value("Item", code, "item_group") != ig:
+        if frappe.db.get_value("Item", code, "item_group") not in rm_groups:
             return False
         if so_items is not None and code not in so_items:
             return False

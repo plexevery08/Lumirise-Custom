@@ -158,21 +158,44 @@ def _bom_lead_days(bom_no):
 	return max(leads) if leads else 0
 
 
-def _blocked_for_other_so(item, exclude_sos):
-	"""Reserved by submitted, not-completed Work Orders for OTHER sales orders."""
-	rows = frappe.db.sql(
+def _blocked_so_breakdown(item, exclude_sos):
+	"""Per-SO reserved qty by submitted, not-completed Work Orders for OTHER sales
+	orders. Returns [{"so": <SO name or "">, "qty": <float>}] grouped by SO.
+	No HAVING filter, so sum(qty over groups) == the old ungrouped total exactly;
+	the label helper filters out non-positive groups for display."""
+	return frappe.db.sql(
 		"""
-		SELECT COALESCE(SUM(woi.required_qty - woi.consumed_qty), 0)
+		SELECT COALESCE(wo.sales_order, '') AS so,
+		       COALESCE(SUM(woi.required_qty - woi.consumed_qty), 0) AS qty
 		FROM `tabWork Order Item` woi
 		JOIN `tabWork Order` wo ON wo.name = woi.parent
 		WHERE woi.item_code = %(item)s
 		  AND wo.docstatus = 1
 		  AND wo.status NOT IN ('Completed', 'Stopped')
 		  AND COALESCE(wo.sales_order, '') NOT IN %(sos)s
+		GROUP BY wo.sales_order
+		ORDER BY qty DESC
 		""",
 		{"item": item, "sos": tuple(exclude_sos) or ("",)},
+		as_dict=True,
 	)
-	return flt(rows[0][0]) if rows else 0
+
+
+def _blocked_for_other_so(item, exclude_sos):
+	"""Total reserved by submitted, not-completed Work Orders for OTHER sales orders."""
+	return sum(flt(r.qty) for r in _blocked_so_breakdown(item, exclude_sos))
+
+
+def _blocked_so_label(breakdown):
+	"""Human-readable 'SO-0001 (50), SO-0003 (20)' from a breakdown list."""
+	parts = []
+	for r in breakdown:
+		qty = flt(r.qty)
+		if qty <= 0:
+			continue
+		qty_str = str(int(qty)) if qty == int(qty) else str(qty)
+		parts.append(f"{r.so or '(No SO)'} ({qty_str})")
+	return ", ".join(parts)
 
 
 # --- Inbound pipeline buckets (single source of truth, no double-count) --------
@@ -286,7 +309,8 @@ def compute_plan(sales_orders):
 				comp = bi.item_code
 				comp_required = flt(bi.qty) / per * required
 				rm_avail = _stock(comp, rm_wh)
-				blocked = _blocked_for_other_so(comp, exclude)
+				blocked_detail = _blocked_so_breakdown(comp, exclude)
+				blocked = sum(flt(r.qty) for r in blocked_detail)
 				usable = max(0, rm_avail - blocked)
 
 				# Live inbound pipeline, each qty in exactly one bucket.
@@ -306,6 +330,7 @@ def compute_plan(sales_orders):
 					"component_item_name": bi.item_name,
 					"required_qty": comp_required, "rm_available": rm_avail,
 					"blocked_for_other_so": blocked,
+					"blocked_against_sos": _blocked_so_label(blocked_detail),
 					"available_after_blocking": usable,
 					"pending_po": pending_po, "pending_pdi": p, "in_transit": t,
 					"pending_iqc": r, "indent_balance": indent_bal,

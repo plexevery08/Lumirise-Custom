@@ -83,10 +83,34 @@ def _make_sample_stock_entry(iqc, row, purpose, from_wh, to_wh, note):
 	return se
 
 
-def _ensure_in_lab(iqc, row):
+def _received_warehouse(iqc, item_code):
+	"""Where the GRN actually received this item. The receiver may put the accepted qty
+	into any RM warehouse on the GRN (typically a specific RM rack/bin, NOT the generic
+	RM parent), so the sample must be drawn from there — otherwise the RM Store -> Lab
+	transfer fails because the parent store holds no stock. Read it from the submitted
+	Purchase Receipt for this IQC's PO; fall back to the configured RM store."""
+	po = iqc.get("purchase_order")
+	if po:
+		rows = frappe.db.sql(
+			"""SELECT pri.warehouse
+			   FROM `tabPurchase Receipt Item` pri
+			   JOIN `tabPurchase Receipt` pr ON pr.name = pri.parent
+			   WHERE pr.docstatus = 1 AND pri.item_code = %(item)s
+			     AND pri.purchase_order = %(po)s AND COALESCE(pri.warehouse, '') != ''
+			   ORDER BY pr.posting_date DESC, pr.creation DESC
+			   LIMIT 1""",
+			{"item": item_code, "po": po})
+		if rows and rows[0][0]:
+			return rows[0][0]
+	return config.rm_warehouse()
+
+
+def _ensure_in_lab(iqc, row, source_wh=None):
 	"""Make sure the sample physically held in the lab is reflected in the ledger.
-	Moves RM Store -> IQC Lab if the row is still just a pre-GRN log. Requires the
-	GRN to have posted (goods owned). Idempotent — a no-op once In Lab."""
+	Moves the GRN receipt warehouse -> IQC Lab if the row is still just a pre-GRN log.
+	Requires the GRN to have posted (goods owned). Idempotent — a no-op once In Lab.
+	`source_wh` lets the GRN-submit hook pass the exact receipt warehouse; otherwise it
+	is looked up from the posted Purchase Receipt."""
 	if row.status == IN_LAB:
 		return
 	if row.status == RETURNED:
@@ -95,12 +119,14 @@ def _ensure_in_lab(iqc, row):
 		frappe.throw(_(
 			"Post the GRN first — the sample's stock is not owned until the accepted "
 			"qty lands in the RM Store."))
-	rm = config.rm_warehouse()
+	src = source_wh or _received_warehouse(iqc, row.item_code)
 	lab = config.iqc_lab_warehouse()
-	se = _make_sample_stock_entry(iqc, row, "Material Transfer", rm, lab, "received into lab")
-	frappe.db.set_value("IQC Sample", row.name, {"status": IN_LAB, "stock_entry": se.name})
+	se = _make_sample_stock_entry(iqc, row, "Material Transfer", src, lab, "received into lab")
+	frappe.db.set_value("IQC Sample", row.name,
+		{"status": IN_LAB, "stock_entry": se.name, "source_warehouse": src})
 	row.status = IN_LAB
 	row.stock_entry = se.name
+	row.source_warehouse = src
 
 
 # --- 1. issue (pre-GRN, no stock) -------------------------------------------
@@ -158,6 +184,11 @@ def realise_samples_to_lab(doc, method=None):
 		pos = _grn_pos(doc)
 	except Exception:
 		return
+	# per-item warehouse the accepted qty actually landed in on THIS GRN
+	wh_map = {}
+	for it in doc.get("items", []):
+		if it.item_code and it.warehouse and it.item_code not in wh_map:
+			wh_map[it.item_code] = it.warehouse
 	for po in pos:
 		iqc_names = frappe.get_all(
 			"IQC", filters={"purchase_order": po, "docstatus": 1}, pluck="name")
@@ -167,7 +198,7 @@ def realise_samples_to_lab(doc, method=None):
 				if row.status != ISSUED:
 					continue
 				try:
-					_ensure_in_lab(iqc, row)
+					_ensure_in_lab(iqc, row, source_wh=wh_map.get(row.item_code))
 				except Exception:
 					frappe.log_error(
 						frappe.get_traceback(),
@@ -227,8 +258,9 @@ def return_sample(docname, row_name, disposition):
 
 	lab = config.iqc_lab_warehouse()
 	if disposition == "Returned Intact":
+		back = row.get("source_warehouse") or _received_warehouse(iqc, row.item_code)
 		se = _make_sample_stock_entry(
-			iqc, row, "Material Transfer", lab, config.rm_warehouse(), "returned intact to RM")
+			iqc, row, "Material Transfer", lab, back, "returned intact to RM")
 	elif disposition == "Built into Finished Unit":
 		se = _make_sample_stock_entry(
 			iqc, row, "Material Transfer", lab, config.fg_warehouse(), "built into finished unit -> FG")

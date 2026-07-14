@@ -707,21 +707,25 @@ def _check_recent_so_planning_task():
 	return _result("", "", "", "pass", detail=f"All {len(recent)} recent SOs raised a Planning task.")
 
 
-@readonly_check("line_user_perm", "Production-line scoping is configured", PERMISSIONS)
+@readonly_check("line_user_perm", "Each production line has a supervisor", PERMISSIONS)
 def _check_line_user_perm():
-	lines = frappe.get_all("User Permission", filters={"allow": "Lumirise Production Line"}, limit=1)
+	# Lines are now keyed by their Warehouse (openable master); per-line ownership/
+	# scoping runs off the supervisor_user assigned to each line (Job Cards auto-assign
+	# there), not a User Permission on the retired child doctype.
 	settings = frappe.get_cached_doc(SETTINGS)
 	active_lines = [r for r in (settings.production_lines or []) if r.is_active]
-	if active_lines and not lines:
+	no_sup = [r.line_name or r.line_warehouse for r in active_lines if not r.supervisor_user]
+	if no_sup:
 		return _result(
 			"",
 			"",
 			"",
 			"warn",
-			detail=f"{len(active_lines)} production lines are configured but no per-line User Permission scoping exists.",
-			remediation="Line operators may see every line's data. Add User Permissions scoping line users to their Lumirise Production Line.",
+			detail=f"{len(no_sup)} of {len(active_lines)} active production lines have no supervisor user set.",
+			remediation="Set Supervisor (User) on each line under Operations Settings → Production Lines so daily Job Cards auto-assign and line data has an owner.",
+			evidence=", ".join(no_sup[:5]),
 		)
-	return _result("", "", "", "pass", detail="Line scoping present or no lines configured yet.")
+	return _result("", "", "", "pass", detail="All active lines have a supervisor or no lines configured yet.")
 
 
 @readonly_check("line_warehouses", "Each production line has a valid warehouse", WAREHOUSES)

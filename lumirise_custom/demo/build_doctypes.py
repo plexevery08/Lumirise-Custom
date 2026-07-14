@@ -109,6 +109,8 @@ def execute():
         _f("rm_available", "Float", "RM Available", in_list_view=1),
         _f("blocked_for_other_so", "Float", "Blocked (other SOs)", in_list_view=1,
            description="Reserved by submitted Work Orders for other orders."),
+        _f("blocked_against_sos", "Small Text", "Blocked Against SO(s)", in_list_view=1, read_only=1,
+           description="Which other Sales Order(s) the blocked qty is reserved against, with qty per SO."),
         _f("available_after_blocking", "Float", "Available After Blocking", in_list_view=1),
         _f("pending_po", "Float", "Pending PO"),
         _f("pending_pdi", "Float", "Pending PDI"),

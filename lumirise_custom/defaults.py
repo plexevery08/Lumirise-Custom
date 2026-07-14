@@ -98,6 +98,31 @@ def is_valid_line(warehouse):
 	return any(l["line_warehouse"] == warehouse for l in production_lines())
 
 
+def _line_row(warehouse):
+	"""The Operations Settings → Production Lines child row for a line warehouse,
+	or None. The line is keyed by its warehouse now (a real, openable master) —
+	no more Link-to-child-table lookups."""
+	if not warehouse:
+		return None
+	for r in _settings().production_lines or []:
+		if r.line_warehouse == warehouse:
+			return r
+	return None
+
+
+def line_supervisor(warehouse):
+	"""Supervisor User configured for a line warehouse (Operations Settings), or None."""
+	row = _line_row(warehouse)
+	return row.supervisor_user if row else None
+
+
+def line_name(warehouse):
+	"""Human line name (e.g. 'Line-3') for a line warehouse, falling back to the
+	warehouse itself if it isn't a configured line."""
+	row = _line_row(warehouse)
+	return (row.line_name if row else None) or warehouse
+
+
 def item_uom(item_code):
 	"""Stock UOM of the item — dynamic, never a hard-coded 'Nos'."""
 	return frappe.db.get_value("Item", item_code, "stock_uom")
