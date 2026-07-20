@@ -8,6 +8,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "company",
   "effective_from",
   "branch",
   "col_break_1",
@@ -18,6 +19,14 @@
   "amended_from"
  ],
  "fields": [
+  {
+   "description": "Rates are converted into this company's currency before they reach costing. Defaults from Lumirise Operations Settings.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
   {
    "default": "Today",
    "description": "Month/date these prices take effect. Purchase updates this monthly.",
@@ -56,11 +65,11 @@
    "label": "Raw Material Prices"
   },
   {
+   "description": "Filled by 'Import Rows from File', or typed in manually.",
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Prices",
-   "options": "RM Price Book Item",
-   "reqd": 1
+   "options": "RM Price Book Item"
   },
   {
    "fieldname": "amended_from",

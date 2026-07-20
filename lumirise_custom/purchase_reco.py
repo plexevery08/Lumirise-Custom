@@ -31,12 +31,16 @@ def _rm_price(item_code, qty=None):
 	prices it. v2 supports multiple vendor / qty-range rows: among the rows matching the
 	qty range, pick the Preferred vendor, else the lowest rate.
 
+	Reads base_rate (company currency), NOT the vendor-currency rate -- rows from
+	different vendors can be quoted in different currencies, so comparing raw `rate`
+	across them would pick the wrong vendor and return a foreign-currency number.
+
 	NOTE: preferred-then-lowest is a deterministic INTERIM rule so costing never picks an
 	arbitrary row; the final vendor-selection policy is confirmed at the purchase meeting
 	(lumirise-decision-gates). Backward compatible — a single legacy row returns as before.
 	"""
 	rows = frappe.db.sql(
-		"""SELECT i.rate, i.min_qty, i.max_qty, i.preferred
+		"""SELECT i.base_rate AS rate, i.min_qty, i.max_qty, i.preferred
 		   FROM `tabRM Price Book Item` i
 		   JOIN `tabRM Price Book` p ON p.name = i.parent
 		   WHERE i.item_code = %s AND p.docstatus = 1

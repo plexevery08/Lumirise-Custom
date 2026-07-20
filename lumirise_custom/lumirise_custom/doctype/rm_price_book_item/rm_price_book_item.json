@@ -11,7 +11,10 @@
   "supplier",
   "min_qty",
   "max_qty",
+  "currency",
+  "conversion_rate",
   "rate",
+  "base_rate",
   "preferred"
  ],
  "fields": [
@@ -62,13 +65,40 @@
    "label": "Max Qty"
   },
   {
-   "description": "Purchase rate (INR) effective this price book.",
+   "description": "Currency the vendor quoted this rate in. Defaults to company currency.",
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Currency",
+   "options": "Currency",
+   "reqd": 1
+  },
+  {
+   "description": "Vendor currency -> company currency. Forced to 1 when they match; auto-fetched when left blank. Do NOT default this to 1 -- a non-blank value suppresses the auto-fetch and would push an unconverted foreign rate into costing.",
+   "fieldname": "conversion_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate",
+   "precision": "9"
+  },
+  {
+   "description": "Purchase rate as quoted, in the row's Currency.",
    "fieldname": "rate",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Rate (INR)",
+   "label": "Rate",
+   "options": "currency",
    "precision": "3",
    "reqd": 1
+  },
+  {
+   "description": "Rate converted to company currency. This is the value pushed into costing on MD approval.",
+   "fieldname": "base_rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Rate (Company Currency)",
+   "options": "Company:company:default_currency",
+   "precision": "3",
+   "read_only": 1
   },
   {
    "description": "Prefer this vendor when several match the qty range.",
