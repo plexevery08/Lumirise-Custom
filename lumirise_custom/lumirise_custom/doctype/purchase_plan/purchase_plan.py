@@ -146,17 +146,28 @@ def create_purchase_orders(plan_name):
 			po.append("items", po_item)
 		# Leave the PO in Draft -- Purchase Head releases it via the workflow.
 		po.insert(ignore_permissions=True)
-		created.append(po.name)
+		# Return name + supplier + amount so the buyer sees every PO and its total
+		# side by side (Rishitha, 2026-07-20 ~01:11:25 "all POs at a time, PO and
+		# total amount side by side, and supplier name"). grand_total is computed
+		# during insert(); fall back to net total if taxes aren't set up yet.
+		created.append({
+			"name": po.name,
+			"supplier": supplier,
+			"supplier_name": frappe.db.get_value("Supplier", supplier, "supplier_name") or supplier,
+			"amount": flt(po.grand_total) or flt(po.total),
+			"currency": po.currency or frappe.db.get_value("Company", po.company, "default_currency"),
+		})
 
+	created_names = [c["name"] for c in created]
 	plan.db_set("po_status", "POs Created")
-	plan.db_set("created_pos", ", ".join(created))
+	plan.db_set("created_pos", ", ".join(created_names))
 
 	# Now that the PO(s) exist and carry lr_indent_refs, refresh the traceability
 	# panel on every upstream doc (SO / Indent / WO) so they show the PO too.
 	# Fail-safe (restamp swallows errors).
 	from lumirise_custom import traceability
 	sos = set()
-	for po in created:
+	for po in created_names:
 		refs = frappe.db.get_value("Purchase Order", po, "lr_indent_refs") or ""
 		for iname in [x.strip() for x in refs.split(",") if x.strip()]:
 			traceability.restamp("Indent", iname)

@@ -10,6 +10,12 @@ frappe.ui.form.on("Purchase Order", {
 				});
 			}, __("Create"));
 		}
+		// Draft PO: pull specific lines from a pending Indent (Rishitha 2026-07-20).
+		if (frm.doc.docstatus === 0) {
+			frm.add_custom_button(__("Get Items from Indent"), () => {
+				pick_indent_items(frm);
+			}, __("Get Items From"));
+		}
 		render_bom_reco(frm);
 	},
 	lr_indent_refs(frm) {
@@ -41,6 +47,94 @@ function render_bom_reco(frm) {
 
 function esc(v) { return frappe.utils.escape_html(String(v == null ? "" : v)); }
 function num(v) { return format_number(flt(v), null, 2); }
+
+// "Get Items from Indent": pick a pending Indent, then TICK ONLY the items wanted
+// (an indent can carry 200-300 lines and the buyer may want a single code onto this
+// PO). Selected lines append to the PO and the Indent is added to Indent References
+// so BOM reconciliation / traceability / mark-ordered all still work.
+function pick_indent_items(frm) {
+	const d = new frappe.ui.Dialog({
+		title: __("Get Items from Indent"),
+		size: "large",
+		fields: [
+			{
+				fieldname: "indent", fieldtype: "Link", options: "Indent",
+				label: __("Indent"), reqd: 1,
+				get_query: () => ({ filters: { docstatus: 1, workflow_state: ["!=", "Ordered"] } }),
+			},
+			{ fieldname: "picker", fieldtype: "HTML" },
+		],
+		primary_action_label: __("Add Selected Items"),
+		primary_action() {
+			const $rows = d.fields_dict.picker.$wrapper.find("input.lr-indent-pick:checked");
+			if (!$rows.length) { frappe.msgprint(__("Tick at least one item.")); return; }
+			const data = d._items || [];
+			$rows.each(function () {
+				const row = data[parseInt(this.getAttribute("data-idx"), 10)];
+				if (!row) return;
+				const child = frm.add_child("items", {
+					item_code: row.item_code,
+					item_name: row.item_name,
+					description: row.description,
+					qty: flt(row.qty),
+					uom: row.uom,
+					stock_uom: row.stock_uom,
+					conversion_factor: 1,
+					schedule_date: row.schedule_date,
+					warehouse: row.warehouse,
+				});
+				child.item_name = row.item_name; // keep mandatory field after any auto-fetch
+			});
+			// Add the indent to Indent References (dedup).
+			const refs = (frm.doc.lr_indent_refs || "").split(",").map((s) => s.trim()).filter(Boolean);
+			if (!refs.includes(d.get_value("indent"))) refs.push(d.get_value("indent"));
+			frm.set_value("lr_indent_refs", refs.join(", "));
+			frm.refresh_field("items");
+			frappe.show_alert({ message: __("{0} item(s) added.", [$rows.length]), indicator: "green" });
+			d.hide();
+		},
+	});
+
+	d.fields_dict.indent.df.onchange = () => {
+		const indent = d.get_value("indent");
+		const $p = d.fields_dict.picker.$wrapper;
+		if (!indent) { $p.empty(); return; }
+		$p.html(`<div class="text-muted">${__("Loading items…")}</div>`);
+		frappe.call({
+			method: "lumirise_custom.lumirise_custom.doctype.indent.indent.get_indent_items",
+			args: { indent },
+			callback(r) {
+				const items = (r.message && r.message.items) || [];
+				d._items = items;
+				if (!items.length) { $p.html(`<div class="text-muted">${__("This indent has no items.")}</div>`); return; }
+				const body = items.map((row, i) => `<tr>
+					<td><input type="checkbox" class="lr-indent-pick" data-idx="${i}"></td>
+					<td>${esc(row.item_code)}</td>
+					<td>${esc(row.item_name)}</td>
+					<td class="text-right">${num(row.qty)}</td>
+					<td>${esc(row.uom)}</td>
+					<td>${esc(row.model || "")}</td>
+				</tr>`).join("");
+				$p.html(`
+					<div style="margin-bottom:6px;">
+						<button class="btn btn-xs btn-default" data-lr-pick-all>${__("Select all")}</button>
+						<button class="btn btn-xs btn-default" data-lr-pick-none>${__("Clear")}</button>
+					</div>
+					<div style="max-height:340px;overflow:auto;">
+					<table class="table table-bordered" style="font-size:12px;margin-bottom:0;">
+						<thead><tr>
+							<th style="width:32px;"></th><th>${__("Item Code")}</th><th>${__("Item Name")}</th>
+							<th class="text-right">${__("Indent Qty")}</th><th>${__("UOM")}</th><th>${__("Model")}</th>
+						</tr></thead><tbody>${body}</tbody>
+					</table></div>`);
+				$p.find("[data-lr-pick-all]").on("click", () => $p.find("input.lr-indent-pick").prop("checked", true));
+				$p.find("[data-lr-pick-none]").on("click", () => $p.find("input.lr-indent-pick").prop("checked", false));
+			},
+		});
+	};
+
+	d.show();
+}
 
 function build_reco_html(data) {
 	const toolbar = `

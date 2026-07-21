@@ -18,8 +18,17 @@ function bom_filter(frm) {
 }
 
 async function fetch_latest_bom(frm) {
-	// "Latest version" = most recently created active (submitted) BOM for the FG item.
+	// Use the product's DEFAULT BOM — the same source every other Lumirise path reads
+	// (indent.py, material_planning.py, purchase_reco.py, the RM tracker). Reading
+	// "most recently created" here instead made a Material Request explode a different
+	// parts list than planning nets against (findings doc 2026-07-17, #3). The
+	// BOM Change Request repoints default_bom on approval, so this stays in step.
 	if (!frm.doc.fg_item) return null;
+	const default_bom = await frappe.db.get_value("Item", frm.doc.fg_item, "default_bom");
+	if (default_bom && default_bom.message && default_bom.message.default_bom) {
+		return default_bom.message.default_bom;
+	}
+	// Fallback: FG item has no default_bom set — take the latest active submitted BOM.
 	const rows = await frappe.db.get_list("BOM", {
 		filters: bom_filter(frm),
 		fields: ["name"],

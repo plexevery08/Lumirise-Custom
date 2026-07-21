@@ -20,6 +20,21 @@ def create_purchase_reco_fields():
 	candidates = [f.fieldname for f in meta.fields if f.fieldname not in OWN_FIELDS]
 	last_field = candidates[-1] if candidates else "items"
 	po_fields = [
+		# Import vs Domestic flag on the same PO screen (Rishitha, 2026-07-20
+		# ~01:13:10 "same screen, a flag whether it's import or domestic; currency
+		# shown here"). Informational + filterable — the currency still drives costing.
+		dict(
+			fieldname="lr_order_type",
+			label="Order Type",
+			fieldtype="Select",
+			options="Domestic\nImport",
+			default="Domestic",
+			insert_after="supplier",
+			in_standard_filter=1,
+			module="Lumirise Custom",
+			translatable=0,
+			description="Domestic (INR) or Import (foreign-currency) purchase. Informational flag; the PO currency drives the actual costing/exchange rate.",
+		),
 		dict(
 			fieldname="lr_bom_reco_tab",
 			label="BOM Reconciliation",

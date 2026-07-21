@@ -108,6 +108,48 @@ def _reconcile_against_bom(models, ordered_items):
 	return warnings
 
 
+@frappe.whitelist()
+def get_indent_items(indent):
+	"""Return one Indent's item lines so the buyer can cherry-pick specific items
+	straight onto a Purchase Order (Rishitha, 2026-07-20 ~01:16-01:18: "one indent
+	may have 200-300 items; I just want to order one item from it and give that PO
+	code to the vendor — no deleting all the rest"). The PO-side dialog lets them
+	tick only the lines they want; this just supplies the data (with item_name /
+	description pre-filled, since programmatic PO rows don't auto-fetch from item_code).
+	Returns {indent, items:[...]}"""
+	frappe.has_permission("Purchase Order", "create", throw=True)
+	if not indent or not frappe.db.exists("Indent", indent):
+		frappe.throw("Select a valid Indent.")
+
+	ind = frappe.get_doc("Indent", indent)
+	codes = list({row.item_code for row in ind.items if row.item_code})
+	item_meta = {
+		r.name: r for r in frappe.get_all(
+			"Item",
+			filters={"name": ["in", codes]},
+			fields=["name", "item_name", "description", "stock_uom"],
+		)
+	} if codes else {}
+
+	items = []
+	for row in ind.items:
+		meta = item_meta.get(row.item_code)
+		uom = row.uom or "Nos"
+		items.append({
+			"item_code": row.item_code,
+			"item_name": (meta.item_name if meta else None) or row.item_code,
+			"description": (meta.description if meta else None) or row.item_code,
+			"qty": flt(row.qty),
+			"uom": uom,
+			"stock_uom": (meta.stock_uom if meta else uom) or uom,
+			"conversion_factor": 1,
+			"model": row.model,
+			"schedule_date": row.required_date or add_days(nowdate(), 15),
+			"warehouse": RM_STORE,
+		})
+	return {"indent": indent, "items": items}
+
+
 def _default_supplier(item_code):
 	"""Best-guess vendor for an item: its Item Default default_supplier (first found).
 	The buyer can override it per line on the Purchase Plan."""

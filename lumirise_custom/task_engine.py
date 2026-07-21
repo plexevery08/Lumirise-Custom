@@ -244,8 +244,14 @@ def on_indent_update(doc, method=None):
 def on_iqc_submit(doc, method=None):
 	"""IQC with any rejection -> Defect task to Purchase (vendor claim / replace)
 	tagged to the Quality + Purchase HOD."""
-	if getattr(doc, "result", "") not in ("Rejected", "Partial"):
+	# The old stored `result` field is gone (and its DB column defaults to
+	# 'Accepted'), so derive the outcome live from the line qtys — otherwise this
+	# early-return always fired and no rejection card ever reached Purchase.
+	from frappe.utils import flt
+	any_reject = any(flt(r.rejected_qty) > 0 for r in (doc.items or []))
+	if not any_reject:
 		return
+	outcome = "Rejected" if doc.is_fully_rejected() else "Partial"
 	po = getattr(doc, "purchase_order", "") or ""
 	create_task(
 		title=f"IQC rejection on {doc.name} (PO {po})",
@@ -255,7 +261,7 @@ def on_iqc_submit(doc, method=None):
 		reference_doctype="IQC",
 		reference_name=doc.name,
 		description=(
-			f"Incoming Quality Control {doc.name} returned '{doc.result}'. "
+			f"Incoming Quality Control {doc.name} returned '{outcome}'. "
 			f"Raise the vendor debit note / replacement against PO {po} and move "
 			f"rejected stock to the RM Rejection store."
 		),

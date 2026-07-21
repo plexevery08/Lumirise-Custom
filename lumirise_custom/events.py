@@ -98,9 +98,14 @@ def iqc_gate(doc, method=None):
 		return
 	pos = {row.purchase_order for row in doc.items if getattr(row, "purchase_order", None)}
 	for po in pos:
+		# Outcome is derived live from the line qtys and locked onto `status` on
+		# submit (Passed / Rejected / On Hold / Moved to RM) — the old stored
+		# `result` column was removed but defaulted to 'Accepted', so filtering on
+		# it opened the gate for every IQC including fully-rejected ones. Gate on
+		# `status` instead: a submitted IQC that is not fully rejected clears it.
 		iqc = frappe.get_all(
 			"IQC",
-			filters={"purchase_order": po, "docstatus": 1, "result": ["!=", "Rejected"]},
+			filters={"purchase_order": po, "docstatus": 1, "status": ["!=", "Rejected"]},
 			limit=1)
 		if not iqc:
 			frappe.throw(

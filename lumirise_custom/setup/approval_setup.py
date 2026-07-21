@@ -153,15 +153,25 @@ def _indent_workflow():
 
 
 def _purchase_order_workflow():
-	"""Purchase Order Release -> Purchase Head approval before the PO is released
-	(submitted). Draft -> Pending Purchase Head -> Released (submit) | Rejected.
+	"""Purchase Order Release -> THREE authorizations before the PO is released to
+	the supplier (Rishitha, 2026-07-20 call ~01:15:26 "three authorizations: we'll
+	release the PO, next Purchase Head will authorize, next MD sir will authorize —
+	it's mandatory before we release to suppliers").
+
+	Draft -> Pending Purchase Head -> Pending MD -> Released (submit) | Rejected.
+	  1. Purchase (Purchase Manager) raises + "Submit for Release".
+	  2. Purchase Head authorizes.
+	  3. MD gives the final authorization, which submits the PO (doc_status 1).
 
 	The PO on_submit hooks (mark_indents_ordered, status_sync) still fire when the
-	workflow submits the document at the 'Released' (doc_status 1) state.
+	workflow submits the document at the 'Released' (doc_status 1) state — that only
+	happens now on MD approval, so the indents are not marked Ordered until the PO
+	is fully authorized.
 	"""
 	states = [
 		{"state": "Draft", "doc_status": "0"},
 		{"state": "Pending Purchase Head", "doc_status": "0"},
+		{"state": "Pending MD", "doc_status": "0"},
 		{"state": "Released", "doc_status": "1"},
 		{"state": "Rejected", "doc_status": "0"},
 	]
@@ -175,7 +185,7 @@ def _purchase_order_workflow():
 		{
 			"state": "Pending Purchase Head",
 			"action": "Purchase Head Approve",
-			"next_state": "Released",
+			"next_state": "Pending MD",
 			"allowed": "Purchase Head",
 		},
 		{
@@ -183,6 +193,18 @@ def _purchase_order_workflow():
 			"action": "Reject",
 			"next_state": "Rejected",
 			"allowed": "Purchase Head",
+		},
+		{
+			"state": "Pending MD",
+			"action": "MD Approve",
+			"next_state": "Released",
+			"allowed": "MD",
+		},
+		{
+			"state": "Pending MD",
+			"action": "Reject",
+			"next_state": "Rejected",
+			"allowed": "MD",
 		},
 	]
 	_upsert_workflow("Purchase Order Release", "Purchase Order", states, transitions)

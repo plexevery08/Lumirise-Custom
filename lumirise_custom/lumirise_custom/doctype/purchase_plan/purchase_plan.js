@@ -14,13 +14,33 @@ frappe.ui.form.on("Purchase Plan", {
 					callback(r) {
 						const pos = r.message || [];
 						if (!pos.length) return;
+						const esc = (v) => frappe.utils.escape_html(String(v == null ? "" : v));
+						const num = (v) => format_number(flt(v), null, 2);
+						let total = 0;
+						const rows = pos.map((p) => {
+							total += flt(p.amount);
+							return `<tr>
+								<td><a href="/app/purchase-order/${encodeURIComponent(p.name)}">${esc(p.name)}</a></td>
+								<td>${esc(p.supplier_name || p.supplier)}</td>
+								<td class="text-right">${esc(p.currency || "")} ${num(p.amount)}</td>
+							</tr>`;
+						}).join("");
 						frappe.msgprint({
-							title: __("Purchase Orders created"),
+							title: __("Purchase Orders created — one per vendor"),
 							indicator: "green",
-							message: __("Created {0} PO(s), one per vendor:", [pos.length])
-								+ "<br>" + pos.map(
-									(p) => `<a href="/app/purchase-order/${encodeURIComponent(p)}">${frappe.utils.escape_html(p)}</a>`
-								).join("<br>"),
+							message: `<table class="table table-bordered" style="font-size:12px;margin-bottom:0;">
+								<thead><tr>
+									<th>${__("Purchase Order")}</th>
+									<th>${__("Supplier")}</th>
+									<th class="text-right">${__("Amount")}</th>
+								</tr></thead>
+								<tbody>${rows}</tbody>
+								<tfoot><tr style="font-weight:bold;">
+									<td colspan="2">${__("Total")}</td>
+									<td class="text-right">${num(total)}</td>
+								</tr></tfoot>
+							</table>
+							<p class="text-muted small" style="margin-top:8px;">${__("Each PO is in Draft and awaits Purchase Head → MD authorization before release.")}</p>`,
 						});
 						frm.reload_doc();
 					},
@@ -112,7 +132,14 @@ function draw_kit_calc(frm) {
 		return;
 	}
 
-	let html = `<p class="text-muted small">${__("Per model: complete kits = min(ordered ÷ per-kit) across components; the rest are loose parts. Bump a component's qty above to see kits recalculate.")}</p>`;
+	// Per-model choice of which component drives the kit count. Default "__auto__"
+	// = the old min-over-components rule. Rishitha (2026-07-20 ~01:07): the auto
+	// least-qty divisor is wrong for bulk items (thermal grease comes 1 kg/pack but
+	// the BOM uses 0.05 kg), so let the buyer nominate the item to split kits by.
+	// Persisted on frm so it survives the live redraws that fire on every qty edit.
+	frm._kit_driver = frm._kit_driver || {};
+
+	let html = `<p class="text-muted small">${__("Complete kits per model. By default kits = min(ordered ÷ per-kit) across components. Or pick a 'Kit driver' component and kits are counted from that item alone — useful when a bulk item (e.g. thermal grease) would otherwise cap the count. Bump a qty above to recalc.")}</p>`;
 
 	models.forEach((model) => {
 		const info = bom[model];
@@ -121,25 +148,42 @@ function draw_kit_calc(frm) {
 			return;
 		}
 		const comps = info.components || {};
-		const codes = Object.keys(comps);
-		// complete kits = floor of the min (ordered ÷ per-kit) across components
-		let kits = Infinity;
-		codes.forEach((c) => {
-			const perKit = flt(comps[c]);
-			if (perKit <= 0) return;
-			kits = Math.min(kits, Math.floor(flt(ordered[c]) / perKit));
-		});
+		const codes = Object.keys(comps).sort();
+		const driver = frm._kit_driver[model] || "__auto__";
+
+		// complete kits: from the chosen driver alone, or floor(min(ordered ÷ per-kit)).
+		let kits;
+		if (driver !== "__auto__" && flt(comps[driver]) > 0) {
+			kits = Math.floor(flt(ordered[driver]) / flt(comps[driver]));
+		} else {
+			kits = Infinity;
+			codes.forEach((c) => {
+				const perKit = flt(comps[c]);
+				if (perKit <= 0) return;
+				kits = Math.min(kits, Math.floor(flt(ordered[c]) / perKit));
+			});
+		}
 		if (!isFinite(kits)) kits = 0;
 
-		const rows = codes.sort().map((c) => {
+		// driver <select>: data-kit-driver=model so the change handler can find it.
+		const opts = [`<option value="__auto__"${driver === "__auto__" ? " selected" : ""}>${__("Auto — least component")}</option>`]
+			.concat(codes.map((c) => `<option value="${esc(c)}"${driver === c ? " selected" : ""}>${esc(c)}</option>`))
+			.join("");
+		const driverSelect = `<select class="form-control input-xs" data-kit-driver="${esc(model)}"
+			style="display:inline-block;width:auto;min-width:160px;height:24px;padding:0 4px;font-size:12px;">${opts}</select>`;
+
+		const rows = codes.map((c) => {
 			const perKit = flt(comps[c]);
 			const ord = flt(ordered[c]);
 			const used = kits * perKit;
 			const loose = ord - used;
 			const nextKit = Math.max(0, (kits + 1) * perKit - ord); // shortfall to 1 more kit
-			const bottleneck = perKit > 0 && Math.floor(ord / perKit) === kits;
+			// what limits the count: the driver row (if chosen) or every row at the auto min.
+			const limits = driver !== "__auto__"
+				? (c === driver)
+				: (perKit > 0 && Math.floor(ord / perKit) === kits);
 			return `<tr>
-				<td>${esc(c)}${bottleneck ? ` <span class="indicator-pill orange">${__("limits kits")}</span>` : ""}</td>
+				<td>${esc(c)}${limits ? ` <span class="indicator-pill orange">${driver !== "__auto__" ? __("kit driver") : __("limits kits")}</span>` : ""}</td>
 				<td class="text-right">${num(ord)}</td>
 				<td class="text-right">${num(perKit)}</td>
 				<td class="text-right">${num(used)}</td>
@@ -150,7 +194,8 @@ function draw_kit_calc(frm) {
 
 		html += `<div style="margin-bottom:16px;">
 			<div style="font-weight:600;margin-bottom:4px;">${esc(model)} —
-				<span class="indicator-pill green">${num(kits)} ${__("complete kit(s)")}</span></div>
+				<span class="indicator-pill green">${num(kits)} ${__("complete kit(s)")}</span>
+				<span style="font-weight:normal;margin-left:8px;">${__("Kit driver:")} ${driverSelect}</span></div>
 			<table class="table table-bordered" style="font-size:12px;margin-bottom:0;">
 				<thead><tr>
 					<th>${__("Component")}</th>
@@ -166,6 +211,13 @@ function draw_kit_calc(frm) {
 	});
 
 	field.$wrapper.html(html);
+
+	// Re-attach the driver-select handlers after each (re)render.
+	field.$wrapper.find("[data-kit-driver]").on("change", function () {
+		const model = this.getAttribute("data-kit-driver");
+		frm._kit_driver[model] = this.value;
+		draw_kit_calc(frm);
+	});
 }
 
 // One read-only table per supplier: which items (and how much) go to that vendor's
