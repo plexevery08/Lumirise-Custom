@@ -21,6 +21,16 @@ frappe.ui.form.on("Purchase Order", {
 	lr_indent_refs(frm) {
 		render_bom_reco(frm);
 	},
+	// Re-run the reconciliation when a PO line is added or removed so the panel
+	// tracks the buyer's edits live (it used to only refresh on form reload).
+	items_add(frm) { render_bom_reco(frm); },
+	items_remove(frm) { render_bom_reco(frm); },
+});
+
+// A line's item_code / qty change also shifts coverage — recompute.
+frappe.ui.form.on("Purchase Order Item", {
+	item_code(frm) { render_bom_reco(frm); },
+	qty(frm) { render_bom_reco(frm); },
 });
 
 function render_bom_reco(frm) {
@@ -34,7 +44,13 @@ function render_bom_reco(frm) {
 	$w.html(`<div class="text-muted">${__("Loading BOM reconciliation…")}</div>`);
 	frappe.call({
 		method: "lumirise_custom.purchase_reco.get_bom_reconciliation",
-		args: { po_name: frm.doc.name },
+		args: {
+			po_name: frm.doc.name,
+			// Pass the LIVE form lines so unsaved add/remove/qty edits reconcile.
+			po_items: JSON.stringify((frm.doc.items || []).map((row) => ({
+				item_code: row.item_code, item_name: row.item_name, qty: row.qty,
+			}))),
+		},
 		callback(r) {
 			const data = r.message || {};
 			frm._bom_reco_data = data;
@@ -154,7 +170,7 @@ function build_reco_html(data) {
 
 	// ---- Kit reconciliation per model
 	html += `<h5>${__("Kit Reconciliation")}</h5>
-		<p class="text-muted small">${__("Full BOM kit for each model. Red = component missing from the indents; amber = short of the required qty.")}</p>`;
+		<p class="text-muted small">${__("Full BOM kit for each model, checked against THIS PO's lines. Red = component not on the PO; amber = on the PO but below the required kit qty. 'In Indent' is Planning's demand, shown for reference.")}</p>`;
 	data.kit.forEach((m) => {
 		html += `<div style="margin:10px 0 4px;"><b>${esc(m.model)}</b>
 			<span class="text-muted">(${__("FG qty")}: ${num(m.fg_qty)})</span></div>`;
@@ -163,17 +179,21 @@ function build_reco_html(data) {
 				<th>${__("Component")}</th>
 				<th class="text-right">${__("Required")}</th>
 				<th class="text-right">${__("In Indent")}</th>
+				<th class="text-right">${__("In PO")}</th>
 				<th class="text-right">${__("In Stock")}</th>
 				<th>${__("Status")}</th>
 			</tr></thead><tbody>`;
 		(m.components || []).forEach((c) => {
+			// Status reflects what is on THIS PO: not on the PO -> MISSING;
+			// on it but below the required kit qty -> Short; otherwise OK.
 			let bg = "", status = __("OK"), badge = "green";
 			if (c.missing) { bg = "background:#fde2e2;"; status = __("MISSING"); badge = "red"; }
-			else if (flt(c.in_indent) < flt(c.required)) { bg = "background:#fff3cd;"; status = __("Short"); badge = "orange"; }
+			else if (flt(c.in_po) < flt(c.required)) { bg = "background:#fff3cd;"; status = __("Short"); badge = "orange"; }
 			html += `<tr style="${bg}">
 				<td><b>${esc(c.component)}</b> <span class="text-muted">${esc(c.item_name)}</span></td>
 				<td class="text-right">${num(c.required)}</td>
 				<td class="text-right">${num(c.in_indent)}</td>
+				<td class="text-right">${num(c.in_po)}</td>
 				<td class="text-right">${num(c.in_stock)}</td>
 				<td><span class="indicator-pill ${badge}">${status}</span></td>
 			</tr>`;
@@ -212,16 +232,16 @@ function build_reco_html(data) {
 function export_reco(frm) {
 	const data = frm._bom_reco_data;
 	if (!data || !data.kit) { frappe.msgprint(__("Nothing to export yet.")); return; }
-	const rows = [["Section", "Model", "Component", "Item Name", "Required/Qty", "In Indent", "In Stock", "Rate", "Amount", "Status"]];
+	const rows = [["Section", "Model", "Component", "Item Name", "Required/Qty", "In Indent", "In PO", "In Stock", "Rate", "Amount", "Status"]];
 	(data.kit || []).forEach((m) => {
 		(m.components || []).forEach((c) => {
-			rows.push(["Kit", m.model, c.component, c.item_name, flt(c.required), flt(c.in_indent), flt(c.in_stock), "", "",
-				c.missing ? "MISSING" : (flt(c.in_indent) < flt(c.required) ? "Short" : "OK")]);
+			rows.push(["Kit", m.model, c.component, c.item_name, flt(c.required), flt(c.in_indent), flt(c.in_po), flt(c.in_stock), "", "",
+				c.missing ? "MISSING" : (flt(c.in_po) < flt(c.required) ? "Short" : "OK")]);
 		});
 	});
 	(data.split || []).forEach((s) => {
 		(s.rows || []).forEach((row) => {
-			rows.push(["Price Split", row.model, s.item_code, s.item_name, flt(row.qty), "", "", flt(row.rate), flt(row.amount), ""]);
+			rows.push(["Price Split", row.model, s.item_code, s.item_name, flt(row.qty), "", "", "", flt(row.rate), flt(row.amount), ""]);
 		});
 	});
 	const csv = rows.map((r) => r.map((v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`).join(",")).join("\n");

@@ -75,12 +75,40 @@ def _rm_stock(item_code):
 
 
 @frappe.whitelist()
-def get_bom_reconciliation(po_name):
+def get_bom_reconciliation(po_name, po_items=None):
 	"""Build the kit-reconciliation + per-model price-split payload for a PO.
-	Reconciles the FULL model BOM against the items present on the source Indents
-	(what Planning actually gave). Pure read — no writes."""
+	Reconciles the FULL model BOM against the LIVE Purchase Order lines (what the
+	buyer is actually ordering), with the source-Indent demand shown alongside as
+	reference. Pure read — no writes.
+
+	`po_items`: optional JSON list of the form-current lines
+	[{item_code, item_name, qty}, ...]. The client passes it so the panel updates
+	live as the buyer adds/removes/edits rows (before saving); without it we fall
+	back to the saved PO lines."""
 	po = frappe.get_doc("Purchase Order", po_name)
 	indents = _indent_names(po)
+
+	# Live PO lines the buyer sees on the form (unsaved edits included) — or the
+	# saved lines if the client didn't pass them. This is what "In PO" / the split
+	# reconcile against, so deleting a line drops its coverage immediately.
+	if po_items:
+		if isinstance(po_items, str):
+			po_items = frappe.parse_json(po_items)
+		po_lines = [
+			{"item_code": r.get("item_code"),
+			 "item_name": r.get("item_name") or r.get("item_code"),
+			 "qty": flt(r.get("qty"))}
+			for r in po_items if r.get("item_code")
+		]
+	else:
+		po_lines = [
+			{"item_code": r.item_code, "item_name": r.item_name or r.item_code,
+			 "qty": flt(r.qty)}
+			for r in po.items
+		]
+	po_qty = {}
+	for r in po_lines:
+		po_qty[r["item_code"]] = po_qty.get(r["item_code"], 0) + flt(r["qty"])
 
 	# --- gather indented qty, the models, and the source sales orders
 	indented_qty = {}          # item_code -> total qty across the source indents
@@ -120,13 +148,18 @@ def get_bom_reconciliation(po_name):
 			for bi in bom_doc.items:
 				required = flt(bi.qty) / per * flt(fg_qty)
 				in_ind = flt(indented_qty.get(bi.item_code, 0))
+				in_po = flt(po_qty.get(bi.item_code, 0))
 				comps.append({
 					"component": bi.item_code,
 					"item_name": bi.item_name or bi.item_code,
 					"required": required,
 					"in_indent": in_ind,
+					"in_po": in_po,
 					"in_stock": _rm_stock(bi.item_code),
-					"missing": in_ind <= 0,
+					# Status is now PO-driven: a component the buyer hasn't put on
+					# this PO flags MISSING, so removing a line reflects immediately.
+					# in_indent stays as reference (was the old, indent-based flag).
+					"missing": in_po <= 0,
 				})
 				# weight uses (fg_qty or 1) so a shared component still splits even
 				# when the FG qty is unknown (proportional by BOM usage).
@@ -136,24 +169,26 @@ def get_bom_reconciliation(po_name):
 
 	# --- per-model price split for the qty actually on the PO (RM Price Book rate)
 	split = []
-	for poi in po.items:
-		weights = comp_model_weight.get(poi.item_code, {})
-		rate = _rm_price(poi.item_code)
+	for poi in po_lines:
+		item_code = poi["item_code"]
+		qty = flt(poi["qty"])
+		weights = comp_model_weight.get(item_code, {})
+		rate = _rm_price(item_code)
 		total_w = sum(weights.values())
 		rows = []
 		if total_w > 0:
 			for model, w in weights.items():
-				alloc = flt(poi.qty) * w / total_w
+				alloc = qty * w / total_w
 				rows.append({"model": model, "qty": alloc, "rate": rate, "amount": alloc * rate})
 		else:
-			rows.append({"model": "(unsplit)", "qty": flt(poi.qty),
-			             "rate": rate, "amount": flt(poi.qty) * rate})
+			rows.append({"model": "(unsplit)", "qty": qty,
+			             "rate": rate, "amount": qty * rate})
 		split.append({
-			"item_code": poi.item_code,
-			"item_name": poi.item_name or poi.item_code,
-			"total_qty": flt(poi.qty),
+			"item_code": item_code,
+			"item_name": poi["item_name"],
+			"total_qty": qty,
 			"rate": rate,
-			"total_amount": flt(poi.qty) * rate,
+			"total_amount": qty * rate,
 			"rows": rows,
 		})
 
