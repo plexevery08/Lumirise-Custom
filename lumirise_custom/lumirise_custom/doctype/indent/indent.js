@@ -9,14 +9,41 @@
 
 frappe.ui.form.on("Indent", {
 	refresh(frm) {
+		const is_service = frm.doc.indent_type === "Service";
+
 		if (frm.doc.docstatus === 1 && frm.doc.workflow_state === "Ordered") {
 			frm.set_intro(__("This indent has been converted to a Purchase Order."), "green");
 		}
+		if (is_service && frm.doc.service_order_ref) {
+			frm.set_intro(__("Service Order created: {0}", [frm.doc.service_order_ref]), "green");
+		}
+
 		if (frm.doc.docstatus === 1 && frm.doc.workflow_state !== "Ordered") {
-			frm.add_custom_button(__("Create Purchase Plan"), () => make_plan([frm.doc.name]), __("Create"));
+			if (is_service) {
+				// Service indent -> subcontract PO (the native "Service Order"), which then
+				// feeds a Subcontracting Order. Purchase indent keeps the Purchase Plan path.
+				frm.add_custom_button(__("Create Service Order"), () => make_service_order(frm), __("Create"));
+			} else {
+				frm.add_custom_button(__("Create Purchase Plan"), () => make_plan([frm.doc.name]), __("Create"));
+			}
 		}
 	},
 });
+
+function make_service_order(frm) {
+	frappe.call({
+		method: "lumirise_custom.service_order.make_service_order",
+		args: { indent: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Building the subcontract Purchase Order…"),
+		callback(r) {
+			if (!r.message) return;
+			frappe.show_alert({ message: __("Service Order (PO) {0} created — set the vendor rate, then run Create → Subcontracting Order.", [r.message]), indicator: "green" });
+			frm.reload_doc();
+			frappe.set_route("Form", "Purchase Order", r.message);
+		},
+	});
+}
 
 function make_plan(indents) {
 	frappe.call({

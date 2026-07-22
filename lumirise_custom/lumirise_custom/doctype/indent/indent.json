@@ -10,6 +10,9 @@
   "indent_date",
   "branch",
   "indent_type",
+  "service_supplier",
+  "service_fg_item",
+  "service_order_ref",
   "source_planning",
   "col1",
   "source_sales_order",
@@ -43,6 +46,30 @@
    "fieldtype": "Select",
    "label": "Indent Type",
    "options": "Purchase\nService"
+  },
+  {
+   "fieldname": "service_supplier",
+   "fieldtype": "Link",
+   "label": "Service Supplier (Job-Work Vendor)",
+   "options": "Supplier",
+   "depends_on": "eval:doc.indent_type=='Service'"
+  },
+  {
+   "fieldname": "service_fg_item",
+   "fieldtype": "Link",
+   "label": "Semi-Finished Item",
+   "options": "Item",
+   "read_only": 1,
+   "depends_on": "eval:doc.indent_type=='Service'",
+   "description": "Resolved from the BOM when the Service Order is created."
+  },
+  {
+   "fieldname": "service_order_ref",
+   "fieldtype": "Data",
+   "label": "Service Order (PO) Ref",
+   "read_only": 1,
+   "no_copy": 1,
+   "depends_on": "eval:doc.indent_type=='Service'"
   },
   {
    "fieldname": "col1",
