@@ -1,0 +1,22 @@
+{
+ "add_total_row": 0,
+ "columns": [],
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "is_standard": "Yes",
+ "letterhead": null,
+ "module": "Lumirise Custom",
+ "name": "Costing Rate Breach",
+ "prepared_report": 0,
+ "ref_doctype": "BOM",
+ "report_name": "Costing Rate Breach",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "Purchase Manager"},
+  {"role": "Manufacturing Manager"},
+  {"role": "Accounts Manager"},
+  {"role": "System Manager"}
+ ]
+}

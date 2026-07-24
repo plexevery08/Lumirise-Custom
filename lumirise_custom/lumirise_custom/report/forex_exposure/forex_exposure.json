@@ -1,0 +1,21 @@
+{
+ "add_total_row": 0,
+ "columns": [],
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "is_standard": "Yes",
+ "letterhead": null,
+ "module": "Lumirise Custom",
+ "name": "Forex Exposure",
+ "prepared_report": 0,
+ "ref_doctype": "Hedge Contract",
+ "report_name": "Forex Exposure",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "Accounts Manager"},
+  {"role": "Accounts User"},
+  {"role": "System Manager"}
+ ]
+}

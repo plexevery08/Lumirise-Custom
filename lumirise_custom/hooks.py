@@ -345,6 +345,14 @@ doc_events = {
 	"Material Receipt": {
 		"validate": "lumirise_custom.traceability.stamp",
 	},
+	# ---- Bitrix24 mirror (one-way, queued; no-op until Bitrix Sync Settings enabled) ----
+	"Lumirise Task": {
+		"on_update": "lumirise_custom.bitrix_sync.enqueue_push",
+	},
+	"Lumirise Job Card": {
+		"on_update": "lumirise_custom.bitrix_sync.enqueue_push",
+		"on_submit": "lumirise_custom.bitrix_sync.enqueue_push",
+	},
 }
 
 # Scheduled Tasks
@@ -359,6 +367,8 @@ scheduler_events = {
 		# RM sitting in the rejection warehouse past the hold window -> one deduped
 		# task to Stores (never auto-scraps; disposition stays with Praveen + Quality).
 		"lumirise_custom.stores.flag_overdue_rm_rejections",
+		# Bitrix mirror rows stuck in Error -> re-enqueue (no-op while sync disabled).
+		"lumirise_custom.bitrix_sync.retry_failed_pushes",
 		# Daily self-test: verify the whole flow, pinpoint what broke + the fix,
 		# and push an in-ERP digest. Read-only on prod; synthetic tier on a test
 		# site only (gated). Runs last so the digest reflects the same-day escalation.

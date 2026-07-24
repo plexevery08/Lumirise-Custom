@@ -1,0 +1,77 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-07-24 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "webhook_url",
+  "sync_direction",
+  "column_break_1",
+  "default_responsible_id",
+  "last_error"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "description": "Master switch. Leave off until the client's Bitrix24 inbound-webhook URL is pasted below and tested.",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "description": "Bitrix24 inbound webhook base URL, e.g. https://yourcompany.bitrix24.in/rest/1/abc123xyz/ — keep the trailing slash. Treat as a secret.",
+   "fieldname": "webhook_url",
+   "fieldtype": "Data",
+   "label": "Webhook URL"
+  },
+  {
+   "default": "ERPNext → Bitrix",
+   "fieldname": "sync_direction",
+   "fieldtype": "Select",
+   "label": "Sync Direction",
+   "options": "ERPNext → Bitrix",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Bitrix user ID set as RESPONSIBLE_ID on created tasks (default 1 = portal admin).",
+   "default": "1",
+   "fieldname": "default_responsible_id",
+   "fieldtype": "Data",
+   "label": "Default Responsible ID"
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Last Error",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-07-24 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Bitrix Sync Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
