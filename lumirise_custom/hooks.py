@@ -91,6 +91,9 @@ doctype_js = {
 # 	"methods": "lumirise_custom.utils.jinja_methods",
 # 	"filters": "lumirise_custom.utils.jinja_filters"
 # }
+jinja = {
+	"methods": ["lumirise_custom.jinja_utils.barcode_svg"],
+}
 
 # Installation
 # ------------

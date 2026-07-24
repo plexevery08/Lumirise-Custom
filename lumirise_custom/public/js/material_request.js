@@ -128,3 +128,37 @@ frappe.ui.form.on("Material Request", {
 		);
 	},
 });
+
+// ---------------------------------------------------------------------------
+// Requisition insight panel (Phase-2 point 59): when a row's item is picked on
+// an MR raised against a Production Order, show the five accountability
+// numbers — store stock, previously requested, issued, balance to issue, and
+// stock after issuing — in the form headline. Read-only; nothing is written.
+frappe.ui.form.on("Material Request Item", {
+	item_code(frm, cdt, cdn) {
+		const row = frappe.get_doc(cdt, cdn);
+		if (!row.item_code) return;
+		frappe.call({
+			method: "lumirise_custom.mr_insights.mr_item_snapshot",
+			args: {
+				item_code: row.item_code,
+				work_order: frm.doc.production_order || null,
+				exclude_mr: frm.doc.__islocal ? null : frm.doc.name,
+			},
+			callback(r) {
+				const d = r.message;
+				if (!d) return;
+				const fmt = (v) => frappe.format(v, { fieldtype: "Float", precision: 2 });
+				const wo_part = frm.doc.production_order
+					? ` · ${__("Required")} ${fmt(d.required)} · ${__("Prev. Requested")} ${fmt(d.prev_requested)} · ${__("Issued")} ${fmt(d.issued)} · ${__("Balance to Issue")} ${fmt(d.balance_to_issue)}`
+					: "";
+				frm.dashboard.set_headline(
+					`<b>${frappe.utils.escape_html(row.item_code)}</b>: ` +
+					`${__("Available at {0}", [d.warehouse])} <b>${fmt(d.available)}</b>` +
+					wo_part +
+					` · ${__("After issuing balance")}: <b>${fmt(d.final_available)}</b>`
+				);
+			},
+		});
+	},
+});

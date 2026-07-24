@@ -18,6 +18,7 @@
   "source_sales_order",
   "workflow_state",
   "sec_items",
+  "balance_warehouse",
   "items",
   "lr_traceability_sec",
   "lr_source_so",
@@ -95,6 +96,14 @@
    "fieldname": "sec_items",
    "fieldtype": "Section Break",
    "label": "Items"
+  },
+  {
+   "default": "Stores - L",
+   "description": "Item balance in the grid is shown for THIS warehouse only (not summed across all warehouses).",
+   "fieldname": "balance_warehouse",
+   "fieldtype": "Link",
+   "label": "Balance Warehouse",
+   "options": "Warehouse"
   },
   {
    "fieldname": "items",

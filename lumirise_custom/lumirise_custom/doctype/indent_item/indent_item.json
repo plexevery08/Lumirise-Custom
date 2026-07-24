@@ -9,6 +9,7 @@
   "item_code",
   "item_name",
   "qty",
+  "stock_at_warehouse",
   "uom",
   "required_date",
   "source_bom",
@@ -38,6 +39,13 @@
    "in_list_view": 1,
    "label": "Qty",
    "reqd": 1
+  },
+  {
+   "fieldname": "stock_at_warehouse",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Balance @ Warehouse",
+   "read_only": 1
   },
   {
    "default": "Nos",

@@ -6,6 +6,18 @@
 // which creates the Production Orders + the consolidated Indent.
 
 frappe.ui.form.on("Material Planning", {
+	setup(frm) {
+		// Availability colour cues on the grids (Phase-2 point 32):
+		//   component: green = covered from stock/pipeline, red = needs ordering.
+		//   FG row:    green = nothing left to plan, orange = must be produced.
+		frm.set_indicator_formatter("component_item", (doc) =>
+			flt(doc.to_be_ordered) > 0 ? "red" : "green"
+		);
+		frm.set_indicator_formatter("fg_item", (doc) =>
+			flt(doc.required_qty) > 0 ? "orange" : "green"
+		);
+	},
+
 	refresh(frm) {
 		// Only while the plan is still with the maker (Draft). Once it is "Submit for
 		// Approval"-ed (Pending Planning Manager) it must not be re-pulled/edited.
@@ -24,6 +36,21 @@ frappe.ui.form.on("Material Planning", {
 			(frm.doc.created_work_orders || "").split(", ").filter(Boolean).forEach((wo) => {
 				frm.add_custom_button(wo, () => frappe.set_route("Form", "Work Order", wo), __("Production Orders"));
 			});
+			// Phase-2 point 37: raise a job-work Service Indent straight from the
+			// posted plan (pre-linked to this plan + its first SO); the Indent screen
+			// then drives Create Service Order -> subcontract PO.
+			frm.add_custom_button(
+				__("Service Indent"),
+				() =>
+					frappe.new_doc("Indent", {
+						indent_type: "Service",
+						source_planning: frm.doc.name,
+						source_sales_order: (frm.doc.fg_plan || []).length
+							? frm.doc.fg_plan[0].sales_order
+							: undefined,
+					}),
+				__("Create")
+			);
 		}
 	},
 

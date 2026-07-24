@@ -28,7 +28,33 @@ frappe.ui.form.on("Indent", {
 			}
 		}
 	},
+
+	// Phase-2 point 38: balance column tracks the SELECTED warehouse only.
+	balance_warehouse(frm) {
+		(frm.doc.items || []).forEach((row) => set_row_balance(frm, row.doctype, row.name));
+	},
 });
+
+frappe.ui.form.on("Indent Item", {
+	item_code(frm, cdt, cdn) {
+		set_row_balance(frm, cdt, cdn);
+	},
+});
+
+function set_row_balance(frm, cdt, cdn) {
+	const row = frappe.get_doc(cdt, cdn);
+	if (!row.item_code) {
+		frappe.model.set_value(cdt, cdn, "stock_at_warehouse", 0);
+		return;
+	}
+	frappe.call({
+		method: "lumirise_custom.lumirise_custom.doctype.indent.indent.warehouse_balance",
+		args: { item_code: row.item_code, warehouse: frm.doc.balance_warehouse || "Stores - L" },
+		callback(r) {
+			frappe.model.set_value(cdt, cdn, "stock_at_warehouse", r.message || 0);
+		},
+	});
+}
 
 function make_service_order(frm) {
 	frappe.call({

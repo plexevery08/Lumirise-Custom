@@ -11,6 +11,7 @@
   "fg_item_name",
   "bom",
   "aso_qty",
+  "delivered_qty",
   "fg_available",
   "required_qty"
  ],
@@ -52,17 +53,25 @@
    "label": "Order Qty (ASO)"
   },
   {
+   "description": "Qty already delivered against this SO line (any route), netted out of the plan.",
+   "fieldname": "delivered_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Already Dispatched",
+   "read_only": 1
+  },
+  {
    "fieldname": "fg_available",
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Available in FG"
   },
   {
-   "description": "Order qty minus FG already available.",
+   "description": "SO qty minus already-dispatched minus FG already available — what still has to be produced/ordered.",
    "fieldname": "required_qty",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Required Qty"
+   "label": "Pending Ordered Qty"
   }
  ],
  "grid_page_length": 50,
