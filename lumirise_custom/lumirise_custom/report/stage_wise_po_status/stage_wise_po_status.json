@@ -1,0 +1,22 @@
+{
+ "add_total_row": 1,
+ "columns": [],
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "is_standard": "Yes",
+ "letterhead": null,
+ "module": "Lumirise Custom",
+ "name": "Stage-wise PO Status",
+ "prepared_report": 0,
+ "ref_doctype": "Purchase Order",
+ "report_name": "Stage-wise PO Status",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "Purchase User"},
+  {"role": "Purchase Manager"},
+  {"role": "Stock User"},
+  {"role": "System Manager"}
+ ]
+}

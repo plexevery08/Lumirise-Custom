@@ -77,3 +77,25 @@ function get_sales_orders(frm) {
 	});
 	d.show();
 }
+
+// --- Availability colour cues (Phase-2 pt 32) --------------------------------
+// Green = enough free stock for the row, amber = partial, red = nothing free.
+// Uses available_after_blocking (the number Purchase actually acts on).
+function lumirise_colour_components(frm) {
+	const grid = frm.fields_dict.components && frm.fields_dict.components.grid;
+	if (!grid) return;
+	(grid.grid_rows || []).forEach((gr) => {
+		const d = gr.doc || {};
+		const avail = flt(d.available_after_blocking);
+		const req = flt(d.required_qty);
+		const colour = req && avail >= req ? "#c6efce" : avail > 0 ? "#ffeb9c" : "#ffc7ce";
+		const cell = gr.row && gr.row.find('[data-fieldname="available_after_blocking"]');
+		if (cell && cell.length) cell.css("background-color", colour);
+	});
+}
+
+frappe.ui.form.on("Material Planning", {
+	refresh: lumirise_colour_components,
+	onload_post_render: lumirise_colour_components,
+});
+

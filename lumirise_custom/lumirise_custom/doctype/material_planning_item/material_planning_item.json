@@ -26,7 +26,6 @@
   {
    "fieldname": "sales_order",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Sales Order",
    "options": "Sales Order"
   },
@@ -42,7 +41,8 @@
    "in_list_view": 1,
    "label": "Component",
    "options": "Item",
-   "reqd": 1
+   "reqd": 1,
+   "columns": 2
   },
   {
    "fetch_from": "component_item.item_name",
@@ -50,33 +50,31 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Component Name",
-   "read_only": 1
+   "read_only": 1,
+   "columns": 4
   },
   {
    "fieldname": "required_qty",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Required"
+   "label": "Required",
+   "columns": 1
   },
   {
    "fieldname": "rm_available",
    "fieldtype": "Float",
-   "in_list_view": 1,
    "label": "RM Available"
   },
   {
    "description": "Reserved by submitted Work Orders for other orders (Blocked For).",
    "fieldname": "blocked_for_other_so",
    "fieldtype": "Float",
-   "in_list_view": 1,
    "label": "Blocked (other SOs)"
   },
   {
-   "columns": 2,
    "description": "Which other Sales Order(s) the blocked qty is reserved against, with the reserved qty per SO.",
    "fieldname": "blocked_against_sos",
    "fieldtype": "Small Text",
-   "in_list_view": 1,
    "label": "Blocked Against SO(s)",
    "read_only": 1
   },
@@ -84,10 +82,11 @@
    "fieldname": "available_after_blocking",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Available After Blocking"
+   "label": "Available After Blocking",
+   "columns": 2
   },
   {
-   "description": "On PO, vendor PDI not started = OPEN − (Pending PDI + In Transit + Pending IQC). Residual, so buckets always sum to the open PO qty.",
+   "description": "On PO, vendor PDI not started = OPEN \u2212 (Pending PDI + In Transit + Pending IQC). Residual, so buckets always sum to the open PO qty.",
    "fieldname": "pending_po",
    "fieldtype": "Float",
    "label": "Pending PO"
@@ -120,7 +119,8 @@
    "fieldname": "to_be_ordered",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "To Be Ordered"
+   "label": "To Be Ordered",
+   "columns": 2
   }
  ],
  "grid_page_length": 50,
