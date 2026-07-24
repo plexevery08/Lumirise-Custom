@@ -162,11 +162,16 @@ def _blocked_so_breakdown(item, exclude_sos):
 	"""Per-SO reserved qty by submitted, not-completed Work Orders for OTHER sales
 	orders. Returns [{"so": <SO name or "">, "qty": <float>}] grouped by SO.
 	No HAVING filter, so sum(qty over groups) == the old ungrouped total exactly;
-	the label helper filters out non-positive groups for display."""
+	the label helper filters out non-positive groups for display.
+
+	Blocked = required − TRANSFERRED (per row, floored at 0): once a qty is issued
+	to the line it has already left the RM store, so it no longer blocks store
+	stock. The old required − consumed kept counting issued-but-not-yet-consumed
+	material as blocked and over-stated the reservation (Phase-2 point 47)."""
 	return frappe.db.sql(
 		"""
 		SELECT COALESCE(wo.sales_order, '') AS so,
-		       COALESCE(SUM(woi.required_qty - woi.consumed_qty), 0) AS qty
+		       COALESCE(SUM(GREATEST(woi.required_qty - woi.transferred_qty, 0)), 0) AS qty
 		FROM `tabWork Order Item` woi
 		JOIN `tabWork Order` wo ON wo.name = woi.parent
 		WHERE woi.item_code = %(item)s
@@ -294,11 +299,17 @@ def compute_plan(sales_orders):
 			if not bom:
 				continue
 			fg_available = _stock(soi.item_code, fg_wh)
-			required = max(0, flt(soi.qty) - fg_available)
+			# Net out qty already dispatched (Delivery Note) — even when the dispatch
+			# happened outside this cockpit — so a partially-delivered SO never plans
+			# its full qty again (Phase-2 point 48).
+			delivered = min(flt(soi.qty), flt(soi.delivered_qty))
+			so_pending = max(0, flt(soi.qty) - delivered)
+			required = max(0, so_pending - fg_available)
 			fg_plan.append({
 				"sales_order": so, "fg_item": soi.item_code,
 				"fg_item_name": soi.item_name, "bom": bom,
-				"aso_qty": flt(soi.qty), "fg_available": fg_available,
+				"aso_qty": flt(soi.qty), "delivered_qty": delivered,
+				"fg_available": fg_available,
 				"required_qty": required,
 			})
 			if required <= 0:
@@ -337,3 +348,58 @@ def compute_plan(sales_orders):
 					"to_be_ordered": to_order,
 				})
 	return {"fg_plan": fg_plan, "components": components}
+
+
+# --- Per-PO inbound stage split (same stage definitions as the global helpers) --
+# Used by the "PO Stage Status" report so the report and the planner can never
+# disagree (one-source-of-truth rule). Furthest-live-document wins, exactly like
+# the per-item buckets above — a qty is counted at ONE stage only.
+
+
+def po_stage_map(po_name):
+	"""Return {item_code: {"at_pdi": x, "in_transit": y, "at_iqc": z}} for one
+	submitted Purchase Order, using the purchase_order links carried by
+	Vendor PDI / Inbound Logistics / IQC."""
+	stages = {}
+
+	def bucket(item):
+		return stages.setdefault(item, {"at_pdi": 0.0, "in_transit": 0.0, "at_iqc": 0.0})
+
+	for r in frappe.db.sql(
+		"""SELECT i.item_code, COALESCE(SUM(i.approved_qty),0) qty
+		   FROM `tabVendor PDI Item` i JOIN `tabVendor PDI` p ON p.name=i.parent
+		   WHERE p.purchase_order=%(po)s AND p.docstatus < 2
+		     AND NOT EXISTS (SELECT 1 FROM `tabInbound Logistics` l
+		                     WHERE l.vendor_pdi = p.name AND l.docstatus < 2)
+		   GROUP BY i.item_code""", {"po": po_name}, as_dict=True):
+		bucket(r.item_code)["at_pdi"] += flt(r.qty)
+
+	for r in frappe.db.sql(
+		"""SELECT i.item_code, COALESCE(SUM(i.qty),0) qty
+		   FROM `tabInbound Logistics Item` i JOIN `tabInbound Logistics` l ON l.name=i.parent
+		   WHERE l.purchase_order=%(po)s AND l.docstatus < 2
+		     AND COALESCE(l.status,'') IN ('Dispatched','In Transit')
+		     AND NOT EXISTS (SELECT 1 FROM `tabIQC` q
+		                     WHERE q.inbound_logistics = l.name AND q.docstatus < 2)
+		   GROUP BY i.item_code""", {"po": po_name}, as_dict=True):
+		bucket(r.item_code)["in_transit"] += flt(r.qty)
+
+	for r in frappe.db.sql(
+		"""SELECT i.item_code, COALESCE(SUM(i.qty),0) qty
+		   FROM `tabInbound Logistics Item` i JOIN `tabInbound Logistics` l ON l.name=i.parent
+		   WHERE l.purchase_order=%(po)s AND l.docstatus < 2
+		     AND COALESCE(l.status,'') = 'Reached Warehouse'
+		     AND NOT EXISTS (SELECT 1 FROM `tabIQC` q
+		                     WHERE q.inbound_logistics = l.name AND q.docstatus < 2)
+		   GROUP BY i.item_code""", {"po": po_name}, as_dict=True):
+		bucket(r.item_code)["at_iqc"] += flt(r.qty)
+
+	for r in frappe.db.sql(
+		"""SELECT i.item_code, COALESCE(SUM(i.accepted_qty),0) qty
+		   FROM `tabIQC Item` i JOIN `tabIQC` q ON q.name=i.parent
+		   WHERE q.purchase_order=%(po)s AND q.docstatus < 2
+		     AND COALESCE(q.status,'') != 'Moved to RM'
+		   GROUP BY i.item_code""", {"po": po_name}, as_dict=True):
+		bucket(r.item_code)["at_iqc"] += flt(r.qty)
+
+	return stages

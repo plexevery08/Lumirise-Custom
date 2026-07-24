@@ -23,6 +23,23 @@ class Indent(Document):
 		for row in self.items:
 			if flt(row.qty) <= 0:
 				frappe.throw(f"Row {row.idx}: Qty must be greater than zero.")
+		self._refresh_warehouse_balances()
+
+	def _refresh_warehouse_balances(self):
+		"""Phase-2 point 38: the balance column shows stock of the SELECTED
+		warehouse only — never a sum across all warehouses."""
+		wh = self.balance_warehouse or RM_STORE
+		for row in self.items:
+			row.stock_at_warehouse = flt(
+				frappe.db.get_value("Bin", {"item_code": row.item_code, "warehouse": wh}, "actual_qty")
+			)
+
+
+@frappe.whitelist()
+def warehouse_balance(item_code, warehouse):
+	"""Single-warehouse balance for the Indent grid (point 38)."""
+	frappe.has_permission("Indent", "read", throw=True)
+	return flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty"))
 
 
 @frappe.whitelist()
