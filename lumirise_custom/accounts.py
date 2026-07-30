@@ -105,6 +105,12 @@ def _auto_debit_note(doc):
 		dn.set_warehouse = rej_wh
 	dn.set_posting_time = 1
 	dn.posting_date = doc.posting_date
+	# India Compliance makes supplier Bill No + date mandatory on every Purchase
+	# Invoice, including this return/debit note — carry the original bill's
+	# reference (suffixed) so it can be saved/submitted on a GST site.
+	if getattr(doc, "bill_no", None):
+		dn.bill_no = f"{doc.bill_no}-DN"
+		dn.bill_date = getattr(doc, "bill_date", None) or doc.posting_date
 	dn.remarks = (
 		f"Auto-generated Debit Note for rejected qty against {doc.name}. "
 		f"PENDING APPROVAL — review and submit to "
