@@ -76,7 +76,7 @@
   },
   {
    "fieldname": "sampling_plan",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Sampling Plan"
   },
   {

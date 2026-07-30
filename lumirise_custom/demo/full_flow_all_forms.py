@@ -316,6 +316,11 @@ def inbound_reject_to_debit_note():
 
         from erpnext.stock.doctype.purchase_receipt.purchase_receipt import make_purchase_invoice
         pi = frappe.get_doc(make_purchase_invoice(pr.name))
+        # India GST Settings make the supplier Bill No + date mandatory on a
+        # Purchase Invoice; the auto Debit Note leg fails without them.
+        if not pi.bill_no:
+            pi.bill_no = f"SUP-INV-{pr.name}"
+            pi.bill_date = nowdate()
         pi.insert(ignore_permissions=True); pi.submit()
         _ok("Purchase Invoice", pi.name)
         holder["pi"] = pi.name
@@ -377,6 +382,14 @@ def produce(wo, issue_qty, produce_qty, reject_qty, label):
             _skip(f"Pick List ({label})", str(e)[:120])
 
         r2 = production.transfer_to_line(wo, LINE, issue_qty)
+        # transfer_to_line intentionally leaves the "Material Transfer for
+        # Manufacture" as a DRAFT (the line supervisor reviews + submits it on the
+        # Stock Entry form in Focus). WO.material_transferred_for_manufacturing only
+        # moves on submit, and the native Manufacture backflush needs it — so submit
+        # the draft here to model that step, or Manufacture finds no RM to consume.
+        if r2.get("docstatus") == 0:
+            _t = frappe.get_doc("Stock Entry", r2["stock_entry"])
+            _t.submit()
         _ok(f"Stock Entry — Transfer to Line ({label})", r2["stock_entry"])
 
         r3 = production.receive_finished_goods(wo, LINE, produce_qty, physical_qty=produce_qty)
