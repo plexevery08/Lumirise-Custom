@@ -59,28 +59,35 @@ def get_consolidated_po_items(indents):
 	# Pre-fetch item_name / description for the lines. Building the PO rows
 	# programmatically on the client does NOT fire ERPNext's auto-fetch from
 	# item_code, so item_name (a mandatory PO Item field) would stay blank.
-	item_meta = {
-		r.name: r for r in frappe.get_all(
-			"Item",
-			filters={"name": ["in", list(ordered_items)]},
-			fields=["name", "item_name", "description", "stock_uom"],
-		)
-	} if ordered_items else {}
+	item_meta = (
+		{
+			r.name: r
+			for r in frappe.get_all(
+				"Item",
+				filters={"name": ["in", list(ordered_items)]},
+				fields=["name", "item_name", "description", "stock_uom"],
+			)
+		}
+		if ordered_items
+		else {}
+	)
 
 	items = []
-	for (item_code, uom) in order:
+	for item_code, uom in order:
 		meta = item_meta.get(item_code)
-		items.append({
-			"item_code": item_code,
-			"item_name": (meta.item_name if meta else None) or item_code,
-			"description": (meta.description if meta else None) or item_code,
-			"qty": agg[(item_code, uom)],
-			"uom": uom,
-			"stock_uom": (meta.stock_uom if meta else uom) or uom,
-			"conversion_factor": 1,
-			"schedule_date": add_days(nowdate(), 15),
-			"warehouse": inbound_target_warehouse(),
-		})
+		items.append(
+			{
+				"item_code": item_code,
+				"item_name": (meta.item_name if meta else None) or item_code,
+				"description": (meta.description if meta else None) or item_code,
+				"qty": agg[(item_code, uom)],
+				"uom": uom,
+				"stock_uom": (meta.stock_uom if meta else uom) or uom,
+				"conversion_factor": 1,
+				"schedule_date": add_days(nowdate(), 15),
+				"warehouse": inbound_target_warehouse(),
+			}
+		)
 
 	warnings = _reconcile_against_bom(models, ordered_items)
 	return {"items": items, "indents": list(indents), "reconciliation": warnings}
@@ -98,11 +105,7 @@ def _reconcile_against_bom(models, ordered_items):
 		bom_items = frappe.get_all("BOM Item", {"parent": bom}, pluck="item_code")
 		# a genuine gap = a BOM component NOT on the consolidated PO AND with no
 		# stock to cover it (the part the planner forgot to indent).
-		missing = [
-			i for i in bom_items
-			if i not in ordered_items
-			and rm_stock_qty(i) <= 0
-		]
+		missing = [i for i in bom_items if i not in ordered_items and rm_stock_qty(i) <= 0]
 		if missing:
 			warnings.append({"model": model, "missing_from_indent": missing})
 	return warnings
@@ -123,30 +126,37 @@ def get_indent_items(indent):
 
 	ind = frappe.get_doc("Indent", indent)
 	codes = list({row.item_code for row in ind.items if row.item_code})
-	item_meta = {
-		r.name: r for r in frappe.get_all(
-			"Item",
-			filters={"name": ["in", codes]},
-			fields=["name", "item_name", "description", "stock_uom"],
-		)
-	} if codes else {}
+	item_meta = (
+		{
+			r.name: r
+			for r in frappe.get_all(
+				"Item",
+				filters={"name": ["in", codes]},
+				fields=["name", "item_name", "description", "stock_uom"],
+			)
+		}
+		if codes
+		else {}
+	)
 
 	items = []
 	for row in ind.items:
 		meta = item_meta.get(row.item_code)
 		uom = row.uom or config.item_uom(row.item_code)
-		items.append({
-			"item_code": row.item_code,
-			"item_name": (meta.item_name if meta else None) or row.item_code,
-			"description": (meta.description if meta else None) or row.item_code,
-			"qty": flt(row.qty),
-			"uom": uom,
-			"stock_uom": (meta.stock_uom if meta else uom) or uom,
-			"conversion_factor": 1,
-			"model": row.model,
-			"schedule_date": row.required_date or add_days(nowdate(), 15),
-			"warehouse": inbound_target_warehouse(),
-		})
+		items.append(
+			{
+				"item_code": row.item_code,
+				"item_name": (meta.item_name if meta else None) or row.item_code,
+				"description": (meta.description if meta else None) or row.item_code,
+				"qty": flt(row.qty),
+				"uom": uom,
+				"stock_uom": (meta.stock_uom if meta else uom) or uom,
+				"conversion_factor": 1,
+				"model": row.model,
+				"schedule_date": row.required_date or add_days(nowdate(), 15),
+				"warehouse": inbound_target_warehouse(),
+			}
+		)
 	return {"indent": indent, "items": items}
 
 
@@ -181,8 +191,12 @@ def make_purchase_plan(indents):
 			uom = row.uom or config.item_uom(row.item_code)
 			key = (row.item_code, uom)
 			if key not in agg:
-				agg[key] = {"qty": 0.0, "indents": set(), "model": row.model,
-				            "required_date": row.required_date}
+				agg[key] = {
+					"qty": 0.0,
+					"indents": set(),
+					"model": row.model,
+					"required_date": row.required_date,
+				}
 				order.append(key)
 			agg[key]["qty"] += flt(row.qty)
 			agg[key]["indents"].add(name)
@@ -190,28 +204,32 @@ def make_purchase_plan(indents):
 	plan = frappe.new_doc("Purchase Plan")
 	plan.plan_date = nowdate()
 	plan.indent_refs = ", ".join(indents)
-	for (item_code, uom) in order:
+	for item_code, uom in order:
 		d = agg[(item_code, uom)]
-		plan.append("items", {
-			"item_code": item_code,
-			"qty": d["qty"],
-			"uom": uom,
-			"supplier": _default_supplier(item_code),
-			"schedule_date": d["required_date"] or add_days(nowdate(), 15),
-			"warehouse": inbound_target_warehouse(),
-			"source_indents": ", ".join(sorted(d["indents"])),
-			"model": d["model"],
-		})
+		plan.append(
+			"items",
+			{
+				"item_code": item_code,
+				"qty": d["qty"],
+				"uom": uom,
+				"supplier": _default_supplier(item_code),
+				"schedule_date": d["required_date"] or add_days(nowdate(), 15),
+				"warehouse": inbound_target_warehouse(),
+				"source_indents": ", ".join(sorted(d["indents"])),
+				"model": d["model"],
+			},
+		)
 	plan.insert(ignore_permissions=True)
 
 	# carry forward the forgotten-component reconciliation as a heads-up.
 	warnings = _reconcile_against_bom(models, {ic for (ic, _u) in order})
 	if warnings:
-		lines = "; ".join(
-			f"{w['model']}: {', '.join(w['missing_from_indent'])}" for w in warnings)
+		lines = "; ".join(f"{w['model']}: {', '.join(w['missing_from_indent'])}" for w in warnings)
 		frappe.msgprint(
 			f"Heads-up — BOM components missing from this plan (no stock): {lines}",
-			title="BOM Reconciliation", indicator="orange")
+			title="BOM Reconciliation",
+			indicator="orange",
+		)
 	return plan.name
 
 

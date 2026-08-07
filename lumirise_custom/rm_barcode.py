@@ -52,7 +52,9 @@ def _get_or_create_batch(item_code, inbound, supplier_lot=None, manufacturing_da
 	if not frappe.db.get_value("Item", item_code, "has_batch_no"):
 		if config.flag("require_batch_for_rm_packages", default=True):
 			frappe.throw(
-				_("Item {0} must have Has Batch No enabled before package labels are generated.").format(item_code)
+				_("Item {0} must have Has Batch No enabled before package labels are generated.").format(
+					item_code
+				)
 			)
 		return None
 
@@ -87,7 +89,9 @@ def create_receiving_packages(inbound_logistics, packages):
 		frappe.throw(_("Submit the Inbound Logistics and mark it Reached Warehouse first."))
 	submitted_iqc = frappe.db.get_value("IQC", {"inbound_logistics": log.name, "docstatus": 1}, "name")
 	if submitted_iqc:
-		frappe.throw(_("IQC {0} is already submitted; package labels can no longer be added.").format(submitted_iqc))
+		frappe.throw(
+			_("IQC {0} is already submitted; package labels can no longer be added.").format(submitted_iqc)
+		)
 	draft_iqc = frappe.db.get_value("IQC", {"inbound_logistics": log.name, "docstatus": 0}, "name")
 
 	available = defaultdict(float)
@@ -105,9 +109,15 @@ def create_receiving_packages(inbound_logistics, packages):
 		if item not in available:
 			frappe.throw(_("Item {0} is not in Inbound Logistics {1}.").format(item, log.name))
 		if count <= 0 or total <= 0:
-			frappe.throw(_("Package count and total quantity must be greater than zero for {0}.").format(item))
+			frappe.throw(
+				_("Package count and total quantity must be greater than zero for {0}.").format(item)
+			)
 		if already[item] + total > available[item] + 0.001:
-			frappe.throw(_("Package quantity for {0} exceeds the inbound quantity still available for labelling.").format(item))
+			frappe.throw(
+				_(
+					"Package quantity for {0} exceeds the inbound quantity still available for labelling."
+				).format(item)
+			)
 
 		batch = _get_or_create_batch(
 			item, log.name, spec.get("supplier_lot"), spec.get("manufacturing_date"), spec.get("expiry_date")
@@ -145,7 +155,9 @@ def create_receiving_packages(inbound_logistics, packages):
 
 
 @frappe.whitelist()
-def create_opening_packages(item_code, warehouse, batch_no, package_count, total_qty, stock_reconciliation=None):
+def create_opening_packages(
+	item_code, warehouse, batch_no, package_count, total_qty, stock_reconciliation=None
+):
 	"""Represent already-posted stock with LPNs without touching the stock ledger.
 
 	System Manager only. The physical count and any quantity correction must be
@@ -164,15 +176,19 @@ def create_opening_packages(item_code, warehouse, batch_no, package_count, total
 	if batch_no and not cint(frappe.db.get_value("Item", item_code, "has_batch_no")):
 		frappe.throw(_("Item {0} is not batch-enabled.").format(item_code))
 	bin_qty = flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty"))
-	represented = flt(frappe.db.sql(
-		"""SELECT COALESCE(SUM(remaining_qty),0) FROM `tabRM Receiving Package`
+	represented = flt(
+		frappe.db.sql(
+			"""SELECT COALESCE(SUM(remaining_qty),0) FROM `tabRM Receiving Package`
 		WHERE item_code=%s AND current_warehouse=%s AND status='Stored'""",
-		(item_code, warehouse),
-	)[0][0])
+			(item_code, warehouse),
+		)[0][0]
+	)
 	if represented + total > bin_qty + 0.001:
-		frappe.throw(_("Opening labels would represent {0}, but ERP stock in {1} is only {2}.").format(
-			represented + total, warehouse, bin_qty
-		))
+		frappe.throw(
+			_("Opening labels would represent {0}, but ERP stock in {1} is only {2}.").format(
+				represented + total, warehouse, bin_qty
+			)
+		)
 
 	created = []
 	base, assigned = flt(total / count, 6), 0.0
@@ -195,8 +211,15 @@ def create_opening_packages(item_code, warehouse, batch_no, package_count, total
 				"current_warehouse": warehouse,
 			}
 		).insert(ignore_permissions=True)
-		_append_movement(pkg, "Received", qty, None, warehouse,
-			"Stock Reconciliation" if stock_reconciliation else None, stock_reconciliation)
+		_append_movement(
+			pkg,
+			"Received",
+			qty,
+			None,
+			warehouse,
+			"Stock Reconciliation" if stock_reconciliation else None,
+			stock_reconciliation,
+		)
 		_system_save(pkg)
 		created.append(pkg.name)
 		assigned += qty
@@ -225,7 +248,9 @@ def record_package_qc(iqc, package_barcode, accepted_qty, rejected_qty=0):
 		frappe.throw(_("Package {0} does not belong to this inbound consignment.").format(pkg.name))
 	accepted, rejected = flt(accepted_qty), flt(rejected_qty)
 	if accepted < 0 or rejected < 0 or abs((accepted + rejected) - flt(pkg.received_qty)) > 0.001:
-		frappe.throw(_("Accepted plus rejected quantity must equal package quantity {0}.").format(pkg.received_qty))
+		frappe.throw(
+			_("Accepted plus rejected quantity must equal package quantity {0}.").format(pkg.received_qty)
+		)
 	pkg.iqc = doc.name
 	rejected_package = None
 	if accepted and rejected:
@@ -285,8 +310,11 @@ def _sync_iqc_totals(iqc):
 
 
 def validate_iqc_packages(doc, method=None):
-	packages = frappe.get_all(PACKAGE_DT, {"inbound_logistics": doc.inbound_logistics},
-		["name", "item_code", "received_qty", "accepted_qty", "rejected_qty"])
+	packages = frappe.get_all(
+		PACKAGE_DT,
+		{"inbound_logistics": doc.inbound_logistics},
+		["name", "item_code", "received_qty", "accepted_qty", "rejected_qty"],
+	)
 	if not packages:
 		return
 	package_totals = defaultdict(lambda: [0.0, 0.0, 0.0])
@@ -299,11 +327,15 @@ def validate_iqc_packages(doc, method=None):
 	for row in doc.items:
 		received, accepted, rejected = package_totals[row.item_code]
 		if abs(received - flt(row.received_qty)) > 0.001:
-			frappe.throw(_("Package labels for {0} total {1}, but IQC received quantity is {2}.").format(
-				row.item_code, received, row.received_qty
-			))
+			frappe.throw(
+				_("Package labels for {0} total {1}, but IQC received quantity is {2}.").format(
+					row.item_code, received, row.received_qty
+				)
+			)
 		if abs(accepted - flt(row.accepted_qty)) > 0.001 or abs(rejected - flt(row.rejected_qty)) > 0.001:
-			frappe.throw(_("IQC totals for {0} must come from the scanned package results.").format(row.item_code))
+			frappe.throw(
+				_("IQC totals for {0} must come from the scanned package results.").format(row.item_code)
+			)
 
 
 def on_iqc_submit(doc, method=None):
@@ -329,8 +361,7 @@ def on_iqc_cancel(doc, method=None):
 def prepare_grn_rows(iqc, pr):
 	"""Replace accepted PR quantities with one row per item/batch package group."""
 	packages = frappe.get_all(
-		PACKAGE_DT, {"iqc": iqc.name},
-		["name", "item_code", "batch_no", "accepted_qty", "rejected_qty"]
+		PACKAGE_DT, {"iqc": iqc.name}, ["name", "item_code", "batch_no", "accepted_qty", "rejected_qty"]
 	)
 	if not packages:
 		return pr
@@ -351,9 +382,14 @@ def prepare_grn_rows(iqc, pr):
 		if item not in source:
 			frappe.throw(_("No Purchase Order row was mapped for package item {0}.").format(item))
 		if source_counts[item] > 1:
-			frappe.throw(_("Purchase Order has duplicate rows for {0}. Consolidate them before package GRN mapping.").format(item))
+			frappe.throw(
+				_(
+					"Purchase Order has duplicate rows for {0}. Consolidate them before package GRN mapping."
+				).format(item)
+			)
 		data = {
-			key: value for key, value in source[item].items()
+			key: value
+			for key, value in source[item].items()
 			if key not in {"name", "parent", "parenttype", "parentfield", "idx", "docstatus"}
 		}
 		data.update(
@@ -387,8 +423,16 @@ def on_grn_submit(doc, method=None):
 			pkg.current_warehouse = staging if flt(pkg.accepted_qty) else row.rejected_warehouse
 			pkg.remaining_qty = pkg.accepted_qty or pkg.rejected_qty
 			pkg.status = "Ready to Put Away" if flt(pkg.accepted_qty) else "Rejected"
-			_append_movement(pkg, "GRN", pkg.accepted_qty or pkg.rejected_qty, None,
-				pkg.current_warehouse, "Purchase Receipt", doc.name, row.name)
+			_append_movement(
+				pkg,
+				"GRN",
+				pkg.accepted_qty or pkg.rejected_qty,
+				None,
+				pkg.current_warehouse,
+				"Purchase Receipt",
+				doc.name,
+				row.name,
+			)
 			_system_save(pkg)
 
 
@@ -411,7 +455,9 @@ def putaway_package(package_barcode, location_barcode):
 	pkg = _package_by_barcode(package_barcode, lock=True)
 	location = _warehouse_by_barcode(location_barcode)
 	if pkg.status != "Ready to Put Away":
-		frappe.throw(_("Package {0} is not ready for put-away (current status: {1}).").format(pkg.name, pkg.status))
+		frappe.throw(
+			_("Package {0} is not ready for put-away (current status: {1}).").format(pkg.name, pkg.status)
+		)
 	_validate_location(location, pkg.item_code, pkg.remaining_qty)
 	staging = config.receiving_warehouse()
 	if not staging:
@@ -497,10 +543,8 @@ def split_package_for_issue(package_barcode, qty):
 	pkg.received_qty = flt(pkg.received_qty) - qty
 	pkg.accepted_qty = flt(pkg.accepted_qty) - qty
 	pkg.remaining_qty = flt(pkg.remaining_qty) - qty
-	_append_movement(pkg, "Split", qty, pkg.current_warehouse, pkg.current_warehouse,
-		PACKAGE_DT, child.name)
-	_append_movement(child, "Split", qty, pkg.current_warehouse, pkg.current_warehouse,
-		PACKAGE_DT, pkg.name)
+	_append_movement(pkg, "Split", qty, pkg.current_warehouse, pkg.current_warehouse, PACKAGE_DT, child.name)
+	_append_movement(child, "Split", qty, pkg.current_warehouse, pkg.current_warehouse, PACKAGE_DT, pkg.name)
 	_system_save(pkg)
 	_system_save(child)
 	return {"package": _package_payload(child), "remainder": _package_payload(pkg)}
@@ -555,31 +599,49 @@ def validate_stock_entry_packages(doc, method=None):
 		tracked = cint(frappe.db.get_value("Item", row.item_code, "lr_rm_barcode_tracking"))
 		from_rm = _is_descendant(row.s_warehouse, rm_root) if enforce else False
 		package_stock = bool(
-			enforce and row.s_warehouse and frappe.db.exists(
+			enforce
+			and row.s_warehouse
+			and frappe.db.exists(
 				PACKAGE_DT,
 				{"item_code": row.item_code, "current_warehouse": row.s_warehouse, "remaining_qty": [">", 0]},
 			)
 		)
 		if enforce and tracked and (from_rm or package_stock) and not row.get("lr_rm_package"):
-			frappe.throw(_("Row {0} ({1}): scan the RM package barcode before submission.").format(row.idx, row.item_code))
+			frappe.throw(
+				_("Row {0} ({1}): scan the RM package barcode before submission.").format(
+					row.idx, row.item_code
+				)
+			)
 		if not row.get("lr_rm_package"):
 			continue
 		pkg = frappe.get_doc(PACKAGE_DT, row.lr_rm_package)
 		if pkg.item_code != row.item_code:
-			frappe.throw(_("Row {0}: package {1} contains {2}, not {3}.").format(row.idx, pkg.name, pkg.item_code, row.item_code))
+			frappe.throw(
+				_("Row {0}: package {1} contains {2}, not {3}.").format(
+					row.idx, pkg.name, pkg.item_code, row.item_code
+				)
+			)
 		if pkg.current_warehouse != row.s_warehouse:
-			frappe.throw(_("Row {0}: package {1} is in {2}, not {3}.").format(row.idx, pkg.name, pkg.current_warehouse, row.s_warehouse))
+			frappe.throw(
+				_("Row {0}: package {1} is in {2}, not {3}.").format(
+					row.idx, pkg.name, pkg.current_warehouse, row.s_warehouse
+				)
+			)
 		if pkg.batch_no and row.get("batch_no") != pkg.batch_no:
-			frappe.throw(_("Row {0}: batch must be {1} for package {2}.").format(row.idx, pkg.batch_no, pkg.name))
+			frappe.throw(
+				_("Row {0}: batch must be {1} for package {2}.").format(row.idx, pkg.batch_no, pkg.name)
+			)
 		seen[pkg.name] += flt(row.qty)
 		if seen[pkg.name] > flt(pkg.remaining_qty) + 0.001:
 			frappe.throw(_("Package {0} has only {1} remaining.").format(pkg.name, pkg.remaining_qty))
 	for package_name, qty in seen.items():
 		remaining = flt(frappe.db.get_value(PACKAGE_DT, package_name, "remaining_qty"))
 		if abs(qty - remaining) > 0.001:
-			frappe.throw(_("Move the complete package {0}. The scanner will create a child label for a partial pick.").format(
-				package_name
-			))
+			frappe.throw(
+				_(
+					"Move the complete package {0}. The scanner will create a child label for a partial pick."
+				).format(package_name)
+			)
 
 
 def validate_warehouse_location_barcode(doc, method=None):
@@ -619,12 +681,17 @@ def on_stock_entry_submit(doc, method=None):
 			elif pkg.current_warehouse == config.receiving_warehouse():
 				pkg.status = "Ready to Put Away"
 			else:
-				pkg.status = "Stored" if _is_descendant(pkg.current_warehouse, config.rm_warehouse()) else "In Production"
+				pkg.status = (
+					"Stored"
+					if _is_descendant(pkg.current_warehouse, config.rm_warehouse())
+					else "In Production"
+				)
 			movement = "Transfer"
 		pkg.last_scan_on = now_datetime()
 		pkg.last_scan_by = frappe.session.user
-		_append_movement(pkg, movement, row.qty, row.s_warehouse, row.t_warehouse,
-			"Stock Entry", doc.name, row.name)
+		_append_movement(
+			pkg, movement, row.qty, row.s_warehouse, row.t_warehouse, "Stock Entry", doc.name, row.name
+		)
 		_system_save(pkg)
 
 
@@ -680,10 +747,20 @@ def _warehouse_by_barcode(barcode):
 
 def _validate_location(warehouse, item_code, incoming_qty):
 	if not _is_descendant(warehouse, config.rm_warehouse()):
-		frappe.throw(_("Location {0} is not inside the configured Raw Material Store hierarchy.").format(warehouse))
+		frappe.throw(
+			_("Location {0} is not inside the configured Raw Material Store hierarchy.").format(warehouse)
+		)
 	row = frappe.db.get_value(
-		"Warehouse", warehouse,
-		["is_group", "disabled", "lr_slot_status", "lr_slot_capacity", "lr_slot_capacity_uom", "lr_allowed_item_group"],
+		"Warehouse",
+		warehouse,
+		[
+			"is_group",
+			"disabled",
+			"lr_slot_status",
+			"lr_slot_capacity",
+			"lr_slot_capacity_uom",
+			"lr_allowed_item_group",
+		],
 		as_dict=True,
 	)
 	if not row or row.is_group or row.disabled:
@@ -693,19 +770,29 @@ def _validate_location(warehouse, item_code, incoming_qty):
 	if row.lr_allowed_item_group:
 		group = frappe.db.get_value("Item", item_code, "item_group")
 		if group != row.lr_allowed_item_group:
-			frappe.throw(_("Location {0} only allows item group {1}.").format(warehouse, row.lr_allowed_item_group))
+			frappe.throw(
+				_("Location {0} only allows item group {1}.").format(warehouse, row.lr_allowed_item_group)
+			)
 	if row.lr_slot_capacity_uom:
 		stock_uom = frappe.db.get_value("Item", item_code, "stock_uom")
 		if stock_uom != row.lr_slot_capacity_uom:
-			frappe.throw(_("Location {0} capacity is measured in {1}; item {2} uses {3}.").format(
-				warehouse, row.lr_slot_capacity_uom, item_code, stock_uom
-			))
+			frappe.throw(
+				_("Location {0} capacity is measured in {1}; item {2} uses {3}.").format(
+					warehouse, row.lr_slot_capacity_uom, item_code, stock_uom
+				)
+			)
 	if flt(row.lr_slot_capacity) > 0:
-		occupied = flt(frappe.db.sql("SELECT COALESCE(SUM(actual_qty),0) FROM `tabBin` WHERE warehouse=%s", warehouse)[0][0])
+		occupied = flt(
+			frappe.db.sql("SELECT COALESCE(SUM(actual_qty),0) FROM `tabBin` WHERE warehouse=%s", warehouse)[
+				0
+			][0]
+		)
 		if occupied + flt(incoming_qty) > flt(row.lr_slot_capacity) + 0.001:
-			frappe.throw(_("Location {0} has capacity {1}; occupied plus incoming would be {2}.").format(
-				warehouse, row.lr_slot_capacity, occupied + flt(incoming_qty)
-			))
+			frappe.throw(
+				_("Location {0} has capacity {1}; occupied plus incoming would be {2}.").format(
+					warehouse, row.lr_slot_capacity, occupied + flt(incoming_qty)
+				)
+			)
 
 
 def _append_movement(pkg, movement_type, qty, source, target, ref_dt, ref_name, ref_row=None):
@@ -727,8 +814,10 @@ def _append_movement(pkg, movement_type, qty, source, target, ref_dt, ref_name, 
 
 def _reverse_movements(pkg, ref_dt, ref_name, ref_row=None):
 	for row in pkg.movements:
-		if row.reference_doctype == ref_dt and row.reference_name == ref_name and (
-			not ref_row or row.reference_row == ref_row
+		if (
+			row.reference_doctype == ref_dt
+			and row.reference_name == ref_name
+			and (not ref_row or row.reference_row == ref_row)
 		):
 			row.is_reversed = 1
 

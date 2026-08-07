@@ -129,9 +129,7 @@ def _seed_stock_entry_types():
 
 def _set_backflush_mode():
 	"""Consume RM from the line it was transferred into (not a generic WIP)."""
-	current = frappe.db.get_single_value(
-		"Manufacturing Settings", "backflush_raw_materials_based_on"
-	)
+	current = frappe.db.get_single_value("Manufacturing Settings", "backflush_raw_materials_based_on")
 	if current != "Material Transferred for Manufacture":
 		s = frappe.get_single("Manufacturing Settings")
 		s.backflush_raw_materials_based_on = "Material Transferred for Manufacture"

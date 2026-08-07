@@ -31,7 +31,9 @@ def _warehouse(field, label, required=True):
 	value = _settings().get(field)
 	if not value and required:
 		frappe.throw(
-			_("Configure the <b>{0}</b> in Lumirise Operations Settings before running this step.").format(label),
+			_("Configure the <b>{0}</b> in Lumirise Operations Settings before running this step.").format(
+				label
+			),
 			title=_("Operations Settings Missing"),
 		)
 	return value
@@ -176,7 +178,9 @@ def assert_destructive_seeder_allowed(action="this destructive seeder"):
 	(2026-07-13: added after the unguarded synthetic tier twice wiped real dev data.)
 	"""
 	site = getattr(frappe.local, "site", None)
-	prod_name = (frappe.db.get_single_value("Lumirise Operations Settings", "production_site_name") or "").strip()
+	prod_name = (
+		frappe.db.get_single_value("Lumirise Operations Settings", "production_site_name") or ""
+	).strip()
 	if frappe.conf.get("is_production_site") or (prod_name and site == prod_name):
 		frappe.throw(f"REFUSED — {action} must NEVER run on the production site ({site}).")
 	if not frappe.conf.get("allow_destructive_seeders"):

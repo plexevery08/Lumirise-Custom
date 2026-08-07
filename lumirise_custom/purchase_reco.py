@@ -93,15 +93,17 @@ def get_bom_reconciliation(po_name, po_items=None):
 		if isinstance(po_items, str):
 			po_items = frappe.parse_json(po_items)
 		po_lines = [
-			{"item_code": r.get("item_code"),
-			 "item_name": r.get("item_name") or r.get("item_code"),
-			 "qty": flt(r.get("qty"))}
-			for r in po_items if r.get("item_code")
+			{
+				"item_code": r.get("item_code"),
+				"item_name": r.get("item_name") or r.get("item_code"),
+				"qty": flt(r.get("qty")),
+			}
+			for r in po_items
+			if r.get("item_code")
 		]
 	else:
 		po_lines = [
-			{"item_code": r.item_code, "item_name": r.item_name or r.item_code,
-			 "qty": flt(r.qty)}
+			{"item_code": r.item_code, "item_name": r.item_name or r.item_code, "qty": flt(r.qty)}
 			for r in po.items
 		]
 	po_qty = {}
@@ -109,8 +111,8 @@ def get_bom_reconciliation(po_name, po_items=None):
 		po_qty[r["item_code"]] = po_qty.get(r["item_code"], 0) + flt(r["qty"])
 
 	# --- gather indented qty, the models, and the source sales orders
-	indented_qty = {}          # item_code -> total qty across the source indents
-	models = {}                # model -> fg order qty
+	indented_qty = {}  # item_code -> total qty across the source indents
+	models = {}  # model -> fg order qty
 	source_sos = set()
 	for name in indents:
 		if not frappe.db.exists("Indent", name):
@@ -136,7 +138,7 @@ def get_bom_reconciliation(po_name, po_items=None):
 
 	# --- kit reconciliation per model + per-component model weights (for the split)
 	kit = []
-	comp_model_weight = {}     # component -> {model -> weight}
+	comp_model_weight = {}  # component -> {model -> weight}
 	for model, fg_qty in models.items():
 		bom = frappe.db.get_value("Item", model, "default_bom")
 		comps = []
@@ -147,18 +149,20 @@ def get_bom_reconciliation(po_name, po_items=None):
 				required = flt(bi.qty) / per * flt(fg_qty)
 				in_ind = flt(indented_qty.get(bi.item_code, 0))
 				in_po = flt(po_qty.get(bi.item_code, 0))
-				comps.append({
-					"component": bi.item_code,
-					"item_name": bi.item_name or bi.item_code,
-					"required": required,
-					"in_indent": in_ind,
-					"in_po": in_po,
-					"in_stock": _rm_stock(bi.item_code),
-					# Status is now PO-driven: a component the buyer hasn't put on
-					# this PO flags MISSING, so removing a line reflects immediately.
-					# in_indent stays as reference (was the old, indent-based flag).
-					"missing": in_po <= 0,
-				})
+				comps.append(
+					{
+						"component": bi.item_code,
+						"item_name": bi.item_name or bi.item_code,
+						"required": required,
+						"in_indent": in_ind,
+						"in_po": in_po,
+						"in_stock": _rm_stock(bi.item_code),
+						# Status is now PO-driven: a component the buyer hasn't put on
+						# this PO flags MISSING, so removing a line reflects immediately.
+						# in_indent stays as reference (was the old, indent-based flag).
+						"missing": in_po <= 0,
+					}
+				)
 				# weight uses (fg_qty or 1) so a shared component still splits even
 				# when the FG qty is unknown (proportional by BOM usage).
 				w = comp_model_weight.setdefault(bi.item_code, {})
@@ -179,15 +183,16 @@ def get_bom_reconciliation(po_name, po_items=None):
 				alloc = qty * w / total_w
 				rows.append({"model": model, "qty": alloc, "rate": rate, "amount": alloc * rate})
 		else:
-			rows.append({"model": "(unsplit)", "qty": qty,
-			             "rate": rate, "amount": qty * rate})
-		split.append({
-			"item_code": item_code,
-			"item_name": poi["item_name"],
-			"total_qty": qty,
-			"rate": rate,
-			"total_amount": qty * rate,
-			"rows": rows,
-		})
+			rows.append({"model": "(unsplit)", "qty": qty, "rate": rate, "amount": qty * rate})
+		split.append(
+			{
+				"item_code": item_code,
+				"item_name": poi["item_name"],
+				"total_qty": qty,
+				"rate": rate,
+				"total_amount": qty * rate,
+				"rows": rows,
+			}
+		)
 
 	return {"has_refs": bool(indents), "indents": indents, "kit": kit, "split": split}

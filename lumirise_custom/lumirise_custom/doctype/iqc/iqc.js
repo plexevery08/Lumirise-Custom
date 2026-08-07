@@ -56,22 +56,60 @@ function issue_sample_prompt(frm) {
 	}
 	frappe.prompt(
 		[
-			{ fieldname: "package_barcode", label: __("RM Package Barcode"), fieldtype: "Data", description: __("Required when Lumirise package labels exist for this consignment.") },
-			{ fieldname: "item_code", label: __("Item"), fieldtype: "Select", options: item_codes.join("\n"), reqd: 1, default: item_codes[0] },
+			{
+				fieldname: "package_barcode",
+				label: __("RM Package Barcode"),
+				fieldtype: "Data",
+				description: __(
+					"Required when Lumirise package labels exist for this consignment."
+				),
+			},
+			{
+				fieldname: "item_code",
+				label: __("Item"),
+				fieldtype: "Select",
+				options: item_codes.join("\n"),
+				reqd: 1,
+				default: item_codes[0],
+			},
 			{ fieldname: "sample_qty", label: __("Sample Qty"), fieldtype: "Float", reqd: 1 },
-			{ fieldname: "taken_by", label: __("Taken By"), fieldtype: "Link", options: "User", reqd: 1, default: frappe.session.user },
+			{
+				fieldname: "taken_by",
+				label: __("Taken By"),
+				fieldtype: "Link",
+				options: "User",
+				reqd: 1,
+				default: frappe.session.user,
+			},
 			{ fieldname: "remarks", label: __("Remarks"), fieldtype: "Small Text" },
 		],
 		(v) =>
 			sample_run(
 				frm,
 				"issue_sample",
-				{ docname: frm.doc.name, item_code: v.item_code, package_barcode: v.package_barcode, sample_qty: v.sample_qty, taken_by: v.taken_by, remarks: v.remarks },
+				{
+					docname: frm.doc.name,
+					item_code: v.item_code,
+					package_barcode: v.package_barcode,
+					sample_qty: v.sample_qty,
+					taken_by: v.taken_by,
+					remarks: v.remarks,
+				},
 				__("Recording sample…")
 			).then((r) => {
 				if (r.message && r.message.new_package) {
-					frappe.msgprint(__("Sample package {0} was created. Print and attach its label to the IQC sample.", [r.message.package]));
-					frappe.utils.print("RM Receiving Package", r.message.package, "Lumirise RM Package Label", false);
+					frappe.msgprint(
+						__(
+							"Sample package {0} was created. Print and attach its label to the IQC sample.",
+							[r.message.package]
+						)
+					);
+					frappe.utils.print(
+						"RM Receiving Package",
+						r.message.package,
+						"Lumirise RM Package Label",
+						false
+					);
 				}
 			}),
 		__("Issue Sample (pre-GRN)"),
@@ -85,12 +123,24 @@ function return_sample_prompt(frm) {
 		frappe.msgprint(__("No open samples to return."));
 		return;
 	}
-	const options = open.map((r) => `${r.name} — ${r.item_code} · ${r.sample_qty} ${r.uom || ""} · ${r.taken_by || ""} [${r.status}]`);
+	const options = open.map(
+		(r) =>
+			`${r.name} — ${r.item_code} · ${r.sample_qty} ${r.uom || ""} · ${r.taken_by || ""} [${
+				r.status
+			}]`
+	);
 	const by_label = {};
 	open.forEach((r, i) => (by_label[options[i]] = r.name));
 	frappe.prompt(
 		[
-			{ fieldname: "row", label: __("Sample"), fieldtype: "Select", options: options.join("\n"), reqd: 1, default: options[0] },
+			{
+				fieldname: "row",
+				label: __("Sample"),
+				fieldtype: "Select",
+				options: options.join("\n"),
+				reqd: 1,
+				default: options[0],
+			},
 			{
 				fieldname: "disposition",
 				label: __("Disposition"),
@@ -135,29 +185,61 @@ frappe.ui.form.on("IQC", {
 
 		add_sample_buttons(frm);
 		if (frm.doc.docstatus === 0) {
-			frm.add_custom_button(__("Scan Package Result"), () => {
-				frappe.prompt(
-					[
-						{ fieldname: "package_barcode", label: __("Package Barcode"), fieldtype: "Data", reqd: 1 },
-						{ fieldname: "accepted_qty", label: __("Accepted Qty"), fieldtype: "Float", reqd: 1 },
-						{ fieldname: "rejected_qty", label: __("Rejected Qty"), fieldtype: "Float", default: 0 },
-					],
-					(v) => frappe.call({
-						method: "lumirise_custom.rm_barcode.record_package_qc",
-						args: Object.assign({ iqc: frm.doc.name }, v),
-						freeze: true,
-						freeze_message: __("Recording package result…"),
-					}).then((r) => {
-						if (r.message.rejected_package) {
-							frappe.msgprint(__("Partial rejection created new package {0}. Print that label and attach it to the segregated rejected material.", [r.message.rejected_package]));
-							frappe.utils.print("RM Receiving Package", r.message.rejected_package, "Lumirise RM Package Label", false);
-						}
-						return frm.reload_doc();
-					}),
-					__("RM Package IQC"),
-					__("Record")
-				);
-			}, __("Barcode"));
+			frm.add_custom_button(
+				__("Scan Package Result"),
+				() => {
+					frappe.prompt(
+						[
+							{
+								fieldname: "package_barcode",
+								label: __("Package Barcode"),
+								fieldtype: "Data",
+								reqd: 1,
+							},
+							{
+								fieldname: "accepted_qty",
+								label: __("Accepted Qty"),
+								fieldtype: "Float",
+								reqd: 1,
+							},
+							{
+								fieldname: "rejected_qty",
+								label: __("Rejected Qty"),
+								fieldtype: "Float",
+								default: 0,
+							},
+						],
+						(v) =>
+							frappe
+								.call({
+									method: "lumirise_custom.rm_barcode.record_package_qc",
+									args: Object.assign({ iqc: frm.doc.name }, v),
+									freeze: true,
+									freeze_message: __("Recording package result…"),
+								})
+								.then((r) => {
+									if (r.message.rejected_package) {
+										frappe.msgprint(
+											__(
+												"Partial rejection created new package {0}. Print that label and attach it to the segregated rejected material.",
+												[r.message.rejected_package]
+											)
+										);
+										frappe.utils.print(
+											"RM Receiving Package",
+											r.message.rejected_package,
+											"Lumirise RM Package Label",
+											false
+										);
+									}
+									return frm.reload_doc();
+								}),
+						__("RM Package IQC"),
+						__("Record")
+					);
+				},
+				__("Barcode")
+			);
 		}
 
 		// Submitted: GRN is the next step (unless wholly rejected or already done).
@@ -165,13 +247,20 @@ frappe.ui.form.on("IQC", {
 			if (frm.doc.status === "Moved to RM") {
 				frm.set_intro(__("GRN posted — accepted stock is in the RM store."), "green");
 			} else if ((frm.doc.items || []).some((r) => flt(r.accepted_qty) > 0)) {
-				frm.set_intro(__("IQC passed. Raise the GRN to take the accepted stock into the RM store."), "blue");
-				frm.add_custom_button(__("GRN (Purchase Receipt)"), () => {
-					frappe.model.open_mapped_doc({
-						method: "lumirise_custom.chain.make_grn",
-						frm: frm,
-					});
-				}, __("Create"));
+				frm.set_intro(
+					__("IQC passed. Raise the GRN to take the accepted stock into the RM store."),
+					"blue"
+				);
+				frm.add_custom_button(
+					__("GRN (Purchase Receipt)"),
+					() => {
+						frappe.model.open_mapped_doc({
+							method: "lumirise_custom.chain.make_grn",
+							frm: frm,
+						});
+					},
+					__("Create")
+				);
 			} else {
 				frm.set_intro(__("All qty rejected — no GRN can be raised."), "red");
 			}
@@ -191,7 +280,9 @@ frappe.ui.form.on("IQC", {
 			).addClass("btn-primary");
 		} else if (status === "Testing") {
 			frm.set_intro(
-				__("Under test. Enter each line's Accepted / Rejected qty (set a Disposition for rejects), then record the result."),
+				__(
+					"Under test. Enter each line's Accepted / Rejected qty (set a Disposition for rejects), then record the result."
+				),
 				"orange"
 			);
 			frm.add_custom_button(__("Record Result"), () =>
@@ -200,7 +291,10 @@ frappe.ui.form.on("IQC", {
 		} else if (status === "Passed") {
 			frm.set_intro(__("Inspection passed. Submit the IQC to unlock the GRN."), "green");
 		} else if (status === "Rejected") {
-			frm.set_intro(__("All qty rejected. Submit to record — no GRN will be allowed."), "red");
+			frm.set_intro(
+				__("All qty rejected. Submit to record — no GRN will be allowed."),
+				"red"
+			);
 		} else if (status === "On Hold") {
 			frm.set_intro(__("On hold: {0}", [frm.doc.iqc_remarks || "—"]), "red");
 			frm.add_custom_button(__("Resume Testing"), () =>
@@ -208,16 +302,18 @@ frappe.ui.form.on("IQC", {
 			);
 		}
 
-		// AQL sampling plan: lot size -> Level I sample size + Accept/Reject per class.
-		if (["IQC Received", "Testing"].includes(status)) {
-			
-		}
-
 		// Park on hold from any open state.
 		if (["IQC Received", "Testing"].includes(status)) {
 			frm.add_custom_button(__("Put On Hold"), () =>
 				frappe.prompt(
-					[{ fieldname: "reason", label: __("Reason"), fieldtype: "Small Text", reqd: 1 }],
+					[
+						{
+							fieldname: "reason",
+							label: __("Reason"),
+							fieldtype: "Small Text",
+							reqd: 1,
+						},
+					],
 					(v) => iqc_run(frm, "hold", { reason: v.reason }, __("Holding…")),
 					__("Put IQC On Hold")
 				)

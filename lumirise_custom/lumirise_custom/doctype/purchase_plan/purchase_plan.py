@@ -36,15 +36,16 @@ class PurchasePlan(Document):
 		missing = [d.item_code for d in self.items if not d.supplier]
 		if missing:
 			frappe.throw(
-				_("Assign a Supplier (vendor) to every line before submitting. "
-				  "Missing for: {0}").format(", ".join(missing))
+				_("Assign a Supplier (vendor) to every line before submitting. Missing for: {0}").format(
+					", ".join(missing)
+				)
 			)
 
 
 @frappe.whitelist()
 def get_indent_qty(plan_name=None, indent_refs=None):
 	"""Total indented qty per item across the plan's source Indents — the baseline
-	for the Indent-vs-Order balance table (Indent Qty − Order Qty = Balance).
+	for the Indent-vs-Order balance table (Indent Qty - Order Qty = Balance).
 	Returns {item_code: indent_qty}."""
 	names = set()
 	# Source 1: the plan-level indent_refs (or an explicit override).
@@ -56,8 +57,9 @@ def get_indent_qty(plan_name=None, indent_refs=None):
 			names.add(n.strip())
 	# Source 2: per-line source_indents (robust if indent_refs is blank).
 	if plan_name and frappe.db.exists("Purchase Plan", plan_name):
-		for row in frappe.get_all("Purchase Plan Item", filters={"parent": plan_name},
-		                          fields=["source_indents"]):
+		for row in frappe.get_all(
+			"Purchase Plan Item", filters={"parent": plan_name}, fields=["source_indents"]
+		):
 			for n in (row.source_indents or "").replace("\n", ",").split(","):
 				if n.strip():
 					names.add(n.strip())
@@ -65,8 +67,7 @@ def get_indent_qty(plan_name=None, indent_refs=None):
 	for name in names:
 		if not frappe.db.exists("Indent", name):
 			continue
-		for row in frappe.get_all("Indent Item", filters={"parent": name},
-		                          fields=["item_code", "qty"]):
+		for row in frappe.get_all("Indent Item", filters={"parent": name}, fields=["item_code", "qty"]):
 			qty[row.item_code] = flt(qty.get(row.item_code, 0)) + flt(row.qty)
 	return qty
 
@@ -81,8 +82,7 @@ def get_kit_bom(plan_name):
 	Returns {model: {"fg_item": model, "components": {item_code: per_kit_qty}}}."""
 	models = set()
 	if frappe.db.exists("Purchase Plan", plan_name):
-		for row in frappe.get_all("Purchase Plan Item", filters={"parent": plan_name},
-		                          fields=["model"]):
+		for row in frappe.get_all("Purchase Plan Item", filters={"parent": plan_name}, fields=["model"]):
 			if row.model:
 				models.add(row.model)
 
@@ -110,8 +110,9 @@ def create_purchase_orders(plan_name):
 	if plan.docstatus != 1:
 		frappe.throw(_("Submit the Purchase Plan before creating Purchase Orders."))
 	if plan.po_status == "POs Created":
-		frappe.throw(_("Purchase Orders were already created for this plan: {0}").format(
-			plan.created_pos or ""))
+		frappe.throw(
+			_("Purchase Orders were already created for this plan: {0}").format(plan.created_pos or "")
+		)
 
 	# group rows by supplier, preserving the union of source indents per supplier
 	by_supplier = {}
@@ -152,13 +153,15 @@ def create_purchase_orders(plan_name):
 		# side by side (Rishitha, 2026-07-20 ~01:11:25 "all POs at a time, PO and
 		# total amount side by side, and supplier name"). grand_total is computed
 		# during insert(); fall back to net total if taxes aren't set up yet.
-		created.append({
-			"name": po.name,
-			"supplier": supplier,
-			"supplier_name": frappe.db.get_value("Supplier", supplier, "supplier_name") or supplier,
-			"amount": flt(po.grand_total) or flt(po.total),
-			"currency": po.currency or frappe.db.get_value("Company", po.company, "default_currency"),
-		})
+		created.append(
+			{
+				"name": po.name,
+				"supplier": supplier,
+				"supplier_name": frappe.db.get_value("Supplier", supplier, "supplier_name") or supplier,
+				"amount": flt(po.grand_total) or flt(po.total),
+				"currency": po.currency or frappe.db.get_value("Company", po.company, "default_currency"),
+			}
+		)
 
 	created_names = [c["name"] for c in created]
 	plan.db_set("po_status", "POs Created")
@@ -168,6 +171,7 @@ def create_purchase_orders(plan_name):
 	# panel on every upstream doc (SO / Indent / WO) so they show the PO too.
 	# Fail-safe (restamp swallows errors).
 	from lumirise_custom import traceability
+
 	sos = set()
 	for po in created_names:
 		refs = frappe.db.get_value("Purchase Order", po, "lr_indent_refs") or ""

@@ -28,9 +28,10 @@ class InboundLogistics(Document):
 			self.status = DISPATCHED
 		# approved-at-PDI qty is the ceiling for what can be in transit
 		approved = {}
-		for d in frappe.get_all(
-			"Vendor PDI Item", {"parent": self.vendor_pdi}, ["item_code", "approved_qty"]
-		) or []:
+		for d in (
+			frappe.get_all("Vendor PDI Item", {"parent": self.vendor_pdi}, ["item_code", "approved_qty"])
+			or []
+		):
 			approved[d.item_code] = approved.get(d.item_code, 0) + flt(d.approved_qty)
 		inbound = {}
 		for row in self.items:
@@ -39,8 +40,8 @@ class InboundLogistics(Document):
 			cap = approved.get(item_code)
 			if cap is not None and qty > cap:
 				frappe.throw(
-					f"{item_code}: total logistics qty {qty} "
-					f"cannot exceed the Vendor-PDI approved qty {cap}.")
+					f"{item_code}: total logistics qty {qty} cannot exceed the Vendor-PDI approved qty {cap}."
+				)
 
 
 # --- flow transitions (called from the form buttons) ------------------------

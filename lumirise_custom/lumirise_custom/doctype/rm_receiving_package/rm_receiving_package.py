@@ -21,9 +21,11 @@ class RMReceivingPackage(Document):
 		if self.batch_no:
 			batch_item = frappe.db.get_value("Batch", self.batch_no, "item")
 			if batch_item and batch_item != self.item_code:
-				frappe.throw(_("Batch {0} belongs to item {1}, not {2}.").format(
-					self.batch_no, batch_item, self.item_code
-				))
+				frappe.throw(
+					_("Batch {0} belongs to item {1}, not {2}.").format(
+						self.batch_no, batch_item, self.item_code
+					)
+				)
 
 	def after_insert(self):
 		# autoname is only final after insertion; keep the physical code equal to the

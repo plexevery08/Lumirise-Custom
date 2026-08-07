@@ -8,7 +8,13 @@ from lumirise_custom import defaults as config
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	columns = [
-		{"label": _("Location"), "fieldname": "warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 220},
+		{
+			"label": _("Location"),
+			"fieldname": "warehouse",
+			"fieldtype": "Link",
+			"options": "Warehouse",
+			"width": 220,
+		},
 		{"label": _("Barcode"), "fieldname": "location_barcode", "fieldtype": "Data", "width": 150},
 		{"label": _("Status"), "fieldname": "slot_status", "fieldtype": "Data", "width": 90},
 		{"label": _("Capacity"), "fieldname": "capacity", "fieldtype": "Float", "width": 90},
@@ -16,7 +22,13 @@ def execute(filters=None):
 		{"label": _("Available"), "fieldname": "available", "fieldtype": "Float", "width": 90},
 		{"label": _("UOM"), "fieldname": "capacity_uom", "fieldtype": "Link", "options": "UOM", "width": 70},
 		{"label": _("Packages"), "fieldname": "package_count", "fieldtype": "Int", "width": 80},
-		{"label": _("Allowed Group"), "fieldname": "allowed_item_group", "fieldtype": "Link", "options": "Item Group", "width": 130},
+		{
+			"label": _("Allowed Group"),
+			"fieldname": "allowed_item_group",
+			"fieldtype": "Link",
+			"options": "Item Group",
+			"width": 130,
+		},
 	]
 
 	root = config.rm_warehouse()
@@ -36,17 +48,21 @@ def execute(filters=None):
 			COALESCE(SUM(b.actual_qty), 0) AS occupied
 		FROM `tabWarehouse` w
 		LEFT JOIN `tabBin` b ON b.warehouse = w.name
-		WHERE {' AND '.join(conditions)}
+		WHERE {" AND ".join(conditions)}
 		GROUP BY w.name
 		ORDER BY w.lft
 		""",
 		params,
 		as_dict=True,
 	)
-	counts = {r.current_warehouse: r.count for r in frappe.db.sql(
-		"""SELECT current_warehouse, COUNT(*) AS count FROM `tabRM Receiving Package`
-		WHERE status='Stored' GROUP BY current_warehouse""", as_dict=True
-	)}
+	counts = {
+		r.current_warehouse: r.count
+		for r in frappe.db.sql(
+			"""SELECT current_warehouse, COUNT(*) AS count FROM `tabRM Receiving Package`
+		WHERE status='Stored' GROUP BY current_warehouse""",
+			as_dict=True,
+		)
+	}
 	for row in rows:
 		row.package_count = counts.get(row.warehouse, 0)
 		row.available = max(0, flt(row.capacity) - flt(row.occupied)) if flt(row.capacity) else None

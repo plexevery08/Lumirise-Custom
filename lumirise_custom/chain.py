@@ -17,8 +17,10 @@ def make_vendor_pdi(source_name, target_doc=None):
 	doc.purchase_order = po.name
 	doc.mode = "Import" if "Import" in (po.supplier or "") else "Domestic"
 	for it in po.items:
-		doc.append("items", {"item_code": it.item_code, "item_name": it.item_name,
-		                     "po_qty": it.qty, "approved_qty": it.qty})
+		doc.append(
+			"items",
+			{"item_code": it.item_code, "item_name": it.item_name, "po_qty": it.qty, "approved_qty": it.qty},
+		)
 	return doc
 
 
@@ -33,9 +35,15 @@ def make_inbound_logistics(source_name, target_doc=None):
 	# Only the qty accepted at Vendor PDI moves forward into transit.
 	for it in vpdi.items:
 		if flt(it.approved_qty) > 0:
-			doc.append("items", {"item_code": it.item_code,
-			                     "item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
-			                     "qty": it.approved_qty})
+			doc.append(
+				"items",
+				{
+					"item_code": it.item_code,
+					"item_name": it.get("item_name")
+					or frappe.db.get_value("Item", it.item_code, "item_name"),
+					"qty": it.approved_qty,
+				},
+			)
 	return doc
 
 
@@ -51,10 +59,16 @@ def make_iqc(source_name, target_doc=None):
 		row = items.setdefault(it.item_code, {"item_name": it.get("item_name"), "qty": 0.0})
 		row["qty"] += flt(it.qty)
 	for item_code, values in items.items():
-		doc.append("items", {
-			"item_code": item_code,
-			"item_name": values["item_name"] or frappe.db.get_value("Item", item_code, "item_name"),
-			"received_qty": values["qty"], "accepted_qty": values["qty"], "rejected_qty": 0})
+		doc.append(
+			"items",
+			{
+				"item_code": item_code,
+				"item_name": values["item_name"] or frappe.db.get_value("Item", item_code, "item_name"),
+				"received_qty": values["qty"],
+				"accepted_qty": values["qty"],
+				"rejected_qty": 0,
+			},
+		)
 	return doc
 
 
@@ -109,6 +123,7 @@ def make_grn(source_name, target_doc=None):
 # accepted qty from the "Pending IQC" bucket in Material Planning (the qty has now
 # landed in the RM store as real Bin stock) — without it the qty would double-count.
 # Assumption (v1, same as iqc_gate): one open passed IQC per PO per GRN.
+
 
 def _grn_pos(doc):
 	return {row.purchase_order for row in doc.items if getattr(row, "purchase_order", None)}
