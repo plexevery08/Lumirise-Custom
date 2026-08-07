@@ -3,7 +3,7 @@
 Custom ERPNext **v16** app for **Lumirise** — an LED **OEM** manufacturer in India — built by
 **Saphaare Labs**. It layers Lumirise's real order-to-dispatch process on top of standard ERPNext:
 landed-cost-driven costing, a sales pricing engine, cross-department task orchestration, line-aware
-production, and mandatory quality gates.
+production, mandatory quality gates, and package-level RM barcode traceability.
 
 App module: `lumirise_custom` · License: MIT.
 
@@ -12,7 +12,7 @@ App module: `lumirise_custom` · License: MIT.
 ## What's inside
 
 The app wires onto standard ERPNext documents (Item, BOM, Sales Order, Work Order, Purchase Receipt,
-Delivery Note, …) via `hooks.py` and adds **29 custom DocTypes**. Nine subsystems:
+Delivery Note, …) via `hooks.py` and adds **31 custom DocTypes**. Ten subsystems:
 
 | # | Subsystem | Code | What it does |
 |---|---|---|---|
@@ -25,6 +25,7 @@ Delivery Note, …) via `hooks.py` and adds **29 custom DocTypes**. Nine subsyst
 | 7 | **Quality gates** | `events.py` | IQC gate blocks Purchase Receipt submit; Customer PDI gate blocks Delivery Note submit. |
 | 8 | **Procurement / dispatch flow chain** | `chain.py` | Doc-to-doc mappers: Vendor PDI → Inbound Logistics → IQC → GRN, and Customer PDI → Delivery Note → Sales Invoice. |
 | 9 | **Indent + Material Planning (MRP)** | `doctype/indent/*`, `doctype/material_planning/*` | Indent with the `Indent Approval` workflow; Material Planning posts Indents + Work Orders and advances SO status. |
+| 10 | **RM package barcodes** | `rm_barcode.py`, `doctype/rm_receiving_package/*` | Lumirise LPN at unloading → package IQC → batch GRN → scanned rack put-away → package-controlled issue, cancellation and slot report. See `docs/rm-barcode-system.md`. |
 
 **Foundation**
 - **Dynamic config** — `defaults.py` resolves every warehouse / company / UOM / feature flag from the

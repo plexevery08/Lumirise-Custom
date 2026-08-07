@@ -31,6 +31,7 @@ CORE_WAREHOUSES = [
 	("Customer PDI", 0),
 	("RM Rejection", 0),
 	("IQC Lab", 0),
+	("RM Receiving", 0),
 ]
 
 # Simple "create if blank" mapping for the fields with no legacy ambiguity.
@@ -39,6 +40,7 @@ SIMPLE_WH_FIELDS = [
 	("pdi_warehouse", "Customer PDI"),
 	("rejection_warehouse", "RM Rejection"),
 	("iqc_lab_warehouse", "IQC Lab"),
+	("receiving_warehouse", "RM Receiving"),
 ]
 
 LINE_GROUP = "Production Lines"

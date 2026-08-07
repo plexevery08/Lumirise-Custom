@@ -53,6 +53,31 @@ frappe.ui.form.on("Inbound Logistics", {
 
 		// Next-stage doc — manual, only after the goods have arrived.
 		if (status === "Reached Warehouse") {
+			frm.add_custom_button(__("Generate RM Package Labels"), () => {
+				const items = (frm.doc.items || []).map((r) => r.item_code).filter(Boolean);
+				frappe.prompt(
+					[
+						{ fieldname: "item_code", label: __("Item"), fieldtype: "Select", options: items.join("\n"), reqd: 1 },
+						{ fieldname: "package_count", label: __("Number of Packages"), fieldtype: "Int", reqd: 1, default: 1 },
+						{ fieldname: "total_qty", label: __("Total Qty in These Packages"), fieldtype: "Float", reqd: 1 },
+						{ fieldname: "package_type", label: __("Package Type"), fieldtype: "Select", options: "Carton\nPallet\nDrum\nBag\nCrate\nOther", default: "Carton", reqd: 1 },
+						{ fieldname: "supplier_lot", label: __("Supplier Lot / Heat No."), fieldtype: "Data" },
+						{ fieldname: "manufacturing_date", label: __("Manufacturing Date"), fieldtype: "Date" },
+						{ fieldname: "expiry_date", label: __("Expiry Date"), fieldtype: "Date" },
+					],
+					(v) => frappe.call({
+						method: "lumirise_custom.rm_barcode.create_receiving_packages",
+						args: { inbound_logistics: frm.doc.name, packages: [v] },
+						freeze: true,
+						freeze_message: __("Generating package labels…"),
+					}).then((r) => {
+						frappe.show_alert({ message: __("Created {0} labels", [r.message.created.length]), indicator: "green" });
+						frappe.set_route("List", "RM Receiving Package", { inbound_logistics: frm.doc.name });
+					}),
+					__("Generate Lumirise RM Labels"),
+					__("Generate")
+				);
+			}, __("Barcode"));
 			frm.add_custom_button(__("IQC"), () => {
 				frappe.model.open_mapped_doc({
 					method: "lumirise_custom.chain.make_iqc",

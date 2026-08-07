@@ -6,15 +6,15 @@ and default Sales Credit Terms exist. Safe to run repeatedly.
 
 import frappe
 
+from lumirise_custom.setup.approval_setup import setup_approvals
+from lumirise_custom.setup.bom_fields import create_bom_fields
 from lumirise_custom.setup.costing_fields import create_costing_fields
 from lumirise_custom.setup.flow_fields import create_flow_fields
-from lumirise_custom.setup.bom_fields import create_bom_fields
-from lumirise_custom.setup.purchase_reco_fields import create_purchase_reco_fields
-from lumirise_custom.setup.wo_line_transfer_fields import create_wo_line_transfer_fields
-from lumirise_custom.setup.purchase_plan_supplier_fields import create_purchase_plan_supplier_fields
 from lumirise_custom.setup.production_setup import setup_production_flow
+from lumirise_custom.setup.purchase_plan_supplier_fields import create_purchase_plan_supplier_fields
+from lumirise_custom.setup.purchase_reco_fields import create_purchase_reco_fields
 from lumirise_custom.setup.task_seed import seed_task_engine
-from lumirise_custom.setup.approval_setup import setup_approvals
+from lumirise_custom.setup.wo_line_transfer_fields import create_wo_line_transfer_fields
 
 SALES_PLATFORM_ROLES = ["Pricing Manager", "Sales Approver", "Sales Auditor"]
 
@@ -30,8 +30,8 @@ DEFAULT_CREDIT_TERMS = [
 def before_migrate():
 	"""Roles referenced by DocType JSON permissions must exist before the
 	schema sync imports those DocTypes."""
-	from lumirise_custom.setup.task_seed import ensure_ops_role
 	from lumirise_custom.setup.approval_setup import ensure_approval_roles
+	from lumirise_custom.setup.task_seed import ensure_ops_role
 
 	ensure_ops_role()
 	# Planning Manager / Purchase Head / MD / Factory Store Manager must exist before
@@ -41,6 +41,8 @@ def before_migrate():
 
 def after_migrate():
 	ensure_roles()
+	from lumirise_custom.setup.rm_barcode_fields import create_rm_barcode_fields
+	create_rm_barcode_fields()
 	create_costing_fields()
 	create_flow_fields()
 	create_bom_fields()
@@ -78,6 +80,8 @@ def after_migrate():
 	# the production-flow warehouse fields (Shop Floor / Production FG / Dispatch FG
 	# / PDI / Rejection) without clashing with the task-seed name-pattern defaults.
 	setup_production_flow()
+	from lumirise_custom.setup.rm_barcode_setup import setup_rm_barcode_system
+	setup_rm_barcode_system()
 	# Ajay review 2026-06-14: Indent -> Planning Manager approval (not Purchase
 	# Manager); Purchase Order -> Purchase Head release approval. Runs last and
 	# upserts both workflows so the desired shape is reasserted every migrate.

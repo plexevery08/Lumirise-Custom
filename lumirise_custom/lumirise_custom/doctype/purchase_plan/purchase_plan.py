@@ -15,7 +15,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
-RM_STORE = "Stores - L"
+from lumirise_custom import defaults as config
+from lumirise_custom.stock_utils import inbound_target_warehouse
 
 
 class PurchasePlan(Document):
@@ -124,6 +125,7 @@ def create_purchase_orders(plan_name):
 				bucket["indents"].add(ind)
 
 	created = []
+	target_warehouse = inbound_target_warehouse()
 	for supplier, bucket in by_supplier.items():
 		po = frappe.new_doc("Purchase Order")
 		po.supplier = supplier
@@ -133,11 +135,11 @@ def create_purchase_orders(plan_name):
 				"item_code": row.item_code,
 				"item_name": row.item_name or row.item_code,
 				"qty": flt(row.qty),
-				"uom": row.uom or "Nos",
-				"stock_uom": row.uom or "Nos",
+				"uom": row.uom or config.item_uom(row.item_code),
+				"stock_uom": row.uom or config.item_uom(row.item_code),
 				"conversion_factor": 1,
 				"schedule_date": row.schedule_date or frappe.utils.add_days(frappe.utils.nowdate(), 15),
-				"warehouse": row.warehouse or RM_STORE,
+				"warehouse": row.warehouse or target_warehouse,
 			}
 			# Carry the negotiated plan rate onto the PO line. Only when set (>0) so a
 			# blank rate leaves ERPNext to fetch its usual price-list / last-purchase rate.

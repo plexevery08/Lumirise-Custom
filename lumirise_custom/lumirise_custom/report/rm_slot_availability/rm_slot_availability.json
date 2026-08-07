@@ -1,0 +1,7 @@
+{
+ "add_total_row":0,"columns":[],"creation":"2026-08-07 00:00:00.000000","disabled":0,"docstatus":0,
+ "doctype":"Report","filters":[],"is_standard":"Yes","modified":"2026-08-07 00:00:00.000000",
+ "modified_by":"Administrator","module":"Lumirise Custom","name":"RM Slot Availability","owner":"Administrator",
+ "prepared_report":0,"ref_doctype":"Warehouse","report_name":"RM Slot Availability","report_type":"Script Report",
+ "roles":[{"role":"Lumirise Operations"},{"role":"Factory Store Manager"},{"role":"Stock Manager"},{"role":"System Manager"}]
+}

@@ -53,6 +53,7 @@ doctype_js = {
 	"Material Receipt": "public/js/material_receipt.js",
 	"Delivery Note": "public/js/delivery_note.js",
 	"Material Request": "public/js/material_request.js",
+	"Warehouse": "public/js/warehouse.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -87,10 +88,9 @@ doctype_js = {
 # ----------
 
 # add methods and filters to jinja environment
-# jinja = {
-# 	"methods": "lumirise_custom.utils.jinja_methods",
-# 	"filters": "lumirise_custom.utils.jinja_filters"
-# }
+jinja = {
+	"methods": ["lumirise_custom.print_utils.code128_data_uri"],
+}
 
 # Installation
 # ------------
@@ -186,6 +186,7 @@ doc_events = {
 			"lumirise_custom.events.container_release_gate",
 		],
 		"on_submit": [
+			"lumirise_custom.rm_barcode.on_grn_submit",
 			# GRN posted -> RM Stores put-away card.
 			"lumirise_custom.task_engine.on_purchase_receipt_submit",
 			# GRN posted -> SO purchase status = Received.
@@ -204,6 +205,7 @@ doc_events = {
 		"on_cancel": [
 			"lumirise_custom.chain.revert_iqc_moved_to_rm",
 			"lumirise_custom.samples.revert_samples_from_lab",
+			"lumirise_custom.rm_barcode.on_grn_cancel",
 		],
 		# Stamp the SO/Indent/WO/PO traceability panel (fail-safe).
 		"validate": "lumirise_custom.traceability.stamp",
@@ -252,6 +254,9 @@ doc_events = {
 		# Item cost changed -> auto-refresh every BOM that uses it.
 		"on_update": "lumirise_custom.costing.item_on_update",
 	},
+	"Warehouse": {
+		"validate": "lumirise_custom.rm_barcode.validate_warehouse_location_barcode",
+	},
 	# Production posted -> auto-refresh produced/consumed item BOM costs +
 	# advance the material-flow handoff chain (issue -> receive -> transfer ->
 	# produce -> dispatch FG) by raising the next team's task.
@@ -261,10 +266,13 @@ doc_events = {
 		"before_validate": "lumirise_custom.stores.set_shopfloor_issue_type",
 		# Stamp the SO/Indent/WO/PO traceability panel from the SE's Work Order.
 		"validate": "lumirise_custom.traceability.stamp",
+		"before_submit": "lumirise_custom.rm_barcode.validate_stock_entry_packages",
 		"on_submit": [
+			"lumirise_custom.rm_barcode.on_stock_entry_submit",
 			"lumirise_custom.costing.on_stock_entry",
 			"lumirise_custom.task_engine.on_stock_entry_submit",
 		],
+		"on_cancel": "lumirise_custom.rm_barcode.on_stock_entry_cancel",
 	},
 	# Production Material Requisition raised -> task Stores to pick & issue.
 	"Material Request": {
@@ -325,8 +333,14 @@ doc_events = {
 		"validate": "lumirise_custom.traceability.stamp",
 	},
 	"IQC": {
+		"after_insert": "lumirise_custom.rm_barcode.link_packages_to_iqc",
+		"before_submit": "lumirise_custom.rm_barcode.validate_iqc_packages",
 		# Rejection at incoming QC -> Defect card to Purchase (vendor claim).
-		"on_submit": "lumirise_custom.task_engine.on_iqc_submit",
+		"on_submit": [
+			"lumirise_custom.rm_barcode.on_iqc_submit",
+			"lumirise_custom.task_engine.on_iqc_submit",
+		],
+		"on_cancel": "lumirise_custom.rm_barcode.on_iqc_cancel",
 		"validate": "lumirise_custom.traceability.stamp",
 	},
 	"Customer PDI": {
@@ -482,4 +496,3 @@ scheduler_events = {
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

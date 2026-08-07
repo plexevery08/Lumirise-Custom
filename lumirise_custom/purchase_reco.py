@@ -17,8 +17,7 @@ Purchase Order form (public/js/purchase_order.js).
 import frappe
 from frappe.utils import flt
 
-# RM stock store (kept consistent with indent.py / material_planning).
-RM_STORE = "Stores - L"
+from lumirise_custom.stock_utils import rm_stock_qty
 
 
 def _indent_names(po):
@@ -70,8 +69,7 @@ def _rm_price(item_code, qty=None):
 
 
 def _rm_stock(item_code):
-	return flt(frappe.db.get_value(
-		"Bin", {"item_code": item_code, "warehouse": RM_STORE}, "actual_qty"))
+	return rm_stock_qty(item_code)
 
 
 @frappe.whitelist()

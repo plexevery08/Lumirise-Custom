@@ -75,6 +75,7 @@ def _make_sample_stock_entry(iqc, row, purpose, from_wh, to_wh, note):
 		"uom": row.uom or config.item_uom(row.item_code),
 		"s_warehouse": from_wh,
 		"t_warehouse": to_wh,
+		"lr_rm_package": row.get("rm_package"),
 	})
 	se.flags.ignore_permissions = True
 	se.insert(ignore_permissions=True)
@@ -131,7 +132,7 @@ def _ensure_in_lab(iqc, row, source_wh=None):
 
 # --- 1. issue (pre-GRN, no stock) -------------------------------------------
 @frappe.whitelist()
-def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None):
+def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None, package_barcode=None):
 	"""Record a sample drawn from the inbound lot for testing. Pure custody log —
 	NO stock entry, because pre-GRN the goods are not yet owned. Works on a draft
 	IQC (sample drawn during Testing) or a submitted one (Passed, awaiting GRN)."""
@@ -146,6 +147,19 @@ def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None):
 		frappe.throw(_("Cannot issue a sample against a cancelled IQC."))
 	if iqc.status in (MOVED_TO_RM, "Rejected"):
 		frappe.throw(_("Samples are drawn pre-GRN — this IQC is already {0}.").format(iqc.status))
+	package_name = None
+	new_package = False
+	package_count = frappe.db.count("RM Receiving Package", {"inbound_logistics": iqc.inbound_logistics})
+	if package_count:
+		if not package_barcode:
+			frappe.throw(_("Scan the RM package from which this sample is taken."))
+		from lumirise_custom.rm_barcode import split_pre_grn_sample_package
+
+		package, new_package = split_pre_grn_sample_package(package_barcode, qty, iqc)
+		package_name = package.name
+		if item_code and item_code != package.item_code:
+			frappe.throw(_("Scanned package contains {0}, not {1}.").format(package.item_code, item_code))
+		item_code = package.item_code
 	if item_code not in {r.item_code for r in iqc.items}:
 		frappe.throw(_("{0} is not on this IQC's item list.").format(item_code))
 
@@ -158,6 +172,7 @@ def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None):
 		"parentfield": "sample_items",
 		"idx": next_idx,
 		"item_code": item_code,
+		"rm_package": package_name,
 		"item_name": frappe.db.get_value("Item", item_code, "item_name"),
 		"sample_qty": qty,
 		"uom": config.item_uom(item_code),
@@ -168,7 +183,7 @@ def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None):
 	})
 	row.flags.ignore_permissions = True
 	row.insert(ignore_permissions=True)
-	return {"row": row.name, "status": ISSUED}
+	return {"row": row.name, "status": ISSUED, "package": package_name, "new_package": new_package}
 
 
 # --- 2. realise to lab (on GRN submit) --------------------------------------

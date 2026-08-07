@@ -818,6 +818,72 @@ def _check_scheduler_alive():
 	return _result("", "", "", "pass", detail="Scheduler active.")
 
 
+@readonly_check("rm_barcode_ready", "RM barcode subsystem is deployment-ready", STOCK)
+def _check_rm_barcode_ready():
+	required_doctypes = ["RM Receiving Package", "RM Package Movement"]
+	required_fields = [
+		("Warehouse", "lr_location_barcode"),
+		("Stock Entry Detail", "lr_rm_package"),
+		("Purchase Receipt", "lr_iqc"),
+		("Item", "lr_rm_barcode_tracking"),
+	]
+	missing = [dt for dt in required_doctypes if not frappe.db.exists("DocType", dt)]
+	for dt, field in required_fields:
+		if not frappe.get_meta(dt).has_field(field):
+			missing.append(f"{dt}.{field}")
+	for name in ("Lumirise RM Package Label", "Lumirise RM Location Label"):
+		if not frappe.db.exists("Print Format", name):
+			missing.append(f"Print Format: {name}")
+	if not frappe.db.exists("Stock Entry Type", "RM Package Put Away"):
+		missing.append("Stock Entry Type: RM Package Put Away")
+	if missing:
+		return _result(
+			"", "", "", "fail",
+			detail="RM barcode schema is incomplete.",
+			remediation="Run bench migrate, clear cache, and rebuild assets.",
+			evidence=", ".join(missing),
+		)
+	settings = frappe.get_cached_doc(SETTINGS)
+	if not settings.get("enable_rm_barcode_system"):
+		return _result("", "", "", "warn", detail="RM barcode tools are installed but disabled.",
+			remediation="Enable RM Barcode System in Lumirise Operations Settings after UAT.")
+	if not settings.receiving_warehouse or not frappe.db.exists("Warehouse", settings.receiving_warehouse):
+		return _result("", "", "", "fail", detail="Receiving / Staging warehouse is not configured.",
+			remediation="Configure the dedicated RM Receiving warehouse before generating live labels.")
+	try:
+		import barcode
+	except ImportError:
+		return _result("", "", "", "fail", detail="python-barcode is unavailable, so labels cannot render.",
+			remediation="Run bench setup requirements, restart workers, then retry the label print.")
+	tracked_without_batch = frappe.db.sql(
+		"""SELECT name FROM `tabItem` WHERE COALESCE(lr_rm_barcode_tracking,0)=1
+		AND COALESCE(has_batch_no,0)=0 LIMIT 10""", as_dict=True
+	)
+	if tracked_without_batch and settings.get("require_batch_for_rm_packages"):
+		return _result("", "", "", "fail", detail="Tracked RM items exist without ERPNext Batch enabled.",
+			remediation="Enable Has Batch No for these items before generating labels.",
+			evidence=", ".join(r.name for r in tracked_without_batch))
+	if settings.get("enforce_rm_package_scan"):
+		rm_lft, rm_rgt = frappe.db.get_value("Warehouse", settings.rm_warehouse, ["lft", "rgt"])
+		unlabelled = frappe.db.sql(
+			"""SELECT COUNT(*) FROM `tabBin` b JOIN `tabItem` i ON i.name=b.item_code
+			JOIN `tabWarehouse` w ON w.name=b.warehouse
+			LEFT JOIN (
+				SELECT item_code, current_warehouse, SUM(remaining_qty) AS package_qty
+				FROM `tabRM Receiving Package` WHERE status='Stored'
+				GROUP BY item_code, current_warehouse
+			) p ON p.item_code=b.item_code AND p.current_warehouse=b.warehouse
+			WHERE COALESCE(i.lr_rm_barcode_tracking,0)=1 AND b.actual_qty>0
+			AND w.lft >= %s AND w.rgt <= %s
+			AND ABS(b.actual_qty-COALESCE(p.package_qty,0))>0.001"""
+			, (rm_lft, rm_rgt)
+		)[0][0]
+		if unlabelled:
+			return _result("", "", "", "fail", detail=f"{unlabelled} tracked item/location stock balances have no active package.",
+				remediation="Create and reconcile opening-stock package labels; keep enforcement off until the count is zero.")
+	return _result("", "", "", "pass", detail="Schema, settings and tracked-item batch prerequisites are valid.")
+
+
 @readonly_check("error_log_spike", "Error Log is not spiking", SCHEDULER)
 def _check_error_log_spike():
 	threshold = cint(frappe.db.get_single_value(SETTINGS, "health_error_log_threshold")) or 50

@@ -1,0 +1,8 @@
+{
+ "creation":"2026-08-07 00:00:00.000000","custom_format":1,"disabled":0,
+ "doc_type":"Warehouse","doctype":"Print Format","docstatus":0,"font_size":10,
+ "html":"<div style=\"width:98mm;height:48mm;padding:4mm;font-family:Arial,sans-serif;box-sizing:border-box;border:2px solid #111;text-align:center;overflow:hidden\"><div style=\"font-size:10px;font-weight:bold\">LUMIRISE RM LOCATION</div><div style=\"font-size:22px;font-weight:bold;margin:2mm 0\">{{ doc.warehouse_name }}</div><img style=\"width:88mm;height:18mm;object-fit:fill\" src=\"{{ code128_data_uri(doc.lr_location_barcode or doc.name) }}\"><div style=\"font-size:13px;font-weight:bold;letter-spacing:1px\">{{ doc.lr_location_barcode or doc.name }}</div></div>",
+ "idx":0,"line_breaks":0,"margin_bottom":0,"margin_left":0,"margin_right":0,"margin_top":0,
+ "modified":"2026-08-07 00:00:00.000000","modified_by":"Administrator","module":"Lumirise Custom",
+ "name":"Lumirise RM Location Label","owner":"Administrator","print_format_type":"Jinja","raw_printing":0,"standard":"Yes"
+}

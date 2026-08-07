@@ -12,10 +12,10 @@ import json
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import flt, nowdate, add_days
+from frappe.utils import add_days, flt, nowdate
 
-COMPANY = "Lumirise"
-RM_STORE = "Stores - L"
+from lumirise_custom import defaults as config
+from lumirise_custom.stock_utils import inbound_target_warehouse, rm_stock_qty
 
 
 class Indent(Document):
@@ -47,7 +47,7 @@ def get_consolidated_po_items(indents):
 		for row in ind.items:
 			if row.model:
 				models.add(row.model)
-			uom = row.uom or "Nos"
+			uom = row.uom or config.item_uom(row.item_code)
 			key = (row.item_code, uom)
 			if key not in agg:
 				agg[key] = 0.0
@@ -79,7 +79,7 @@ def get_consolidated_po_items(indents):
 			"stock_uom": (meta.stock_uom if meta else uom) or uom,
 			"conversion_factor": 1,
 			"schedule_date": add_days(nowdate(), 15),
-			"warehouse": RM_STORE,
+			"warehouse": inbound_target_warehouse(),
 		})
 
 	warnings = _reconcile_against_bom(models, ordered_items)
@@ -101,7 +101,7 @@ def _reconcile_against_bom(models, ordered_items):
 		missing = [
 			i for i in bom_items
 			if i not in ordered_items
-			and flt(frappe.db.get_value("Bin", {"item_code": i, "warehouse": RM_STORE}, "actual_qty")) <= 0
+			and rm_stock_qty(i) <= 0
 		]
 		if missing:
 			warnings.append({"model": model, "missing_from_indent": missing})
@@ -134,7 +134,7 @@ def get_indent_items(indent):
 	items = []
 	for row in ind.items:
 		meta = item_meta.get(row.item_code)
-		uom = row.uom or "Nos"
+		uom = row.uom or config.item_uom(row.item_code)
 		items.append({
 			"item_code": row.item_code,
 			"item_name": (meta.item_name if meta else None) or row.item_code,
@@ -145,7 +145,7 @@ def get_indent_items(indent):
 			"conversion_factor": 1,
 			"model": row.model,
 			"schedule_date": row.required_date or add_days(nowdate(), 15),
-			"warehouse": RM_STORE,
+			"warehouse": inbound_target_warehouse(),
 		})
 	return {"indent": indent, "items": items}
 
@@ -178,7 +178,7 @@ def make_purchase_plan(indents):
 		for row in ind.items:
 			if row.model:
 				models.add(row.model)
-			uom = row.uom or "Nos"
+			uom = row.uom or config.item_uom(row.item_code)
 			key = (row.item_code, uom)
 			if key not in agg:
 				agg[key] = {"qty": 0.0, "indents": set(), "model": row.model,
@@ -198,7 +198,7 @@ def make_purchase_plan(indents):
 			"uom": uom,
 			"supplier": _default_supplier(item_code),
 			"schedule_date": d["required_date"] or add_days(nowdate(), 15),
-			"warehouse": RM_STORE,
+			"warehouse": inbound_target_warehouse(),
 			"source_indents": ", ".join(sorted(d["indents"])),
 			"model": d["model"],
 		})

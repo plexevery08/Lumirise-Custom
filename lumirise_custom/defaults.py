@@ -144,6 +144,9 @@ def form_warehouse_defaults():
 			return None
 
 	return {
+		"rm": _safe(rm_warehouse),
+		"shop_floor": _safe(shop_floor_warehouse),
+		"receiving": _safe(receiving_warehouse),
 		"dispatch_fg": _safe(dispatch_fg_warehouse),
 		"production_fg": _safe(fg_warehouse),
 		"pdi": _safe(pdi_warehouse),

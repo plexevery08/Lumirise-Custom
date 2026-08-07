@@ -23,6 +23,53 @@ frappe.ui.form.on("Stock Entry", {
 	},
 
 	refresh(frm) {
+		if (frm.doc.docstatus === 0) {
+			frm.add_custom_button(__("Scan RM Package"), () => {
+				frappe.prompt(
+					[{ fieldname: "package_barcode", label: __("Package Barcode"), fieldtype: "Data", reqd: 1 }],
+					(v) => frappe.call({
+						method: "lumirise_custom.rm_barcode.get_package_scan_context",
+						args: v,
+					}).then(async (r) => {
+						let p = r.message;
+						const row = (frm.doc.items || []).find((d) =>
+							d.item_code === p.item_code && d.s_warehouse === p.current_warehouse && !d.lr_rm_package
+						);
+						if (!row) {
+							frappe.throw(__("No unscanned row for item {0} from {1}.", [p.item_code, p.current_warehouse]));
+						}
+						const requested = flt(row.qty);
+						let scanned = Math.min(requested, flt(p.remaining_qty));
+						if (scanned < flt(p.remaining_qty)) {
+							const split = await frappe.call({
+								method: "lumirise_custom.rm_barcode.split_package_for_issue",
+								args: { package_barcode: p.barcode, qty: scanned },
+								freeze: true,
+								freeze_message: __("Creating partial-pick package…"),
+							});
+							p = split.message.package;
+							frappe.msgprint(__("Partial pick created {0}. Print and attach this new label to the issued material.", [p.name]));
+							frappe.utils.print("RM Receiving Package", p.name, "Lumirise RM Package Label", false);
+						}
+						if (requested > scanned) {
+							const remainder = frm.add_child("items");
+							["item_code", "item_name", "s_warehouse", "t_warehouse", "uom", "stock_uom", "conversion_factor"].forEach((f) => {
+								remainder[f] = row[f];
+							});
+							remainder.qty = requested - scanned;
+						}
+						frappe.model.set_value(row.doctype, row.name, "qty", scanned);
+						frappe.model.set_value(row.doctype, row.name, "lr_rm_package", p.name);
+						frappe.model.set_value(row.doctype, row.name, "batch_no", p.batch_no);
+						frappe.model.set_value(row.doctype, row.name, "use_serial_batch_fields", p.batch_no ? 1 : 0);
+						frm.refresh_field("items");
+						frappe.show_alert({ message: __("Scanned {0}: {1} {2}", [p.name, scanned, p.uom || ""]), indicator: "green" });
+					}),
+					__("Scan RM Package"),
+					__("Apply")
+				);
+			}, __("Barcode"));
+		}
 		if (frm.doc.docstatus === 1 && frm.doc.stock_entry_type === "Material Issue to Shop Floor") {
 			frm.add_custom_button(__("Acknowledge Receipt (Material Receipt)"), () => {
 				frappe.model.open_mapped_doc({

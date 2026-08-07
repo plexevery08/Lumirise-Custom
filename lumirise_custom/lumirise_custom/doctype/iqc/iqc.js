@@ -44,6 +44,7 @@ function sample_run(frm, method, args, freeze_message) {
 			if (r && r.message) {
 				frappe.show_alert({ message: __("Done"), indicator: "green" });
 			}
+			return r;
 		});
 }
 
@@ -55,6 +56,7 @@ function issue_sample_prompt(frm) {
 	}
 	frappe.prompt(
 		[
+			{ fieldname: "package_barcode", label: __("RM Package Barcode"), fieldtype: "Data", description: __("Required when Lumirise package labels exist for this consignment.") },
 			{ fieldname: "item_code", label: __("Item"), fieldtype: "Select", options: item_codes.join("\n"), reqd: 1, default: item_codes[0] },
 			{ fieldname: "sample_qty", label: __("Sample Qty"), fieldtype: "Float", reqd: 1 },
 			{ fieldname: "taken_by", label: __("Taken By"), fieldtype: "Link", options: "User", reqd: 1, default: frappe.session.user },
@@ -64,9 +66,14 @@ function issue_sample_prompt(frm) {
 			sample_run(
 				frm,
 				"issue_sample",
-				{ docname: frm.doc.name, item_code: v.item_code, sample_qty: v.sample_qty, taken_by: v.taken_by, remarks: v.remarks },
+				{ docname: frm.doc.name, item_code: v.item_code, package_barcode: v.package_barcode, sample_qty: v.sample_qty, taken_by: v.taken_by, remarks: v.remarks },
 				__("Recording sample…")
-			),
+			).then((r) => {
+				if (r.message && r.message.new_package) {
+					frappe.msgprint(__("Sample package {0} was created. Print and attach its label to the IQC sample.", [r.message.package]));
+					frappe.utils.print("RM Receiving Package", r.message.package, "Lumirise RM Package Label", false);
+				}
+			}),
 		__("Issue Sample (pre-GRN)"),
 		__("Record")
 	);
@@ -127,6 +134,31 @@ frappe.ui.form.on("IQC", {
 		}
 
 		add_sample_buttons(frm);
+		if (frm.doc.docstatus === 0) {
+			frm.add_custom_button(__("Scan Package Result"), () => {
+				frappe.prompt(
+					[
+						{ fieldname: "package_barcode", label: __("Package Barcode"), fieldtype: "Data", reqd: 1 },
+						{ fieldname: "accepted_qty", label: __("Accepted Qty"), fieldtype: "Float", reqd: 1 },
+						{ fieldname: "rejected_qty", label: __("Rejected Qty"), fieldtype: "Float", default: 0 },
+					],
+					(v) => frappe.call({
+						method: "lumirise_custom.rm_barcode.record_package_qc",
+						args: Object.assign({ iqc: frm.doc.name }, v),
+						freeze: true,
+						freeze_message: __("Recording package result…"),
+					}).then((r) => {
+						if (r.message.rejected_package) {
+							frappe.msgprint(__("Partial rejection created new package {0}. Print that label and attach it to the segregated rejected material.", [r.message.rejected_package]));
+							frappe.utils.print("RM Receiving Package", r.message.rejected_package, "Lumirise RM Package Label", false);
+						}
+						return frm.reload_doc();
+					}),
+					__("RM Package IQC"),
+					__("Record")
+				);
+			}, __("Barcode"));
+		}
 
 		// Submitted: GRN is the next step (unless wholly rejected or already done).
 		if (frm.doc.docstatus === 1) {
