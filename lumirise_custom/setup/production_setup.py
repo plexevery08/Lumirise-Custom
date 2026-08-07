@@ -18,6 +18,7 @@ import frappe
 # is_standard stays 0 so they never collide with native set_stock_entry_type().
 STOCK_ENTRY_TYPES = [
 	("Material Issue to Shop Floor", "Material Transfer"),
+	("RM Put Away", "Material Transfer"),
 	("Internal Stock Transfer to Line", "Material Transfer for Manufacture"),
 	("Receipt from Production", "Manufacture"),
 	("FG to Dispatch Transfer", "Material Transfer"),

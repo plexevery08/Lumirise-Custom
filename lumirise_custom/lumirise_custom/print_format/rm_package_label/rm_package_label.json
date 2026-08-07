@@ -1,0 +1,7 @@
+{
+ "doctype": "Print Format",
+ "doc_type": "RM Package",
+ "html": "<div style=\"width:72mm;padding:3mm;border:1px solid #222;text-align:center;font-family:Arial,sans-serif\"><div style=\"font-size:16px;font-weight:700\">LUMIRISE RM PACKAGE</div><div style=\"font-size:12px\">{{ doc.item_code }} · {{ doc.item_name or '' }}</div>{{ barcode_svg(doc.package_barcode) }}<div style=\"font-size:13px;font-weight:700\">{{ doc.package_barcode }}</div><div>Batch: {{ doc.batch_no }}</div><div>Qty: {{ doc.quantity }} {{ doc.uom or '' }}</div><div>Supplier lot: {{ doc.supplier_lot or '—' }}</div><div>Status: {{ doc.status }}</div></div>",
+ "name": "RM Package Label",
+ "standard": "Yes"
+}
