@@ -83,9 +83,12 @@ frappe.ui.form.on("Inbound Logistics", {
 							},
 							{
 								fieldname: "total_qty",
-								label: __("Total Qty in These Packages"),
+								label: __("Total Qty in These Packages (Stock UOM)"),
 								fieldtype: "Float",
 								reqd: 1,
+								description: __(
+									"Enter the quantity shown in the Item's Stock UOM."
+								),
 							},
 							{
 								fieldname: "package_type",

@@ -13,7 +13,8 @@ This module makes the sample accountable without corrupting the ledger:
   3. return_sample             -> IQC Lab -> disposition (the two the client named,
                                   plus scrap):
        Returned Intact          -> IQC Lab -> RM Store
-       Built into Finished Unit  -> IQC Lab -> Production FG Store
+       Built into Finished Unit  -> Material Issue from IQC Lab (RM consumed;
+                                    the production transaction receives the FG)
        Scrapped                  -> Material Issue out of IQC Lab (write-off)
 
 No double count: the GRN receives the accepted qty into RM exactly once; the sample
@@ -150,6 +151,7 @@ def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None, package
 		frappe.throw(_("Sample qty must be greater than zero."))
 	if not taken_by:
 		frappe.throw(_("Record who is taking the sample (Taken By)."))
+	frappe.db.sql("SELECT name FROM `tabIQC` WHERE name=%s FOR UPDATE", docname)
 	iqc = _load_iqc(docname)
 	if iqc.docstatus == 2:
 		frappe.throw(_("Cannot issue a sample against a cancelled IQC."))
@@ -193,7 +195,13 @@ def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None, package
 	)
 	row.flags.ignore_permissions = True
 	row.insert(ignore_permissions=True)
-	return {"row": row.name, "status": ISSUED, "package": package_name, "new_package": new_package}
+	return {
+		"row": row.name,
+		"status": ISSUED,
+		"package": package_name,
+		"new_package": new_package,
+		"source_package": package.parent_package if new_package else None,
+	}
 
 
 # --- 2. realise to lab (on GRN submit) --------------------------------------
@@ -273,6 +281,9 @@ def return_sample(docname, row_name, disposition):
 	frappe.has_permission("IQC", "write", docname, throw=True)
 	if disposition not in DISPOSITIONS:
 		frappe.throw(_("Choose a valid disposition: {0}.").format(", ".join(DISPOSITIONS)))
+	frappe.db.sql(
+		"SELECT name FROM `tabIQC Sample` WHERE name=%s AND parent=%s FOR UPDATE", (row_name, docname)
+	)
 	iqc = _load_iqc(docname)
 	row = _sample_row(iqc, row_name)
 	if row.status == RETURNED:
@@ -285,9 +296,10 @@ def return_sample(docname, row_name, disposition):
 		back = row.get("source_warehouse") or _received_warehouse(iqc, row.item_code)
 		se = _make_sample_stock_entry(iqc, row, "Material Transfer", lab, back, "returned intact to RM")
 	elif disposition == "Built into Finished Unit":
-		se = _make_sample_stock_entry(
-			iqc, row, "Material Transfer", lab, config.fg_warehouse(), "built into finished unit -> FG"
-		)
+		# This row is still the raw-material item. Moving it into an FG warehouse
+		# would falsely retain RM stock under an FG location. Consume the sample;
+		# the Work Order/Manufacture entry remains responsible for receiving the FG.
+		se = _make_sample_stock_entry(iqc, row, "Material Issue", lab, None, "consumed in test build")
 	else:  # Scrapped
 		se = _make_sample_stock_entry(iqc, row, "Material Issue", lab, None, "scrapped (write-off)")
 

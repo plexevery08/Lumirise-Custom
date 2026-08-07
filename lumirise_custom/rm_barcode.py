@@ -30,12 +30,55 @@ def _require_enabled():
 
 def _as_list(value):
 	if isinstance(value, str):
-		return json.loads(value)
-	return value or []
+		value = json.loads(value)
+	if isinstance(value, dict):
+		return [value]
+	if value is None:
+		return []
+	if not isinstance(value, list):
+		frappe.throw(_("Packages must be supplied as a list."))
+	return value
 
 
 def _clean_code(value, length=36):
 	return re.sub(r"[^A-Za-z0-9-]+", "-", value or "").strip("-")[:length]
+
+
+def _insert_package(values):
+	"""Create package records only through this service-controlled path."""
+	doc = frappe.get_doc(values)
+	doc.flags.rm_barcode_system_update = True
+	doc.insert(ignore_permissions=True)
+	return doc
+
+
+def _po_item_info(purchase_order, item_code):
+	"""Return the single PO row's UOM conversion used by package quantities.
+
+	Package quantities are always held in the Item stock UOM. The legacy inbound
+	and IQC grids use the PO UOM, so their quantities must cross this boundary
+	through the PO conversion factor.
+	"""
+	rows = frappe.get_all(
+		"Purchase Order Item",
+		filters={"parent": purchase_order, "parenttype": "Purchase Order", "item_code": item_code},
+		fields=["uom", "stock_uom", "conversion_factor"],
+	)
+	if len(rows) != 1:
+		frappe.throw(
+			_(
+				"Purchase Order {0} must contain exactly one row for item {1} before RM labels are generated."
+			).format(purchase_order, item_code)
+		)
+	row = rows[0]
+	factor = flt(row.conversion_factor)
+	if factor <= 0:
+		frappe.throw(
+			_("Invalid UOM conversion factor for item {0} on Purchase Order {1}.").format(
+				item_code, purchase_order
+			)
+		)
+	return frappe._dict(purchase_uom=row.uom, stock_uom=row.stock_uom, conversion_factor=factor)
 
 
 def _is_descendant(warehouse, parent):
@@ -46,6 +89,11 @@ def _is_descendant(warehouse, parent):
 	bounds = frappe.db.get_value("Warehouse", parent, ["lft", "rgt"], as_dict=True)
 	child = frappe.db.get_value("Warehouse", warehouse, ["lft", "rgt"], as_dict=True)
 	return bool(bounds and child and child.lft > bounds.lft and child.rgt < bounds.rgt)
+
+
+def _lock_warehouse(warehouse):
+	if warehouse:
+		frappe.db.sql("SELECT name FROM `tabWarehouse` WHERE name=%s FOR UPDATE", warehouse)
 
 
 def _get_or_create_batch(item_code, inbound, supplier_lot=None, manufacturing_date=None, expiry_date=None):
@@ -84,6 +132,7 @@ def create_receiving_packages(inbound_logistics, packages):
 	"""
 	_require_enabled()
 	frappe.has_permission("Inbound Logistics", "write", inbound_logistics, throw=True)
+	frappe.db.sql("SELECT name FROM `tabInbound Logistics` WHERE name=%s FOR UPDATE", inbound_logistics)
 	log = frappe.get_doc("Inbound Logistics", inbound_logistics)
 	if log.docstatus != 1 or log.status != "Reached Warehouse":
 		frappe.throw(_("Submit the Inbound Logistics and mark it Reached Warehouse first."))
@@ -95,8 +144,12 @@ def create_receiving_packages(inbound_logistics, packages):
 	draft_iqc = frappe.db.get_value("IQC", {"inbound_logistics": log.name, "docstatus": 0}, "name")
 
 	available = defaultdict(float)
+	item_info = {}
 	for row in log.items:
-		available[row.item_code] += flt(row.qty)
+		if row.item_code not in item_info:
+			item_info[row.item_code] = _po_item_info(log.purchase_order, row.item_code)
+		info = item_info[row.item_code]
+		available[row.item_code] += flt(row.qty) * info.conversion_factor
 	already = defaultdict(float)
 	for row in frappe.get_all(PACKAGE_DT, {"inbound_logistics": log.name}, ["item_code", "received_qty"]):
 		already[row.item_code] += flt(row.received_qty)
@@ -126,13 +179,15 @@ def create_receiving_packages(inbound_logistics, packages):
 		assigned = 0.0
 		for index in range(1, count + 1):
 			qty = flt(total - assigned, 6) if index == count else base
-			pkg = frappe.get_doc(
+			pkg = _insert_package(
 				{
 					"doctype": PACKAGE_DT,
 					"inbound_logistics": log.name,
 					"purchase_order": log.purchase_order,
 					"iqc": draft_iqc,
 					"item_code": item,
+					"purchase_uom": item_info[item].purchase_uom,
+					"conversion_factor": item_info[item].conversion_factor,
 					"batch_no": batch,
 					"supplier_lot": spec.get("supplier_lot"),
 					"manufacturing_date": spec.get("manufacturing_date"),
@@ -144,7 +199,7 @@ def create_receiving_packages(inbound_logistics, packages):
 					"remaining_qty": 0,
 					"status": "Pending IQC",
 				}
-			).insert(ignore_permissions=True)
+			)
 			_append_movement(pkg, "Received", qty, None, None, "Inbound Logistics", log.name)
 			_system_save(pkg)
 			created.append(pkg.name)
@@ -168,6 +223,7 @@ def create_opening_packages(
 	count, total = cint(package_count), flt(total_qty)
 	if count <= 0 or total <= 0:
 		frappe.throw(_("Package count and total quantity must be greater than zero."))
+	_lock_warehouse(warehouse)
 	_validate_location(warehouse, item_code, 0)
 	if batch_no and frappe.db.get_value("Batch", batch_no, "item") != item_code:
 		frappe.throw(_("Batch {0} does not belong to item {1}.").format(batch_no, item_code))
@@ -176,17 +232,27 @@ def create_opening_packages(
 	if batch_no and not cint(frappe.db.get_value("Item", item_code, "has_batch_no")):
 		frappe.throw(_("Item {0} is not batch-enabled.").format(item_code))
 	bin_qty = flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty"))
+	stock_qty = bin_qty
+	if batch_no:
+		from erpnext.stock.doctype.batch.batch import get_batch_qty
+
+		stock_qty = flt(get_batch_qty(batch_no=batch_no, warehouse=warehouse, item_code=item_code))
+	package_filters = ["item_code=%s", "current_warehouse=%s", "remaining_qty>0"]
+	package_values = [item_code, warehouse]
+	if batch_no:
+		package_filters.append("batch_no=%s")
+		package_values.append(batch_no)
 	represented = flt(
 		frappe.db.sql(
-			"""SELECT COALESCE(SUM(remaining_qty),0) FROM `tabRM Receiving Package`
-		WHERE item_code=%s AND current_warehouse=%s AND status='Stored'""",
-			(item_code, warehouse),
+			f"""SELECT COALESCE(SUM(remaining_qty),0) FROM `tabRM Receiving Package`
+		WHERE {" AND ".join(package_filters)}""",
+			package_values,
 		)[0][0]
 	)
-	if represented + total > bin_qty + 0.001:
+	if represented + total > stock_qty + 0.001:
 		frappe.throw(
-			_("Opening labels would represent {0}, but ERP stock in {1} is only {2}.").format(
-				represented + total, warehouse, bin_qty
+			_("Opening labels would represent {0}, but matching ERP stock in {1} is only {2}.").format(
+				represented + total, warehouse, stock_qty
 			)
 		)
 
@@ -194,12 +260,14 @@ def create_opening_packages(
 	base, assigned = flt(total / count, 6), 0.0
 	for index in range(1, count + 1):
 		qty = flt(total - assigned, 6) if index == count else base
-		pkg = frappe.get_doc(
+		pkg = _insert_package(
 			{
 				"doctype": PACKAGE_DT,
 				"is_opening_stock": 1,
 				"stock_reconciliation": stock_reconciliation,
 				"item_code": item_code,
+				"purchase_uom": frappe.db.get_value("Item", item_code, "stock_uom"),
+				"conversion_factor": 1,
 				"batch_no": batch_no,
 				"package_index": index,
 				"total_packages": count,
@@ -210,7 +278,7 @@ def create_opening_packages(
 				"status": "Stored",
 				"current_warehouse": warehouse,
 			}
-		).insert(ignore_permissions=True)
+		)
 		_append_movement(
 			pkg,
 			"Received",
@@ -232,7 +300,7 @@ def link_packages_to_iqc(doc, method=None):
 	for row in frappe.get_all(
 		PACKAGE_DT, filters={"inbound_logistics": doc.inbound_logistics}, fields=["name", "iqc"]
 	):
-		if not row.iqc:
+		if not row.iqc or cint(frappe.db.get_value("IQC", row.iqc, "docstatus")) == 2:
 			frappe.db.set_value(PACKAGE_DT, row.name, "iqc", doc.name, update_modified=False)
 
 
@@ -240,12 +308,23 @@ def link_packages_to_iqc(doc, method=None):
 def record_package_qc(iqc, package_barcode, accepted_qty, rejected_qty=0):
 	_require_enabled()
 	frappe.has_permission("IQC", "write", iqc, throw=True)
+	frappe.db.sql("SELECT name FROM `tabIQC` WHERE name=%s FOR UPDATE", iqc)
 	doc = frappe.get_doc("IQC", iqc)
 	if doc.docstatus != 0:
 		frappe.throw(_("Package results can only be scanned while the IQC is in Draft."))
-	pkg = _package_by_barcode(package_barcode)
+	if doc.status not in ("IQC Received", "Testing"):
+		frappe.throw(_("Package results can only be scanned while IQC is Received or Testing."))
+	pkg = _package_by_barcode(package_barcode, lock=True)
 	if pkg.inbound_logistics != doc.inbound_logistics:
 		frappe.throw(_("Package {0} does not belong to this inbound consignment.").format(pkg.name))
+	if pkg.iqc and pkg.iqc != doc.name:
+		frappe.throw(_("Package {0} is already linked to IQC {1}.").format(pkg.name, pkg.iqc))
+	if pkg.status != "Pending IQC" or flt(pkg.accepted_qty) or flt(pkg.rejected_qty):
+		frappe.throw(
+			_(
+				"Package {0} already has an IQC result. Use Reset Package Result before scanning it again."
+			).format(pkg.name)
+		)
 	accepted, rejected = flt(accepted_qty), flt(rejected_qty)
 	if accepted < 0 or rejected < 0 or abs((accepted + rejected) - flt(pkg.received_qty)) > 0.001:
 		frappe.throw(
@@ -261,13 +340,17 @@ def record_package_qc(iqc, package_barcode, accepted_qty, rejected_qty=0):
 		pkg.accepted_qty = accepted
 		pkg.rejected_qty = 0
 		pkg.status = "IQC Passed"
-		rejected_package = frappe.get_doc(
+		rejected_package = _insert_package(
 			{
 				"doctype": PACKAGE_DT,
 				"inbound_logistics": pkg.inbound_logistics,
 				"iqc": doc.name,
 				"purchase_order": pkg.purchase_order,
+				"parent_package": pkg.name,
+				"split_reason": "IQC Rejection",
 				"item_code": pkg.item_code,
+				"purchase_uom": pkg.purchase_uom,
+				"conversion_factor": pkg.conversion_factor,
 				"batch_no": pkg.batch_no,
 				"supplier_lot": pkg.supplier_lot,
 				"manufacturing_date": pkg.manufacturing_date,
@@ -284,7 +367,10 @@ def record_package_qc(iqc, package_barcode, accepted_qty, rejected_qty=0):
 					pkg.name, original_received
 				),
 			}
-		).insert(ignore_permissions=True)
+		)
+		_append_movement(pkg, "Split", rejected, None, None, PACKAGE_DT, rejected_package.name)
+		_append_movement(rejected_package, "Split", rejected, None, None, PACKAGE_DT, pkg.name)
+		_system_save(rejected_package)
 	else:
 		pkg.accepted_qty = accepted
 		pkg.rejected_qty = rejected
@@ -298,32 +384,92 @@ def record_package_qc(iqc, package_barcode, accepted_qty, rejected_qty=0):
 	return result
 
 
+@frappe.whitelist()
+def reset_package_qc(iqc, package_barcode):
+	"""Clear one mistaken package result while the IQC is still a draft.
+
+	Physical child packages created by a partial rejection remain separate labels;
+	each can be reset and rescanned independently so the split audit is preserved.
+	"""
+	_require_enabled()
+	frappe.has_permission("IQC", "write", iqc, throw=True)
+	frappe.db.sql("SELECT name FROM `tabIQC` WHERE name=%s FOR UPDATE", iqc)
+	doc = frappe.get_doc("IQC", iqc)
+	if doc.docstatus != 0:
+		frappe.throw(_("Package results can only be reset while the IQC is in Draft."))
+	if doc.status not in ("IQC Received", "Testing"):
+		frappe.throw(_("Package results can only be reset while IQC is Received or Testing."))
+	pkg = _package_by_barcode(package_barcode, lock=True)
+	if pkg.iqc != doc.name or pkg.inbound_logistics != doc.inbound_logistics:
+		frappe.throw(_("Package {0} does not belong to IQC {1}.").format(pkg.name, doc.name))
+	if pkg.purchase_receipt:
+		frappe.throw(_("Package {0} is already linked to GRN {1}.").format(pkg.name, pkg.purchase_receipt))
+	pkg.accepted_qty = 0
+	pkg.rejected_qty = 0
+	pkg.remaining_qty = 0
+	pkg.status = "Pending IQC"
+	pkg.last_scan_on = now_datetime()
+	pkg.last_scan_by = frappe.session.user
+	_system_save(pkg)
+	_sync_iqc_totals(doc)
+	return _package_payload(pkg)
+
+
 def _sync_iqc_totals(iqc):
 	totals = defaultdict(lambda: [0.0, 0.0])
-	for pkg in frappe.get_all(PACKAGE_DT, {"iqc": iqc.name}, ["item_code", "accepted_qty", "rejected_qty"]):
-		totals[pkg.item_code][0] += flt(pkg.accepted_qty)
-		totals[pkg.item_code][1] += flt(pkg.rejected_qty)
+	for pkg in frappe.get_all(
+		PACKAGE_DT,
+		{"iqc": iqc.name},
+		["item_code", "accepted_qty", "rejected_qty", "conversion_factor"],
+	):
+		factor = flt(pkg.conversion_factor) or 1
+		totals[pkg.item_code][0] += flt(pkg.accepted_qty) / factor
+		totals[pkg.item_code][1] += flt(pkg.rejected_qty) / factor
 	for row in iqc.items:
 		if row.item_code in totals:
-			row.accepted_qty, row.rejected_qty = totals[row.item_code]
-	iqc.save(ignore_permissions=True)
+			accepted, rejected = totals[row.item_code]
+			frappe.db.set_value(
+				"IQC Item",
+				row.name,
+				{"accepted_qty": accepted, "rejected_qty": rejected},
+				update_modified=False,
+			)
 
 
 def validate_iqc_packages(doc, method=None):
+	frappe.db.sql("SELECT name FROM `tabInbound Logistics` WHERE name=%s FOR UPDATE", doc.inbound_logistics)
+	package_fields = [
+		"name",
+		"item_code",
+		"received_qty",
+		"accepted_qty",
+		"rejected_qty",
+		"conversion_factor",
+	]
 	packages = frappe.get_all(
 		PACKAGE_DT,
 		{"inbound_logistics": doc.inbound_logistics},
-		["name", "item_code", "received_qty", "accepted_qty", "rejected_qty"],
+		package_fields,
 	)
 	if not packages:
 		return
+	for package_name in sorted(pkg.name for pkg in packages):
+		frappe.db.sql("SELECT name FROM `tabRM Receiving Package` WHERE name=%s FOR UPDATE", package_name)
+	packages = frappe.get_all(PACKAGE_DT, {"inbound_logistics": doc.inbound_logistics}, package_fields)
+	doc_items = [row.item_code for row in doc.items]
+	if len(doc_items) != len(set(doc_items)):
+		frappe.throw(_("Package-controlled IQC requires exactly one IQC row per item."))
+	package_items = {pkg.item_code for pkg in packages}
+	if package_items != set(doc_items):
+		frappe.throw(_("IQC item rows must exactly match the labelled package items."))
 	package_totals = defaultdict(lambda: [0.0, 0.0, 0.0])
 	for pkg in packages:
 		if abs(flt(pkg.received_qty) - flt(pkg.accepted_qty) - flt(pkg.rejected_qty)) > 0.001:
 			frappe.throw(_("Scan a complete IQC result for package {0} before submitting.").format(pkg.name))
-		package_totals[pkg.item_code][0] += flt(pkg.received_qty)
-		package_totals[pkg.item_code][1] += flt(pkg.accepted_qty)
-		package_totals[pkg.item_code][2] += flt(pkg.rejected_qty)
+		factor = flt(pkg.conversion_factor) or 1
+		package_totals[pkg.item_code][0] += flt(pkg.received_qty) / factor
+		package_totals[pkg.item_code][1] += flt(pkg.accepted_qty) / factor
+		package_totals[pkg.item_code][2] += flt(pkg.rejected_qty) / factor
 	for row in doc.items:
 		received, accepted, rejected = package_totals[row.item_code]
 		if abs(received - flt(row.received_qty)) > 0.001:
@@ -361,13 +507,19 @@ def on_iqc_cancel(doc, method=None):
 def prepare_grn_rows(iqc, pr):
 	"""Replace accepted PR quantities with one row per item/batch package group."""
 	packages = frappe.get_all(
-		PACKAGE_DT, {"iqc": iqc.name}, ["name", "item_code", "batch_no", "accepted_qty", "rejected_qty"]
+		PACKAGE_DT,
+		{"iqc": iqc.name},
+		["name", "item_code", "batch_no", "accepted_qty", "rejected_qty", "conversion_factor"],
 	)
 	if not packages:
 		return pr
-	groups = defaultdict(lambda: {"accepted": 0.0, "rejected": 0.0, "packages": []})
+	groups = defaultdict(lambda: {"accepted": 0.0, "rejected": 0.0, "packages": [], "factor": None})
 	for pkg in packages:
 		key = (pkg.item_code, pkg.batch_no or "")
+		factor = flt(pkg.conversion_factor) or 1
+		if groups[key]["factor"] not in (None, factor):
+			frappe.throw(_("Package UOM conversions disagree for item {0} batch {1}.").format(*key))
+		groups[key]["factor"] = factor
 		groups[key]["accepted"] += flt(pkg.accepted_qty)
 		groups[key]["rejected"] += flt(pkg.rejected_qty)
 		groups[key]["packages"].append(pkg.name)
@@ -378,6 +530,7 @@ def prepare_grn_rows(iqc, pr):
 		source.setdefault(row.item_code, row.as_dict())
 		source_counts[row.item_code] += 1
 	new_rows = []
+	staging = config.receiving_warehouse()
 	for (item, batch), values in groups.items():
 		if item not in source:
 			frappe.throw(_("No Purchase Order row was mapped for package item {0}.").format(item))
@@ -392,11 +545,18 @@ def prepare_grn_rows(iqc, pr):
 			for key, value in source[item].items()
 			if key not in {"name", "parent", "parenttype", "parentfield", "idx", "docstatus"}
 		}
+		factor = values["factor"] or flt(source[item].get("conversion_factor")) or 1
+		accepted = values["accepted"] / factor
+		rejected = values["rejected"] / factor
+		if values["accepted"] and not staging:
+			frappe.throw(_("Configure the Receiving / Staging warehouse before creating the GRN."))
 		data.update(
 			{
-				"qty": values["accepted"],
-				"received_qty": values["accepted"] + values["rejected"],
-				"rejected_qty": values["rejected"],
+				"qty": accepted,
+				"received_qty": accepted + rejected,
+				"rejected_qty": rejected,
+				"warehouse": staging or source[item].get("warehouse"),
+				"rejected_warehouse": config.rejection_warehouse(required=True) if rejected else None,
 				"batch_no": batch or None,
 				"use_serial_batch_fields": 1 if batch else 0,
 				"lr_rm_package_refs": "\n".join(values["packages"]),
@@ -409,10 +569,78 @@ def prepare_grn_rows(iqc, pr):
 	return pr
 
 
+def validate_grn_packages(doc, method=None):
+	"""Make the GRN rows authoritative and prevent API/manual tampering."""
+	enforce = config.flag("enforce_rm_package_scan", default=False)
+	tracked_rows = [
+		row for row in doc.items if cint(frappe.db.get_value("Item", row.item_code, "lr_rm_barcode_tracking"))
+	]
+	if not doc.get("lr_iqc"):
+		if enforce and tracked_rows:
+			frappe.throw(_("Tracked RM receipts must be created from a submitted IQC."))
+		return
+	iqc = frappe.get_doc("IQC", doc.lr_iqc)
+	frappe.db.sql("SELECT name FROM `tabIQC` WHERE name=%s FOR UPDATE", iqc.name)
+	iqc.reload()
+	if iqc.docstatus != 1 or iqc.status not in ("Passed", "Moved to RM"):
+		frappe.throw(_("Linked IQC {0} is not submitted and passed.").format(iqc.name))
+	if doc.get("lr_inbound_logistics") != iqc.inbound_logistics:
+		frappe.throw(_("GRN inbound reference does not match IQC {0}.").format(iqc.name))
+
+	expected = set(frappe.get_all(PACKAGE_DT, {"iqc": iqc.name}, pluck="name"))
+	if not expected:
+		if enforce and tracked_rows:
+			frappe.throw(_("Generate and scan RM package labels before submitting this tracked GRN."))
+		return
+	for package_name in sorted(expected):
+		frappe.db.sql("SELECT name FROM `tabRM Receiving Package` WHERE name=%s FOR UPDATE", package_name)
+	seen = set()
+	for row in doc.items:
+		accepted_stock = rejected_stock = 0.0
+		for name in filter(None, (row.get("lr_rm_package_refs") or "").splitlines()):
+			if name in seen:
+				frappe.throw(_("RM package {0} appears on more than one GRN row.").format(name))
+			seen.add(name)
+			pkg = frappe.get_doc(PACKAGE_DT, name)
+			if pkg.iqc != iqc.name or pkg.item_code != row.item_code:
+				frappe.throw(_("RM package {0} does not match this GRN row/IQC.").format(name))
+			if pkg.status not in ("IQC Passed", "Rejected"):
+				frappe.throw(_("RM package {0} is not ready for GRN (status {1}).").format(name, pkg.status))
+			if (pkg.batch_no or "") != (row.get("batch_no") or ""):
+				frappe.throw(_("GRN batch does not match package {0}.").format(name))
+			if pkg.purchase_receipt and pkg.purchase_receipt != doc.name:
+				frappe.throw(
+					_("RM package {0} is already received on {1}.").format(name, pkg.purchase_receipt)
+				)
+			accepted_stock += flt(pkg.accepted_qty)
+			rejected_stock += flt(pkg.rejected_qty)
+		factor = flt(row.conversion_factor) or 1
+		if abs(accepted_stock - flt(row.qty) * factor) > 0.001:
+			frappe.throw(
+				_("GRN accepted quantity does not match its RM packages on row {0}.").format(row.idx)
+			)
+		if abs(rejected_stock - flt(row.rejected_qty) * factor) > 0.001:
+			frappe.throw(
+				_("GRN rejected quantity does not match its RM packages on row {0}.").format(row.idx)
+			)
+		if accepted_stock and row.warehouse != config.receiving_warehouse():
+			frappe.throw(
+				_("Accepted RM packages must first enter the configured Receiving / Staging warehouse.")
+			)
+		if rejected_stock and row.rejected_warehouse != config.rejection_warehouse(required=True):
+			frappe.throw(_("Rejected RM packages must enter the configured rejection warehouse."))
+	if seen != expected:
+		frappe.throw(
+			_("GRN package references do not exactly match all packages inspected by IQC {0}.").format(
+				iqc.name
+			)
+		)
+
+
 def on_grn_submit(doc, method=None):
 	if not doc.get("lr_iqc"):
 		return
-	staging = config.receiving_warehouse() or config.rm_warehouse()
+	staging = config.receiving_warehouse()
 	for row in doc.items:
 		for name in (row.get("lr_rm_package_refs") or "").splitlines():
 			if not name:
@@ -454,6 +682,7 @@ def putaway_package(package_barcode, location_barcode):
 	frappe.has_permission("Stock Entry", "create", throw=True)
 	pkg = _package_by_barcode(package_barcode, lock=True)
 	location = _warehouse_by_barcode(location_barcode)
+	_lock_warehouse(location)
 	if pkg.status != "Ready to Put Away":
 		frappe.throw(
 			_("Package {0} is not ready for put-away (current status: {1}).").format(pkg.name, pkg.status)
@@ -495,6 +724,7 @@ def putaway_package(package_barcode, location_barcode):
 def get_package_scan_context(package_barcode, location_barcode=None):
 	_require_enabled()
 	pkg = _package_by_barcode(package_barcode)
+	frappe.has_permission(PACKAGE_DT, "read", pkg.name, throw=True)
 	location = _warehouse_by_barcode(location_barcode) if location_barcode else None
 	if location:
 		_validate_location(location, pkg.item_code, 0)
@@ -514,7 +744,7 @@ def split_package_for_issue(package_barcode, qty):
 		frappe.throw(_("Only stored or in-production material can be split for movement."))
 	if qty <= 0 or qty >= flt(pkg.remaining_qty) - 0.001:
 		frappe.throw(_("Split quantity must be greater than zero and less than the package balance."))
-	child = frappe.get_doc(
+	child = _insert_package(
 		{
 			"doctype": PACKAGE_DT,
 			"is_opening_stock": pkg.is_opening_stock,
@@ -524,7 +754,11 @@ def split_package_for_issue(package_barcode, qty):
 			"purchase_receipt": pkg.purchase_receipt,
 			"purchase_receipt_item": pkg.purchase_receipt_item,
 			"stock_reconciliation": pkg.stock_reconciliation,
+			"parent_package": pkg.name,
+			"split_reason": "Partial Issue",
 			"item_code": pkg.item_code,
+			"purchase_uom": pkg.purchase_uom,
+			"conversion_factor": pkg.conversion_factor,
 			"batch_no": pkg.batch_no,
 			"supplier_lot": pkg.supplier_lot,
 			"manufacturing_date": pkg.manufacturing_date,
@@ -539,7 +773,7 @@ def split_package_for_issue(package_barcode, qty):
 			"current_warehouse": pkg.current_warehouse,
 			"remarks": _("Split from {0} for a partial production issue.").format(pkg.name),
 		}
-	).insert(ignore_permissions=True)
+	)
 	pkg.received_qty = flt(pkg.received_qty) - qty
 	pkg.accepted_qty = flt(pkg.accepted_qty) - qty
 	pkg.remaining_qty = flt(pkg.remaining_qty) - qty
@@ -563,13 +797,17 @@ def split_pre_grn_sample_package(package_barcode, qty, iqc):
 	if abs(qty - flt(pkg.received_qty)) <= 0.001:
 		return pkg, False
 
-	child = frappe.get_doc(
+	child = _insert_package(
 		{
 			"doctype": PACKAGE_DT,
 			"inbound_logistics": pkg.inbound_logistics,
 			"iqc": iqc.name,
 			"purchase_order": pkg.purchase_order,
+			"parent_package": pkg.name,
+			"split_reason": "IQC Sample",
 			"item_code": pkg.item_code,
+			"purchase_uom": pkg.purchase_uom,
+			"conversion_factor": pkg.conversion_factor,
 			"batch_no": pkg.batch_no,
 			"supplier_lot": pkg.supplier_lot,
 			"manufacturing_date": pkg.manufacturing_date,
@@ -580,7 +818,7 @@ def split_pre_grn_sample_package(package_barcode, qty, iqc):
 			"status": "Pending IQC",
 			"remarks": _("IQC sample split from {0}.").format(pkg.name),
 		}
-	).insert(ignore_permissions=True)
+	)
 	pkg.received_qty = flt(pkg.received_qty) - qty
 	_append_movement(pkg, "Split", qty, None, None, PACKAGE_DT, child.name)
 	_append_movement(child, "Split", qty, None, None, PACKAGE_DT, pkg.name)
@@ -594,6 +832,15 @@ def validate_stock_entry_packages(doc, method=None):
 		return
 	enforce = config.flag("enforce_rm_package_scan", default=False)
 	rm_root = config.rm_warehouse() if enforce else None
+	package_names = sorted({row.lr_rm_package for row in doc.items if row.get("lr_rm_package")})
+	for package_name in package_names:
+		frappe.db.sql("SELECT name FROM `tabRM Receiving Package` WHERE name=%s FOR UPDATE", package_name)
+	putaway_totals = defaultdict(float)
+	if doc.stock_entry_type == PUTAWAY_TYPE:
+		for row in doc.items:
+			putaway_totals[row.t_warehouse] += flt(row.qty)
+		for warehouse in sorted(filter(None, putaway_totals)):
+			_lock_warehouse(warehouse)
 	seen = defaultdict(float)
 	for row in doc.items:
 		tracked = cint(frappe.db.get_value("Item", row.item_code, "lr_rm_barcode_tracking"))
@@ -615,6 +862,12 @@ def validate_stock_entry_packages(doc, method=None):
 		if not row.get("lr_rm_package"):
 			continue
 		pkg = frappe.get_doc(PACKAGE_DT, row.lr_rm_package)
+		if pkg.status in ("Pending IQC", "IQC Passed", "Rejected", "Consumed"):
+			frappe.throw(
+				_("Row {0}: package {1} cannot move while its status is {2}.").format(
+					row.idx, pkg.name, pkg.status
+				)
+			)
 		if pkg.item_code != row.item_code:
 			frappe.throw(
 				_("Row {0}: package {1} contains {2}, not {3}.").format(
@@ -631,6 +884,29 @@ def validate_stock_entry_packages(doc, method=None):
 			frappe.throw(
 				_("Row {0}: batch must be {1} for package {2}.").format(row.idx, pkg.batch_no, pkg.name)
 			)
+		if doc.stock_entry_type == PUTAWAY_TYPE:
+			if pkg.status != "Ready to Put Away" or row.s_warehouse != config.receiving_warehouse():
+				frappe.throw(
+					_("Package {0} is not ready in Receiving / Staging for put-away.").format(pkg.name)
+				)
+			_validate_location(row.t_warehouse, row.item_code, putaway_totals[row.t_warehouse])
+		elif pkg.status == "Ready to Put Away":
+			is_sample = frappe.db.exists("IQC Sample", {"rm_package": pkg.name, "status": "Issued"})
+			if row.t_warehouse != config.iqc_lab_warehouse() or not is_sample:
+				frappe.throw(_("Package {0} must be put away by scanning an RM rack.").format(pkg.name))
+		if doc.stock_entry_type == ISSUE_TYPE:
+			shop_floor = config.shop_floor_warehouse()
+			valid_target = (
+				row.t_warehouse == shop_floor
+				or _is_descendant(row.t_warehouse, shop_floor)
+				or config.is_valid_line(row.t_warehouse)
+			)
+			if pkg.status != "Stored" or not valid_target:
+				frappe.throw(
+					_("Package {0} must move from an RM rack to a configured shop-floor location.").format(
+						pkg.name
+					)
+				)
 		seen[pkg.name] += flt(row.qty)
 		if seen[pkg.name] > flt(pkg.remaining_qty) + 0.001:
 			frappe.throw(_("Package {0} has only {1} remaining.").format(pkg.name, pkg.remaining_qty))
@@ -648,6 +924,7 @@ def validate_warehouse_location_barcode(doc, method=None):
 	barcode = (doc.get("lr_location_barcode") or "").strip()
 	if not barcode:
 		return
+	doc.lr_location_barcode = barcode
 	duplicate = frappe.db.get_value(
 		"Warehouse", {"lr_location_barcode": barcode, "name": ["!=", doc.name]}, "name"
 	)
@@ -655,11 +932,37 @@ def validate_warehouse_location_barcode(doc, method=None):
 		frappe.throw(_("Location barcode {0} is already assigned to {1}.").format(barcode, duplicate))
 
 
+def validate_stock_reconciliation_packages(doc, method=None):
+	"""Prevent silent package/ledger drift once scan enforcement is live."""
+	if not _enabled() or not config.flag("enforce_rm_package_scan", default=False):
+		return
+	rm_root = config.rm_warehouse()
+	for row in doc.items:
+		if not _is_descendant(row.warehouse, rm_root):
+			continue
+		if cint(frappe.db.get_value("Item", row.item_code, "lr_rm_barcode_tracking")):
+			frappe.throw(
+				_(
+					"Row {0}: tracked RM stock cannot be reconciled while package-scan enforcement is on. "
+					"Use an approved count window, disable enforcement, reconcile stock, update package labels, "
+					"run the health check, then re-enable enforcement."
+				).format(row.idx)
+			)
+
+
 def on_stock_entry_submit(doc, method=None):
 	for row in doc.items:
 		if not row.get("lr_rm_package"):
 			continue
 		pkg = _locked_package(row.lr_rm_package)
+		if pkg.current_warehouse != row.s_warehouse:
+			frappe.throw(
+				_("Package {0} moved from {1} after this Stock Entry was prepared; scan it again.").format(
+					pkg.name, row.s_warehouse
+				)
+			)
+		if flt(row.qty) > flt(pkg.remaining_qty) + 0.001:
+			frappe.throw(_("Package {0} no longer has enough remaining quantity.").format(pkg.name))
 		if doc.stock_entry_type == PUTAWAY_TYPE:
 			pkg.current_warehouse = row.t_warehouse
 			pkg.status = "Stored"
@@ -728,6 +1031,7 @@ def _system_save(pkg):
 
 
 def _package_by_barcode(barcode, lock=False):
+	barcode = (barcode or "").strip()
 	name = frappe.db.get_value(PACKAGE_DT, {"barcode_value": barcode}, "name") or (
 		barcode if frappe.db.exists(PACKAGE_DT, barcode) else None
 	)
@@ -737,9 +1041,8 @@ def _package_by_barcode(barcode, lock=False):
 
 
 def _warehouse_by_barcode(barcode):
-	name = frappe.db.get_value("Warehouse", {"lr_location_barcode": barcode}, "name") or (
-		barcode if frappe.db.exists("Warehouse", barcode) else None
-	)
+	barcode = (barcode or "").strip()
+	name = frappe.db.get_value("Warehouse", {"lr_location_barcode": barcode}, "name")
 	if not name:
 		frappe.throw(_("Unknown warehouse/location barcode: {0}").format(barcode))
 	return name
@@ -756,6 +1059,7 @@ def _validate_location(warehouse, item_code, incoming_qty):
 		[
 			"is_group",
 			"disabled",
+			"lr_location_barcode",
 			"lr_slot_status",
 			"lr_slot_capacity",
 			"lr_slot_capacity_uom",
@@ -765,6 +1069,8 @@ def _validate_location(warehouse, item_code, incoming_qty):
 	)
 	if not row or row.is_group or row.disabled:
 		frappe.throw(_("Choose an enabled leaf warehouse/rack location."))
+	if not row.lr_location_barcode:
+		frappe.throw(_("Assign and print a Location Barcode for {0} before using it.").format(warehouse))
 	if row.lr_slot_status and row.lr_slot_status != "Available":
 		frappe.throw(_("Location {0} is {1}.").format(warehouse, row.lr_slot_status))
 	if row.lr_allowed_item_group:
@@ -780,6 +1086,18 @@ def _validate_location(warehouse, item_code, incoming_qty):
 				_("Location {0} capacity is measured in {1}; item {2} uses {3}.").format(
 					warehouse, row.lr_slot_capacity_uom, item_code, stock_uom
 				)
+			)
+		mismatched_uom = frappe.db.sql(
+			"""SELECT i.name FROM `tabBin` b
+			JOIN `tabItem` i ON i.name=b.item_code
+			WHERE b.warehouse=%s AND ABS(b.actual_qty)>0.001 AND i.stock_uom!=%s LIMIT 1""",
+			(warehouse, row.lr_slot_capacity_uom),
+		)
+		if mismatched_uom:
+			frappe.throw(
+				_(
+					"Location {0} contains stock with another UOM; its numeric capacity cannot be enforced."
+				).format(warehouse)
 			)
 	if flt(row.lr_slot_capacity) > 0:
 		occupied = flt(

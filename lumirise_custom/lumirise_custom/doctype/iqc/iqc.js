@@ -72,7 +72,12 @@ function issue_sample_prompt(frm) {
 				reqd: 1,
 				default: item_codes[0],
 			},
-			{ fieldname: "sample_qty", label: __("Sample Qty"), fieldtype: "Float", reqd: 1 },
+			{
+				fieldname: "sample_qty",
+				label: __("Sample Qty (Stock UOM)"),
+				fieldtype: "Float",
+				reqd: 1,
+			},
 			{
 				fieldname: "taken_by",
 				label: __("Taken By"),
@@ -100,13 +105,19 @@ function issue_sample_prompt(frm) {
 				if (r.message && r.message.new_package) {
 					frappe.msgprint(
 						__(
-							"Sample package {0} was created. Print and attach its label to the IQC sample.",
+							"Sample package {0} was created. Attach it to the sample and replace the source-package remainder label.",
 							[r.message.package]
 						)
 					);
 					frappe.utils.print(
 						"RM Receiving Package",
 						r.message.package,
+						"Lumirise RM Package Label",
+						false
+					);
+					frappe.utils.print(
+						"RM Receiving Package",
+						r.message.source_package,
 						"Lumirise RM Package Label",
 						false
 					);
@@ -184,7 +195,7 @@ frappe.ui.form.on("IQC", {
 		}
 
 		add_sample_buttons(frm);
-		if (frm.doc.docstatus === 0) {
+		if (frm.doc.docstatus === 0 && ["IQC Received", "Testing"].includes(frm.doc.status)) {
 			frm.add_custom_button(
 				__("Scan Package Result"),
 				() => {
@@ -198,13 +209,13 @@ frappe.ui.form.on("IQC", {
 							},
 							{
 								fieldname: "accepted_qty",
-								label: __("Accepted Qty"),
+								label: __("Accepted Qty (Stock UOM)"),
 								fieldtype: "Float",
-								reqd: 1,
+								default: 0,
 							},
 							{
 								fieldname: "rejected_qty",
-								label: __("Rejected Qty"),
+								label: __("Rejected Qty (Stock UOM)"),
 								fieldtype: "Float",
 								default: 0,
 							},
@@ -221,9 +232,15 @@ frappe.ui.form.on("IQC", {
 									if (r.message.rejected_package) {
 										frappe.msgprint(
 											__(
-												"Partial rejection created new package {0}. Print that label and attach it to the segregated rejected material.",
+												"Partial rejection created {0}. Replace the original package label and attach the new label to the segregated rejected material.",
 												[r.message.rejected_package]
 											)
+										);
+										frappe.utils.print(
+											"RM Receiving Package",
+											r.message.name,
+											"Lumirise RM Package Label",
+											false
 										);
 										frappe.utils.print(
 											"RM Receiving Package",
@@ -236,6 +253,36 @@ frappe.ui.form.on("IQC", {
 								}),
 						__("RM Package IQC"),
 						__("Record")
+					);
+				},
+				__("Barcode")
+			);
+			frm.add_custom_button(
+				__("Reset Package Result"),
+				() => {
+					frappe.prompt(
+						[
+							{
+								fieldname: "package_barcode",
+								label: __("Package Barcode"),
+								fieldtype: "Data",
+								reqd: 1,
+							},
+						],
+						(v) =>
+							frappe
+								.call({
+									method: "lumirise_custom.rm_barcode.reset_package_qc",
+									args: {
+										iqc: frm.doc.name,
+										package_barcode: v.package_barcode,
+									},
+									freeze: true,
+									freeze_message: __("Resetting package result…"),
+								})
+								.then(() => frm.reload_doc()),
+						__("Reset RM Package Result"),
+						__("Reset")
 					);
 				},
 				__("Barcode")

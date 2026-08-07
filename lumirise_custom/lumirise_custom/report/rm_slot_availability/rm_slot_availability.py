@@ -59,7 +59,7 @@ def execute(filters=None):
 		r.current_warehouse: r.count
 		for r in frappe.db.sql(
 			"""SELECT current_warehouse, COUNT(*) AS count FROM `tabRM Receiving Package`
-		WHERE status='Stored' GROUP BY current_warehouse""",
+		WHERE remaining_qty>0 AND COALESCE(current_warehouse, '')!='' GROUP BY current_warehouse""",
 			as_dict=True,
 		)
 	}

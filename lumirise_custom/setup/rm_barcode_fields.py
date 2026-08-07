@@ -32,6 +32,7 @@ def create_rm_barcode_fields():
 					"fieldtype": "Data",
 					"insert_after": "lr_rm_location_section",
 					"in_standard_filter": 1,
+					"unique": 1,
 					"module": "Lumirise Custom",
 				},
 				{

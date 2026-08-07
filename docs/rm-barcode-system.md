@@ -21,7 +21,7 @@ ERPNext remains the accounting truth:
 3. Purchase Order → Vendor PDI → submitted Inbound Logistics records the consignment.
 4. Logistics marks `Reached Warehouse`. ERP creates a Quality handoff task.
 5. At Stock-In/unloading, Inward opens Inbound Logistics → Barcode → Generate RM Package Labels.
-   Enter item, physical package count, total quantity, supplier lot and dates. ERP creates the Batch
+   Enter item, physical package count, total quantity in the Item's Stock UOM, supplier lot and dates. ERP creates the Batch
    and one LPN per package. Print and attach labels immediately.
 6. Inward creates IQC. The inspector uses Barcode → Scan Package Result for every package. The sum
    of accepted and rejected must equal the label quantity. A partially rejected carton is split into
@@ -129,6 +129,10 @@ result is signed off. Migrate first with enforcement off; never switch it on dur
   Bins, shop-floor Bin and package remaining quantities.
 - Partial issue and full issue.
 - Wrong item, wrong Batch, wrong source rack, duplicate location barcode and over-issue must fail.
+- Purchase-UOM conversion: receive an item whose PO UOM differs from Stock UOM; confirm the package,
+  IQC, GRN and Stock Entry quantities reconcile exactly.
+- API bypass: manual package insertion, a hand-built put-away to a non-RM warehouse, moving rejected
+  material, and submitting a tracked GRN without the linked IQC/package list must fail.
 - Cancel issue, put-away and GRN in reverse dependency order; verify ledger and package restoration.
 - Print ten labels and scan each from paper using the actual mobile/scanner and production printer.
 - Permissions: Inward cannot submit stock moves; Stores cannot submit IQC; Quality cannot alter racks.

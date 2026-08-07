@@ -893,12 +893,30 @@ def _check_rm_barcode_ready():
 		)
 	if settings.get("enforce_rm_package_scan"):
 		rm_lft, rm_rgt = frappe.db.get_value("Warehouse", settings.rm_warehouse, ["lft", "rgt"])
+		missing_location_barcodes = frappe.db.sql(
+			"""SELECT name FROM `tabWarehouse`
+			WHERE lft>%s AND rgt<%s AND is_group=0 AND disabled=0
+			AND COALESCE(lr_location_barcode, '')='' LIMIT 10""",
+			(rm_lft, rm_rgt),
+			as_dict=True,
+		)
+		if missing_location_barcodes:
+			return _result(
+				"",
+				"",
+				"",
+				"fail",
+				detail="Enabled RM rack locations are missing barcodes.",
+				remediation="Assign unique Location Barcodes and print rack labels before enforcement.",
+				evidence=", ".join(r.name for r in missing_location_barcodes),
+			)
 		unlabelled = frappe.db.sql(
 			"""SELECT COUNT(*) FROM `tabBin` b JOIN `tabItem` i ON i.name=b.item_code
 			JOIN `tabWarehouse` w ON w.name=b.warehouse
 			LEFT JOIN (
 				SELECT item_code, current_warehouse, SUM(remaining_qty) AS package_qty
-				FROM `tabRM Receiving Package` WHERE status='Stored'
+				FROM `tabRM Receiving Package`
+				WHERE remaining_qty>0 AND COALESCE(current_warehouse, '')!=''
 				GROUP BY item_code, current_warehouse
 			) p ON p.item_code=b.item_code AND p.current_warehouse=b.warehouse
 			WHERE COALESCE(i.lr_rm_barcode_tracking,0)=1 AND b.actual_qty>0

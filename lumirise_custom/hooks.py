@@ -184,6 +184,8 @@ doc_events = {
 			"lumirise_custom.events.iqc_gate",
 			# Warn/block if the PO's Inbound Logistics wasn't released by Purchase (WP-2.3).
 			"lumirise_custom.events.container_release_gate",
+			# Package references, batches and receiving/rejection warehouses are authoritative.
+			"lumirise_custom.rm_barcode.validate_grn_packages",
 		],
 		"on_submit": [
 			"lumirise_custom.rm_barcode.on_grn_submit",
@@ -273,6 +275,9 @@ doc_events = {
 			"lumirise_custom.task_engine.on_stock_entry_submit",
 		],
 		"on_cancel": "lumirise_custom.rm_barcode.on_stock_entry_cancel",
+	},
+	"Stock Reconciliation": {
+		"before_submit": "lumirise_custom.rm_barcode.validate_stock_reconciliation_packages",
 	},
 	# Production Material Requisition raised -> task Stores to pick & issue.
 	"Material Request": {

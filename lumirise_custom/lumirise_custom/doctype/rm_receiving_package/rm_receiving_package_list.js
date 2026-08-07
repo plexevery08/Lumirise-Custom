@@ -33,9 +33,10 @@ frappe.listview_settings["RM Receiving Package"] = {
 					},
 					{
 						fieldname: "total_qty",
-						label: __("Counted Total Qty"),
+						label: __("Counted Total Qty (Stock UOM)"),
 						fieldtype: "Float",
 						reqd: 1,
+						description: __("Enter the physical balance in the Item's Stock UOM."),
 					},
 					{
 						fieldname: "stock_reconciliation",

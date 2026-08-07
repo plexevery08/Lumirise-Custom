@@ -70,13 +70,19 @@ frappe.ui.form.on("Stock Entry", {
 										p = split.message.package;
 										frappe.msgprint(
 											__(
-												"Partial pick created {0}. Print and attach this new label to the issued material.",
+												"Partial pick created {0}. Attach it to the issued material and replace the rack remainder label.",
 												[p.name]
 											)
 										);
 										frappe.utils.print(
 											"RM Receiving Package",
 											p.name,
+											"Lumirise RM Package Label",
+											false
+										);
+										frappe.utils.print(
+											"RM Receiving Package",
+											split.message.remainder.name,
 											"Lumirise RM Package Label",
 											false
 										);

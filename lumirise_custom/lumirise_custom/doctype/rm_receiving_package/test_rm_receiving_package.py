@@ -22,3 +22,29 @@ class IntegrationTestRMReceivingPackage(IntegrationTestCase):
 		)
 		with self.assertRaises(frappe.ValidationError):
 			doc.run_method("validate")
+
+	def test_manual_package_creation_is_blocked(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "RM Receiving Package",
+				"inbound_logistics": "TEST-INBOUND",
+				"item_code": "TEST-ITEM",
+				"received_qty": 10,
+				"conversion_factor": 1,
+			}
+		)
+		with self.assertRaises(frappe.ValidationError):
+			doc.run_method("before_insert")
+
+	def test_conversion_factor_must_be_positive(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "RM Receiving Package",
+				"inbound_logistics": "TEST-INBOUND",
+				"item_code": "TEST-ITEM",
+				"received_qty": 10,
+				"conversion_factor": 0,
+			}
+		)
+		with self.assertRaises(frappe.ValidationError):
+			doc.run_method("validate")
