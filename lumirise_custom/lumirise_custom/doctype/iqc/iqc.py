@@ -31,6 +31,13 @@ class IQC(Document):
 		if not self.status:
 			self.status = RECEIVED
 		for row in self.items:
+			if row.package_barcode:
+				pkg = frappe.db.get_value("RM Package", row.package_barcode, ["item_code", "batch_no", "status"], as_dict=True)
+				if not pkg or pkg.item_code != row.item_code:
+					frappe.throw(f"Row {row.idx} ({row.item_code}): package does not match the item.")
+				if row.batch_no and row.batch_no != pkg.batch_no:
+					frappe.throw(f"Row {row.idx} ({row.item_code}): batch does not match the package.")
+				row.batch_no = pkg.batch_no
 			parts = (flt(row.accepted_qty) + flt(row.rejected_qty)
 			         + flt(row.under_test_qty) + flt(row.on_hold_qty))
 			if parts > flt(row.received_qty) + 0.001:

@@ -31,6 +31,26 @@ function log_run(frm, method, freeze_message) {
 
 frappe.ui.form.on("Inbound Logistics", {
 	refresh(frm) {
+		if (!frm.is_new() && frm.doc.docstatus === 1 && frm.doc.vehicle_gate_status !== "Approved") {
+			frm.add_custom_button(__("Approve Vehicle Gate"), () => {
+				return frappe.call({
+					method: LOG_METHOD + "approve_gate",
+					args: { docname: frm.doc.name }, freeze: true,
+				}).then(() => frm.reload_doc());
+			}, __("Inward Controls"));
+		}
+		if (!frm.is_new() && frm.doc.docstatus === 1 && frm.doc.document_verification_status !== "Verified") {
+			frm.add_custom_button(__("Verify Documents"), () => {
+				frappe.prompt([
+					{ fieldname: "exception", label: __("Exception (leave blank to verify)"), fieldtype: "Small Text" },
+				], (v) => {
+					return frappe.call({
+						method: LOG_METHOD + "verify_documents",
+						args: { docname: frm.doc.name, exception: v.exception }, freeze: true,
+					}).then(() => frm.reload_doc());
+				}, __("Verify Inward Documents"), __("Save"));
+			}, __("Inward Controls"));
+		}
 		if (frm.doc.docstatus !== 1) {
 			return; // transitions act on the submitted consignment
 		}
@@ -59,6 +79,24 @@ frappe.ui.form.on("Inbound Logistics", {
 					frm: frm,
 				});
 			}, __("Create"));
+			frm.add_custom_button(__("Generate RM Package / LPN"), () => {
+				const items = (frm.doc.items || []).filter((r) => r.item_code);
+				if (!items.length) {
+					frappe.msgprint(__("Add at least one inbound item first."));
+					return;
+				}
+				frappe.prompt([
+					{ fieldname: "item_code", label: __("Item"), fieldtype: "Select", options: items.map((r) => r.item_code).join("\n"), reqd: 1 },
+					{ fieldname: "quantity", label: __("Package Quantity"), fieldtype: "Float", reqd: 1 },
+					{ fieldname: "supplier_lot", label: __("Supplier Lot / Reference"), fieldtype: "Data" },
+				], (v) => frappe.call({
+					method: "lumirise_custom.lumirise_custom.doctype.rm_package.rm_package.create_from_inbound",
+					args: { inbound_logistics: frm.doc.name, item_code: v.item_code, quantity: v.quantity, supplier_lot: v.supplier_lot },
+					freeze: true, freeze_message: __("Creating native Batch and LPN…"),
+				}).then((r) => {
+					if (r.message) frappe.set_route("Form", "RM Package", r.message.name);
+				}), __("Generate RM Package"), __("Create"));
+			}, __("Barcode"));
 		}
 	},
 });

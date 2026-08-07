@@ -16,6 +16,12 @@
   "expected_arrival_date",
   "container_no",
   "release_status",
+  "vehicle_gate_status",
+  "gate_approved_by",
+  "gate_approved_on",
+  "document_verification_status",
+  "document_exception",
+  "receiving_warehouse",
   "released_by",
   "released_on",
   "col1",
@@ -75,6 +81,55 @@
    "label": "Status",
    "options": "Dispatched\nIn Transit\nReached Warehouse",
    "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Pending Approval",
+   "fieldname": "vehicle_gate_status",
+   "fieldtype": "Select",
+   "label": "Vehicle Gate Status",
+   "options": "Pending Approval\nApproved\nRejected",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gate_approved_by",
+   "fieldtype": "Link",
+   "label": "Gate Approved By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gate_approved_on",
+   "fieldtype": "Datetime",
+   "label": "Gate Approved On",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Pending",
+   "fieldname": "document_verification_status",
+   "fieldtype": "Select",
+   "label": "Document Verification",
+   "options": "Pending\nVerified\nException",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "document_exception",
+   "fieldtype": "Small Text",
+   "label": "Document Exception",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "receiving_warehouse",
+   "fieldtype": "Link",
+   "label": "Receiving / Staging Warehouse",
+   "options": "Warehouse"
   },
   {
    "allow_on_submit": 1,

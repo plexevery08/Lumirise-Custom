@@ -7,6 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "item_code",
+  "batch_no",
+  "package_barcode",
   "item_name",
   "received_qty",
   "under_test_qty",
@@ -26,6 +28,18 @@
    "label": "Item",
    "options": "Item",
    "reqd": 1
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Link",
+   "label": "ERP Batch",
+   "options": "Batch"
+  },
+  {
+   "fieldname": "package_barcode",
+   "fieldtype": "Link",
+   "label": "Package / LPN",
+   "options": "RM Package"
   },
   {
    "fetch_from": "item_code.item_name",

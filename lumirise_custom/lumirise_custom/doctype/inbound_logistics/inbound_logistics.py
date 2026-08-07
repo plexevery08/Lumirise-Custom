@@ -26,6 +26,10 @@ class InboundLogistics(Document):
 	def validate(self):
 		if not self.status:
 			self.status = DISPATCHED
+		if not self.vehicle_gate_status:
+			self.vehicle_gate_status = "Pending Approval"
+		if not self.document_verification_status:
+			self.document_verification_status = "Pending"
 		# approved-at-PDI qty is the ceiling for what can be in transit
 		approved = {
 			d.item_code: flt(d.approved_qty)
@@ -51,10 +55,41 @@ def mark_in_transit(docname):
 	"""Logistics confirms the consignment has left the vendor / port."""
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
+	if doc.vehicle_gate_status != "Approved":
+		frappe.throw(_("Vehicle gate approval is required before the consignment leaves the gate."))
+	if doc.document_verification_status != "Verified":
+		frappe.throw(_("Verify the invoice, packing list, waybill/LR and PDI documents before dispatch."))
 	if doc.status not in (DISPATCHED, IN_TRANSIT):
 		frappe.throw(_("Only a Dispatched consignment can be marked In Transit."))
 	doc.db_set("status", IN_TRANSIT)
 	return {"status": IN_TRANSIT}
+
+
+@frappe.whitelist()
+def approve_gate(docname):
+	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
+	doc = _load(docname)
+	if doc.docstatus != 1:
+		frappe.throw(_("Submit the Inbound Logistics record before approving the vehicle gate."))
+	if doc.vehicle_gate_status == "Rejected":
+		frappe.throw(_("A rejected vehicle cannot be approved without a new inbound record."))
+	doc.db_set("vehicle_gate_status", "Approved")
+	doc.db_set("gate_approved_by", frappe.session.user)
+	doc.db_set("gate_approved_on", now_datetime())
+	return {"vehicle_gate_status": "Approved"}
+
+
+@frappe.whitelist()
+def verify_documents(docname, exception=None):
+	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
+	doc = _load(docname)
+	if exception:
+		doc.db_set("document_verification_status", "Exception")
+		doc.db_set("document_exception", exception)
+		return {"document_verification_status": "Exception"}
+	doc.db_set("document_verification_status", "Verified")
+	doc.db_set("document_exception", "")
+	return {"document_verification_status": "Verified"}
 
 
 @frappe.whitelist()

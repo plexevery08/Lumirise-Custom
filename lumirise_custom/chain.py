@@ -47,10 +47,13 @@ def make_iqc(source_name, target_doc=None):
 	doc.purchase_order = log.purchase_order
 	doc.status = "IQC Received"
 	for it in log.items:
+		pkg = frappe.get_all("RM Package", filters={"inbound_logistics": log.name, "item_code": it.item_code, "status": "Pending IQC"}, fields=["name", "batch_no"], limit=1)
 		doc.append("items", {
 			"item_code": it.item_code,
 			"item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
-			"received_qty": it.qty, "accepted_qty": it.qty, "rejected_qty": 0})
+			"received_qty": it.qty, "accepted_qty": it.qty, "rejected_qty": 0,
+			"package_barcode": pkg[0].name if pkg else None,
+			"batch_no": pkg[0].batch_no if pkg else None})
 	return doc
 
 

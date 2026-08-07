@@ -201,6 +201,7 @@ doc_events = {
 			# GRN posted -> realise any pre-GRN IQC samples into the IQC Lab store
 			# (RM Store -> IQC Lab), now that the goods are owned. Fail-safe (10.1).
 			"lumirise_custom.samples.realise_samples_to_lab",
+			"lumirise_custom.packages.on_purchase_receipt_submit",
 		],
 		# GRN cancelled -> re-open the IQC so the qty returns to "Pending IQC", and
 		# reverse any un-dispositioned IQC Lab sample transfers.
@@ -262,11 +263,13 @@ doc_events = {
 		# Stamp the shop-floor issue type when the SE comes from a (non-Delivery) Pick
 		# List — authoritative server-side mirror of the public/js/stock_entry.js default.
 		"before_validate": "lumirise_custom.stores.set_shopfloor_issue_type",
+		"before_submit": "lumirise_custom.packages.validate_scanned_stock_entry",
 		# Stamp the SO/Indent/WO/PO traceability panel from the SE's Work Order.
 		"validate": "lumirise_custom.traceability.stamp",
 		"on_submit": [
 			"lumirise_custom.costing.on_stock_entry",
 			"lumirise_custom.task_engine.on_stock_entry_submit",
+			"lumirise_custom.packages.on_stock_entry_submit",
 		],
 	},
 	# Production Material Requisition raised -> task Stores to pick & issue.
@@ -475,4 +478,3 @@ scheduler_events = {
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-
