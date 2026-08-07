@@ -94,7 +94,7 @@ def _run_one(key, title, stage, fn):
 			r.setdefault("remediation", "")
 			r.setdefault("evidence", "")
 			return r
-		status, detail, remediation, evidence = (list(r) + ["", "", ""])[:4]
+		status, detail, remediation, evidence = [*list(r), "", "", ""][:4]
 		return _result(key, title, stage, status, detail, remediation, evidence)
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), f"Health Check broke: {key}")
@@ -178,9 +178,8 @@ def _persist_run(results, trigger, synthetic_ran):
 	run.warn_count = counts["warn"]
 	run.fail_count = counts["fail"]
 	run.total_checks = len(results)
-	run.summary = (
-		f"{overall}: {counts['pass']} pass / {counts['warn']} warn / {counts['fail']} fail."
-		+ (f" First failure: {fails[0]['title']}." if fails else " All systems healthy.")
+	run.summary = f"{overall}: {counts['pass']} pass / {counts['warn']} warn / {counts['fail']} fail." + (
+		f" First failure: {fails[0]['title']}." if fails else " All systems healthy."
 	)
 	for r in results:
 		run.append(
@@ -265,10 +264,7 @@ def _notify(run_name, results, synthetic_ran):
 			return
 		url = get_url_to_form("Health Check Run", run_name)
 		dot = {"Green": "🟢", "Amber": "🟡", "Red": "🔴"}[overall]
-		subject = (
-			f"{dot} Health Check {overall}: "
-			f"{counts['pass']}✓ {counts['warn']}! {counts['fail']}✗"
-		)
+		subject = f"{dot} Health Check {overall}: {counts['pass']}✓ {counts['warn']}! {counts['fail']}✗"
 		body = _build_digest_html(run_name, overall, counts, results, synthetic_ran, url)
 		for user in _digest_recipients():
 			try:
@@ -507,7 +503,12 @@ def _check_bom_rm_rollup():
 @readonly_check("moq_slabs_populated", "MOQ slab prices are populated", COSTING)
 def _check_moq_slabs():
 	boms = _parent_boms()
-	slab_fields = ["custom_1k_moq_price", "custom_3k_moq_price", "custom_6k_moq_price", "custom_10k_moq_price"]
+	slab_fields = [
+		"custom_1k_moq_price",
+		"custom_3k_moq_price",
+		"custom_6k_moq_price",
+		"custom_10k_moq_price",
+	]
 	bad = [b for b in boms if flt(b.custom_bom_cost) > 0 and any(flt(b.get(f)) <= 0 for f in slab_fields)]
 	if bad:
 		return _result(
@@ -559,7 +560,6 @@ def _check_so_status_consistent():
 		fields=["name", "lr_planning_status", "lr_purchase_status", "lr_production_status"],
 		limit_page_length=0,
 	)
-	planned = ("Planned",)
 	purchase_advanced = ("Ordered", "Received")
 	prod_advanced = ("In Production", "Completed")
 	bad = []
@@ -653,9 +653,7 @@ _TASK_HANDLERS = {
 @readonly_check("task_handlers_wired", "Task-engine handoff handlers are wired", TASKS)
 def _check_task_handlers():
 	missing = [
-		f"{dt}.{event}"
-		for dt, (event, handler) in _TASK_HANDLERS.items()
-		if not _hooked(dt, event, handler)
+		f"{dt}.{event}" for dt, (event, handler) in _TASK_HANDLERS.items() if not _hooked(dt, event, handler)
 	]
 	if missing:
 		return _result(
@@ -725,7 +723,9 @@ def _check_line_user_perm():
 			remediation="Set Supervisor (User) on each line under Operations Settings → Production Lines so daily Job Cards auto-assign and line data has an owner.",
 			evidence=", ".join(no_sup[:5]),
 		)
-	return _result("", "", "", "pass", detail="All active lines have a supervisor or no lines configured yet.")
+	return _result(
+		"", "", "", "pass", detail="All active lines have a supervisor or no lines configured yet."
+	)
 
 
 @readonly_check("line_warehouses", "Each production line has a valid warehouse", WAREHOUSES)
@@ -818,6 +818,126 @@ def _check_scheduler_alive():
 	return _result("", "", "", "pass", detail="Scheduler active.")
 
 
+@readonly_check("rm_barcode_ready", "RM barcode subsystem is deployment-ready", STOCK)
+def _check_rm_barcode_ready():
+	required_doctypes = ["RM Receiving Package", "RM Package Movement"]
+	required_fields = [
+		("Warehouse", "lr_location_barcode"),
+		("Stock Entry Detail", "lr_rm_package"),
+		("Purchase Receipt", "lr_iqc"),
+		("Item", "lr_rm_barcode_tracking"),
+	]
+	missing = [dt for dt in required_doctypes if not frappe.db.exists("DocType", dt)]
+	for dt, field in required_fields:
+		if not frappe.get_meta(dt).has_field(field):
+			missing.append(f"{dt}.{field}")
+	for name in ("Lumirise RM Package Label", "Lumirise RM Location Label"):
+		if not frappe.db.exists("Print Format", name):
+			missing.append(f"Print Format: {name}")
+	if not frappe.db.exists("Stock Entry Type", "RM Package Put Away"):
+		missing.append("Stock Entry Type: RM Package Put Away")
+	if missing:
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail="RM barcode schema is incomplete.",
+			remediation="Run bench migrate, clear cache, and rebuild assets.",
+			evidence=", ".join(missing),
+		)
+	settings = frappe.get_cached_doc(SETTINGS)
+	if not settings.get("enable_rm_barcode_system"):
+		return _result(
+			"",
+			"",
+			"",
+			"warn",
+			detail="RM barcode tools are installed but disabled.",
+			remediation="Enable RM Barcode System in Lumirise Operations Settings after UAT.",
+		)
+	if not settings.receiving_warehouse or not frappe.db.exists("Warehouse", settings.receiving_warehouse):
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail="Receiving / Staging warehouse is not configured.",
+			remediation="Configure the dedicated RM Receiving warehouse before generating live labels.",
+		)
+	try:
+		import barcode
+	except ImportError:
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail="python-barcode is unavailable, so labels cannot render.",
+			remediation="Run bench setup requirements, restart workers, then retry the label print.",
+		)
+	tracked_without_batch = frappe.db.sql(
+		"""SELECT name FROM `tabItem` WHERE COALESCE(lr_rm_barcode_tracking,0)=1
+		AND COALESCE(has_batch_no,0)=0 LIMIT 10""",
+		as_dict=True,
+	)
+	if tracked_without_batch and settings.get("require_batch_for_rm_packages"):
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail="Tracked RM items exist without ERPNext Batch enabled.",
+			remediation="Enable Has Batch No for these items before generating labels.",
+			evidence=", ".join(r.name for r in tracked_without_batch),
+		)
+	if settings.get("enforce_rm_package_scan"):
+		rm_lft, rm_rgt = frappe.db.get_value("Warehouse", settings.rm_warehouse, ["lft", "rgt"])
+		missing_location_barcodes = frappe.db.sql(
+			"""SELECT name FROM `tabWarehouse`
+			WHERE lft>%s AND rgt<%s AND is_group=0 AND disabled=0
+			AND COALESCE(lr_location_barcode, '')='' LIMIT 10""",
+			(rm_lft, rm_rgt),
+			as_dict=True,
+		)
+		if missing_location_barcodes:
+			return _result(
+				"",
+				"",
+				"",
+				"fail",
+				detail="Enabled RM rack locations are missing barcodes.",
+				remediation="Assign unique Location Barcodes and print rack labels before enforcement.",
+				evidence=", ".join(r.name for r in missing_location_barcodes),
+			)
+		unlabelled = frappe.db.sql(
+			"""SELECT COUNT(*) FROM `tabBin` b JOIN `tabItem` i ON i.name=b.item_code
+			JOIN `tabWarehouse` w ON w.name=b.warehouse
+			LEFT JOIN (
+				SELECT item_code, current_warehouse, SUM(remaining_qty) AS package_qty
+				FROM `tabRM Receiving Package`
+				WHERE remaining_qty>0 AND COALESCE(current_warehouse, '')!=''
+				GROUP BY item_code, current_warehouse
+			) p ON p.item_code=b.item_code AND p.current_warehouse=b.warehouse
+			WHERE COALESCE(i.lr_rm_barcode_tracking,0)=1 AND b.actual_qty>0
+			AND w.lft >= %s AND w.rgt <= %s
+			AND ABS(b.actual_qty-COALESCE(p.package_qty,0))>0.001""",
+			(rm_lft, rm_rgt),
+		)[0][0]
+		if unlabelled:
+			return _result(
+				"",
+				"",
+				"",
+				"fail",
+				detail=f"{unlabelled} tracked item/location stock balances have no active package.",
+				remediation="Create and reconcile opening-stock package labels; keep enforcement off until the count is zero.",
+			)
+	return _result(
+		"", "", "", "pass", detail="Schema, settings and tracked-item batch prerequisites are valid."
+	)
+
+
 @readonly_check("error_log_spike", "Error Log is not spiking", SCHEDULER)
 def _check_error_log_spike():
 	threshold = cint(frappe.db.get_single_value(SETTINGS, "health_error_log_threshold")) or 50
@@ -895,15 +1015,9 @@ def _check_over_receipt_guard():
 	return _result("", "", "", "pass", detail=f"Over-receipt allowance {allowance}% (≤ {cap}%).")
 
 
-@readonly_check(
-	"auto_reserve_on_purchase_off", "Auto-reserve FG for SO on purchase is off", STOCK
-)
+@readonly_check("auto_reserve_on_purchase_off", "Auto-reserve FG for SO on purchase is off", STOCK)
 def _check_auto_reserve_on_purchase():
-	if cint(
-		frappe.db.get_single_value(
-			"Stock Settings", "auto_reserve_stock_for_sales_order_on_purchase"
-		)
-	):
+	if cint(frappe.db.get_single_value("Stock Settings", "auto_reserve_stock_for_sales_order_on_purchase")):
 		return _result(
 			"",
 			"",
@@ -917,14 +1031,15 @@ def _check_auto_reserve_on_purchase():
 			),
 		)
 	return _result(
-		"", "", "", "pass",
+		"",
+		"",
+		"",
+		"pass",
 		detail="Auto-reserve FG for SO on purchase is off (late/opt-in reservation).",
 	)
 
 
-@readonly_check(
-	"dept_map_users_filled", "Active Department Map rows have supervisor/HOD users", TASKS
-)
+@readonly_check("dept_map_users_filled", "Active Department Map rows have supervisor/HOD users", TASKS)
 def _check_dept_map_users():
 	rows = frappe.get_all(
 		"Lumirise Department Map",
@@ -953,14 +1068,15 @@ def _check_dept_map_users():
 			evidence=", ".join(unfilled[:8]),
 		)
 	return _result(
-		"", "", "", "pass",
+		"",
+		"",
+		"",
+		"pass",
 		detail=f"All {len(rows)} active departments have at least one user mapped.",
 	)
 
 
-@readonly_check(
-	"jobcard_miss_has_task", "Missed Job Cards raised an escalation task", TASKS
-)
+@readonly_check("jobcard_miss_has_task", "Missed Job Cards raised an escalation task", TASKS)
 def _check_jobcard_miss_task():
 	missed = frappe.get_all(
 		"Lumirise Job Card",
@@ -992,7 +1108,10 @@ def _check_jobcard_miss_task():
 			evidence=", ".join(missing[:8]),
 		)
 	return _result(
-		"", "", "", "pass",
+		"",
+		"",
+		"",
+		"pass",
 		detail=f"All {len(missed)} missed Job Cards raised an escalation task.",
 	)
 
@@ -1083,11 +1202,11 @@ def _check_schedule_within_so_qty():
 	)
 	scheduled = {}
 	for ln in lines:
-		scheduled[(ln.sales_order, ln.fg_item)] = scheduled.get((ln.sales_order, ln.fg_item), 0) + flt(ln.slice_qty)
-	for (so, fg), qty in scheduled.items():
-		so_qty = flt(
-			frappe.db.get_value("Sales Order Item", {"parent": so, "item_code": fg}, "qty")
+		scheduled[(ln.sales_order, ln.fg_item)] = scheduled.get((ln.sales_order, ln.fg_item), 0) + flt(
+			ln.slice_qty
 		)
+	for (so, fg), qty in scheduled.items():
+		so_qty = flt(frappe.db.get_value("Sales Order Item", {"parent": so, "item_code": fg}, "qty"))
 		if so_qty and qty > so_qty + 0.001:
 			over.append(f"{so}/{fg}: scheduled {qty:g} > ordered {so_qty:g}")
 	if over:
@@ -1175,7 +1294,9 @@ def _check_rm_rejection_overdue():
 			remediation="Check the daily scheduler; run lumirise_custom.stores.flag_overdue_rm_rejections. Disposition stays manual (Praveen + Quality).",
 			evidence=", ".join(missing[:8]),
 		)
-	return _result("", "", "", "pass", detail=f"All {len(overdue)} overdue RM rejection(s) have a scrap-review task.")
+	return _result(
+		"", "", "", "pass", detail=f"All {len(overdue)} overdue RM rejection(s) have a scrap-review task."
+	)
 
 
 @readonly_check("container_release_gate_wired", "Container-release gate is wired on GRN", GATES)
@@ -1205,7 +1326,9 @@ def _check_container_release_wired():
 			remediation="Purchase should Release Container on those Inbound Logistics, or explain the hold.",
 			evidence=", ".join(stuck[:8]),
 		)
-	return _result("", "", "", "pass", detail="Container-release gate wired; no consignments stuck unreleased.")
+	return _result(
+		"", "", "", "pass", detail="Container-release gate wired; no consignments stuck unreleased."
+	)
 
 
 @readonly_check("stock_variance_open", "No large uncounted stock variance pending", STOCK)
@@ -1221,7 +1344,9 @@ def _check_stock_variance_open():
 	)
 	big = []
 	for r in rows:
-		system = flt(frappe.db.get_value("Bin", {"item_code": r.item_code, "warehouse": r.warehouse}, "actual_qty"))
+		system = flt(
+			frappe.db.get_value("Bin", {"item_code": r.item_code, "warehouse": r.warehouse}, "actual_qty")
+		)
 		if abs(system - flt(r.counted)) > cap:
 			big.append(f"{r.item_code}@{r.warehouse}: {flt(system - flt(r.counted)):g}")
 	if big:
@@ -1243,12 +1368,14 @@ def _check_destructive_disarmed():
 	# that holds real data — it is what lets smoke_test/full_flow cleanups wipe ALL
 	# transactions. If it is set, scream (red) when there is live data to lose.
 	if not frappe.conf.get("allow_destructive_seeders"):
-		return _result("", "", "", "pass", detail="Destructive seeders/cleanups are disarmed (site_config allow_destructive_seeders not set).")
-	txn = (
-		frappe.db.count("Sales Order")
-		+ frappe.db.count("Work Order")
-		+ frappe.db.count("Stock Entry")
-	)
+		return _result(
+			"",
+			"",
+			"",
+			"pass",
+			detail="Destructive seeders/cleanups are disarmed (site_config allow_destructive_seeders not set).",
+		)
+	txn = frappe.db.count("Sales Order") + frappe.db.count("Work Order") + frappe.db.count("Stock Entry")
 	return _result(
 		"",
 		"",
@@ -1257,7 +1384,7 @@ def _check_destructive_disarmed():
 		detail=(
 			"site_config allow_destructive_seeders is ARMED — smoke_test / full_flow cleanups "
 			"can wipe ALL transactions on this site"
-			+ (f", and it currently holds {txn} live transaction(s)." if txn else " (site is empty)." )
+			+ (f", and it currently holds {txn} live transaction(s)." if txn else " (site is empty).")
 		),
 		remediation="Remove 'allow_destructive_seeders' from this site's site_config.json unless it is a throwaway test site with no real data.",
 	)
@@ -1274,4 +1401,10 @@ def _check_packing_gate_wired():
 			detail="events.packing_gate is not wired on Delivery Note before_submit.",
 			remediation="Restore the packing_gate handler in hooks.py and run bench migrate.",
 		)
-	return _result("", "", "", "pass", detail="Packing-approval gate wired (enforced only when require_packing_approval is ON).")
+	return _result(
+		"",
+		"",
+		"",
+		"pass",
+		detail="Packing-approval gate wired (enforced only when require_packing_approval is ON).",
+	)

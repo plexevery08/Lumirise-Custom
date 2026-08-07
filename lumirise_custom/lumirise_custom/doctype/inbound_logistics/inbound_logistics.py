@@ -27,18 +27,21 @@ class InboundLogistics(Document):
 		if not self.status:
 			self.status = DISPATCHED
 		# approved-at-PDI qty is the ceiling for what can be in transit
-		approved = {
-			d.item_code: flt(d.approved_qty)
-			for d in frappe.get_all(
-				"Vendor PDI Item", {"parent": self.vendor_pdi},
-				["item_code", "approved_qty"]) or []
-		}
+		approved = {}
+		for d in (
+			frappe.get_all("Vendor PDI Item", {"parent": self.vendor_pdi}, ["item_code", "approved_qty"])
+			or []
+		):
+			approved[d.item_code] = approved.get(d.item_code, 0) + flt(d.approved_qty)
+		inbound = {}
 		for row in self.items:
-			cap = approved.get(row.item_code)
-			if cap is not None and flt(row.qty) > cap:
+			inbound[row.item_code] = inbound.get(row.item_code, 0) + flt(row.qty)
+		for item_code, qty in inbound.items():
+			cap = approved.get(item_code)
+			if cap is not None and qty > cap:
 				frappe.throw(
-					f"Row {row.idx} ({row.item_code}): logistics qty {row.qty} "
-					f"cannot exceed the Vendor-PDI approved qty {cap}.")
+					f"{item_code}: total logistics qty {qty} cannot exceed the Vendor-PDI approved qty {cap}."
+				)
 
 
 # --- flow transitions (called from the form buttons) ------------------------
@@ -66,6 +69,21 @@ def mark_reached(docname):
 	if doc.status not in (DISPATCHED, IN_TRANSIT, REACHED):
 		frappe.throw(_("Mark a dispatched / in-transit consignment as reached."))
 	doc.db_set("status", REACHED)
+	from lumirise_custom.task_engine import create_task
+
+	create_task(
+		title=f"Perform IQC and generate/verify RM labels for {doc.name}",
+		department="Quality - PDI/IQC",
+		task_type="Handoff",
+		priority="High",
+		reference_doctype="Inbound Logistics",
+		reference_name=doc.name,
+		description=(
+			"Vehicle reached Stock-In. Verify documents, unload in sequence, generate Lumirise "
+			"package labels, then scan every package during IQC."
+		),
+		source_event="inbound_reached_iqc",
+	)
 	return {"status": REACHED}
 
 

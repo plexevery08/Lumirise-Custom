@@ -31,6 +31,7 @@ CORE_WAREHOUSES = [
 	("Customer PDI", 0),
 	("RM Rejection", 0),
 	("IQC Lab", 0),
+	("RM Receiving", 0),
 ]
 
 # Simple "create if blank" mapping for the fields with no legacy ambiguity.
@@ -39,6 +40,7 @@ SIMPLE_WH_FIELDS = [
 	("pdi_warehouse", "Customer PDI"),
 	("rejection_warehouse", "RM Rejection"),
 	("iqc_lab_warehouse", "IQC Lab"),
+	("receiving_warehouse", "RM Receiving"),
 ]
 
 LINE_GROUP = "Production Lines"
@@ -127,9 +129,7 @@ def _seed_stock_entry_types():
 
 def _set_backflush_mode():
 	"""Consume RM from the line it was transferred into (not a generic WIP)."""
-	current = frappe.db.get_single_value(
-		"Manufacturing Settings", "backflush_raw_materials_based_on"
-	)
+	current = frappe.db.get_single_value("Manufacturing Settings", "backflush_raw_materials_based_on")
 	if current != "Material Transferred for Manufacture":
 		s = frappe.get_single("Manufacturing Settings")
 		s.backflush_raw_materials_based_on = "Material Transferred for Manufacture"

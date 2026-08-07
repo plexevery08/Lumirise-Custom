@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "item_code",
+  "rm_package",
   "item_name",
   "sample_qty",
   "uom",
@@ -29,6 +30,15 @@
    "options": "Item",
    "read_only": 1,
    "reqd": 1
+  },
+  {
+   "description": "Lumirise package/LPN from which this physical sample was taken.",
+   "fieldname": "rm_package",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "RM Package",
+   "options": "RM Receiving Package",
+   "read_only": 1
   },
   {
    "fetch_from": "item_code.item_name",

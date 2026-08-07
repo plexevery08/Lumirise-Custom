@@ -66,13 +66,27 @@ frappe.ui.form.on("Material Request", {
 		if (frm.doc.docstatus !== 0) return;
 		frm.add_custom_button(
 			__("Get Items from BOM"),
-			() => {
+			async () => {
 				if (!frm.doc.bom_no || !frm.doc.production_qty) {
-					frappe.msgprint(__("Select the Main / FG Item, its BOM, and the Production Qty first."));
+					frappe.msgprint(
+						__("Select the Main / FG Item, its BOM, and the Production Qty first.")
+					);
 					return;
 				}
 				// get_bom_items returns each component already scaled to the Production Qty
 				// (component-per-unit x production_qty), plus uom / stock_uom / conversion_factor / rate.
+				const defaults = await frappe.call({
+					method: "lumirise_custom.defaults.form_warehouse_defaults",
+				});
+				const src = defaults.message && defaults.message.rm;
+				const tgt = defaults.message && defaults.message.shop_floor;
+				if (!src || !tgt) {
+					frappe.throw(
+						__(
+							"Configure Raw Material Store and Shop Floor in Lumirise Operations Settings."
+						)
+					);
+				}
 				frappe.call({
 					method: "erpnext.manufacturing.doctype.bom.bom.get_bom_items",
 					args: {
@@ -88,8 +102,6 @@ frappe.ui.form.on("Material Request", {
 							frappe.msgprint(__("No items returned for this BOM."));
 							return;
 						}
-						const src = "Stores - L";
-						const tgt = "Shopfloor Stock in Area - L";
 						const sd =
 							frm.doc.schedule_date ||
 							frappe.datetime.add_days(frappe.datetime.nowdate(), 2);

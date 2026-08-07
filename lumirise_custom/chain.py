@@ -7,7 +7,7 @@
 import frappe
 from frappe.utils import flt
 
-STORES = "Stores - L"
+from lumirise_custom import defaults as config
 
 
 @frappe.whitelist()
@@ -17,8 +17,10 @@ def make_vendor_pdi(source_name, target_doc=None):
 	doc.purchase_order = po.name
 	doc.mode = "Import" if "Import" in (po.supplier or "") else "Domestic"
 	for it in po.items:
-		doc.append("items", {"item_code": it.item_code, "item_name": it.item_name,
-		                     "po_qty": it.qty, "approved_qty": it.qty})
+		doc.append(
+			"items",
+			{"item_code": it.item_code, "item_name": it.item_name, "po_qty": it.qty, "approved_qty": it.qty},
+		)
 	return doc
 
 
@@ -33,9 +35,15 @@ def make_inbound_logistics(source_name, target_doc=None):
 	# Only the qty accepted at Vendor PDI moves forward into transit.
 	for it in vpdi.items:
 		if flt(it.approved_qty) > 0:
-			doc.append("items", {"item_code": it.item_code,
-			                     "item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
-			                     "qty": it.approved_qty})
+			doc.append(
+				"items",
+				{
+					"item_code": it.item_code,
+					"item_name": it.get("item_name")
+					or frappe.db.get_value("Item", it.item_code, "item_name"),
+					"qty": it.approved_qty,
+				},
+			)
 	return doc
 
 
@@ -46,11 +54,21 @@ def make_iqc(source_name, target_doc=None):
 	doc.inbound_logistics = log.name
 	doc.purchase_order = log.purchase_order
 	doc.status = "IQC Received"
+	items = {}
 	for it in log.items:
-		doc.append("items", {
-			"item_code": it.item_code,
-			"item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
-			"received_qty": it.qty, "accepted_qty": it.qty, "rejected_qty": 0})
+		row = items.setdefault(it.item_code, {"item_name": it.get("item_name"), "qty": 0.0})
+		row["qty"] += flt(it.qty)
+	for item_code, values in items.items():
+		doc.append(
+			"items",
+			{
+				"item_code": item_code,
+				"item_name": values["item_name"] or frappe.db.get_value("Item", item_code, "item_name"),
+				"received_qty": values["qty"],
+				"accepted_qty": values["qty"],
+				"rejected_qty": 0,
+			},
+		)
 	return doc
 
 
@@ -64,12 +82,13 @@ def make_grn(source_name, target_doc=None):
 	rejection is visible downstream (it then drives the auto debit note).
 	"""
 	from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
-	from lumirise_custom import defaults as config
-	from frappe.utils import flt
 
 	iqc = frappe.get_doc("IQC", source_name)
 	pr = make_purchase_receipt(iqc.purchase_order)
 	rej_wh = config.rejection_warehouse()
+	accepted_wh = config.receiving_warehouse() or config.rm_warehouse()
+	pr.lr_iqc = iqc.name
+	pr.lr_inbound_logistics = iqc.inbound_logistics
 
 	# IQC rows grouped by item (lists -> consume per matching PR row).
 	iqc_rows = {}
@@ -77,7 +96,7 @@ def make_grn(source_name, target_doc=None):
 		iqc_rows.setdefault(r.item_code, []).append(r)
 
 	for it in pr.items:
-		it.warehouse = STORES
+		it.warehouse = accepted_wh
 		bucket = iqc_rows.get(it.item_code)
 		if not bucket:
 			continue
@@ -89,7 +108,12 @@ def make_grn(source_name, target_doc=None):
 		it.rejected_qty = flt(r.rejected_qty)
 		if flt(r.rejected_qty) > 0:
 			it.rejected_warehouse = rej_wh
-	return pr
+
+	# When package labels were created at unloading, split the mapped GRN rows by
+	# item/batch and retain the exact package list on each row.
+	from lumirise_custom.rm_barcode import prepare_grn_rows
+
+	return prepare_grn_rows(iqc, pr)
 
 
 # --- GRN -> IQC status sync (closes the inbound chain) -----------------------
@@ -99,6 +123,7 @@ def make_grn(source_name, target_doc=None):
 # accepted qty from the "Pending IQC" bucket in Material Planning (the qty has now
 # landed in the RM store as real Bin stock) — without it the qty would double-count.
 # Assumption (v1, same as iqc_gate): one open passed IQC per PO per GRN.
+
 
 def _grn_pos(doc):
 	return {row.purchase_order for row in doc.items if getattr(row, "purchase_order", None)}
@@ -147,7 +172,6 @@ def make_delivery_note(source_name, target_doc=None):
 	off one SO is tracked automatically. FG is shipped from the Dispatch FG store.
 	The Customer-PDI gate (events.py) blocks submission until a passed PDI exists."""
 	from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note as _mdn
-	from lumirise_custom import defaults as config
 
 	dn = _mdn(source_name)
 	dispatch_fg = config.dispatch_fg_warehouse()

@@ -13,7 +13,8 @@ This module makes the sample accountable without corrupting the ledger:
   3. return_sample             -> IQC Lab -> disposition (the two the client named,
                                   plus scrap):
        Returned Intact          -> IQC Lab -> RM Store
-       Built into Finished Unit  -> IQC Lab -> Production FG Store
+       Built into Finished Unit  -> Material Issue from IQC Lab (RM consumed;
+                                    the production transaction receives the FG)
        Scrapped                  -> Material Issue out of IQC Lab (write-off)
 
 No double count: the GRN receives the accepted qty into RM exactly once; the sample
@@ -34,9 +35,9 @@ from frappe.utils import flt, now_datetime
 from lumirise_custom import defaults as config
 
 # --- sample row status (single source of truth) -----------------------------
-ISSUED = "Issued"        # logged pre-GRN, no stock yet
-IN_LAB = "In Lab"        # GRN posted, sample transferred RM Store -> IQC Lab
-RETURNED = "Returned"    # dispositioned back out of the lab
+ISSUED = "Issued"  # logged pre-GRN, no stock yet
+IN_LAB = "In Lab"  # GRN posted, sample transferred RM Store -> IQC Lab
+RETURNED = "Returned"  # dispositioned back out of the lab
 
 DISPOSITIONS = ("Returned Intact", "Built into Finished Unit", "Scrapped")
 
@@ -69,13 +70,17 @@ def _make_sample_stock_entry(iqc, row, purpose, from_wh, to_wh, note):
 		se.from_warehouse = from_wh
 	if to_wh:
 		se.to_warehouse = to_wh
-	se.append("items", {
-		"item_code": row.item_code,
-		"qty": flt(row.sample_qty),
-		"uom": row.uom or config.item_uom(row.item_code),
-		"s_warehouse": from_wh,
-		"t_warehouse": to_wh,
-	})
+	se.append(
+		"items",
+		{
+			"item_code": row.item_code,
+			"qty": flt(row.sample_qty),
+			"uom": row.uom or config.item_uom(row.item_code),
+			"s_warehouse": from_wh,
+			"t_warehouse": to_wh,
+			"lr_rm_package": row.get("rm_package"),
+		},
+	)
 	se.flags.ignore_permissions = True
 	se.insert(ignore_permissions=True)
 	se.submit()
@@ -99,7 +104,8 @@ def _received_warehouse(iqc, item_code):
 			     AND pri.purchase_order = %(po)s AND COALESCE(pri.warehouse, '') != ''
 			   ORDER BY pr.posting_date DESC, pr.creation DESC
 			   LIMIT 1""",
-			{"item": item_code, "po": po})
+			{"item": item_code, "po": po},
+		)
 		if rows and rows[0][0]:
 			return rows[0][0]
 	return config.rm_warehouse()
@@ -116,14 +122,18 @@ def _ensure_in_lab(iqc, row, source_wh=None):
 	if row.status == RETURNED:
 		frappe.throw(_("This sample has already been returned / dispositioned."))
 	if iqc.status != MOVED_TO_RM:
-		frappe.throw(_(
-			"Post the GRN first — the sample's stock is not owned until the accepted "
-			"qty lands in the RM Store."))
+		frappe.throw(
+			_(
+				"Post the GRN first — the sample's stock is not owned until the accepted "
+				"qty lands in the RM Store."
+			)
+		)
 	src = source_wh or _received_warehouse(iqc, row.item_code)
 	lab = config.iqc_lab_warehouse()
 	se = _make_sample_stock_entry(iqc, row, "Material Transfer", src, lab, "received into lab")
-	frappe.db.set_value("IQC Sample", row.name,
-		{"status": IN_LAB, "stock_entry": se.name, "source_warehouse": src})
+	frappe.db.set_value(
+		"IQC Sample", row.name, {"status": IN_LAB, "stock_entry": se.name, "source_warehouse": src}
+	)
 	row.status = IN_LAB
 	row.stock_entry = se.name
 	row.source_warehouse = src
@@ -131,7 +141,7 @@ def _ensure_in_lab(iqc, row, source_wh=None):
 
 # --- 1. issue (pre-GRN, no stock) -------------------------------------------
 @frappe.whitelist()
-def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None):
+def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None, package_barcode=None):
 	"""Record a sample drawn from the inbound lot for testing. Pure custody log —
 	NO stock entry, because pre-GRN the goods are not yet owned. Works on a draft
 	IQC (sample drawn during Testing) or a submitted one (Passed, awaiting GRN)."""
@@ -141,34 +151,57 @@ def issue_sample(docname, item_code, sample_qty, taken_by, remarks=None):
 		frappe.throw(_("Sample qty must be greater than zero."))
 	if not taken_by:
 		frappe.throw(_("Record who is taking the sample (Taken By)."))
+	frappe.db.sql("SELECT name FROM `tabIQC` WHERE name=%s FOR UPDATE", docname)
 	iqc = _load_iqc(docname)
 	if iqc.docstatus == 2:
 		frappe.throw(_("Cannot issue a sample against a cancelled IQC."))
 	if iqc.status in (MOVED_TO_RM, "Rejected"):
 		frappe.throw(_("Samples are drawn pre-GRN — this IQC is already {0}.").format(iqc.status))
+	package_name = None
+	new_package = False
+	package_count = frappe.db.count("RM Receiving Package", {"inbound_logistics": iqc.inbound_logistics})
+	if package_count:
+		if not package_barcode:
+			frappe.throw(_("Scan the RM package from which this sample is taken."))
+		from lumirise_custom.rm_barcode import split_pre_grn_sample_package
+
+		package, new_package = split_pre_grn_sample_package(package_barcode, qty, iqc)
+		package_name = package.name
+		if item_code and item_code != package.item_code:
+			frappe.throw(_("Scanned package contains {0}, not {1}.").format(package.item_code, item_code))
+		item_code = package.item_code
 	if item_code not in {r.item_code for r in iqc.items}:
 		frappe.throw(_("{0} is not on this IQC's item list.").format(item_code))
 
 	# Direct child insert so we don't fight the parent submit lock.
 	next_idx = (max([r.idx for r in iqc.sample_items], default=0)) + 1
-	row = frappe.get_doc({
-		"doctype": "IQC Sample",
-		"parent": iqc.name,
-		"parenttype": "IQC",
-		"parentfield": "sample_items",
-		"idx": next_idx,
-		"item_code": item_code,
-		"item_name": frappe.db.get_value("Item", item_code, "item_name"),
-		"sample_qty": qty,
-		"uom": config.item_uom(item_code),
-		"taken_by": taken_by,
-		"issued_on": now_datetime(),
-		"status": ISSUED,
-		"remarks": remarks,
-	})
+	row = frappe.get_doc(
+		{
+			"doctype": "IQC Sample",
+			"parent": iqc.name,
+			"parenttype": "IQC",
+			"parentfield": "sample_items",
+			"idx": next_idx,
+			"item_code": item_code,
+			"rm_package": package_name,
+			"item_name": frappe.db.get_value("Item", item_code, "item_name"),
+			"sample_qty": qty,
+			"uom": config.item_uom(item_code),
+			"taken_by": taken_by,
+			"issued_on": now_datetime(),
+			"status": ISSUED,
+			"remarks": remarks,
+		}
+	)
 	row.flags.ignore_permissions = True
 	row.insert(ignore_permissions=True)
-	return {"row": row.name, "status": ISSUED}
+	return {
+		"row": row.name,
+		"status": ISSUED,
+		"package": package_name,
+		"new_package": new_package,
+		"source_package": package.parent_package if new_package else None,
+	}
 
 
 # --- 2. realise to lab (on GRN submit) --------------------------------------
@@ -181,6 +214,7 @@ def realise_samples_to_lab(doc, method=None):
 		return  # subcontracting service PR — no RM IQC, no samples
 	try:
 		from lumirise_custom.chain import _grn_pos
+
 		pos = _grn_pos(doc)
 	except Exception:
 		return
@@ -190,8 +224,7 @@ def realise_samples_to_lab(doc, method=None):
 		if it.item_code and it.warehouse and it.item_code not in wh_map:
 			wh_map[it.item_code] = it.warehouse
 	for po in pos:
-		iqc_names = frappe.get_all(
-			"IQC", filters={"purchase_order": po, "docstatus": 1}, pluck="name")
+		iqc_names = frappe.get_all("IQC", filters={"purchase_order": po, "docstatus": 1}, pluck="name")
 		for iqc_name in iqc_names:
 			iqc = frappe.get_doc("IQC", iqc_name)
 			for row in iqc.sample_items:
@@ -201,8 +234,8 @@ def realise_samples_to_lab(doc, method=None):
 					_ensure_in_lab(iqc, row, source_wh=wh_map.get(row.item_code))
 				except Exception:
 					frappe.log_error(
-						frappe.get_traceback(),
-						f"IQC sample -> lab failed (IQC {iqc_name}, row {row.name})")
+						frappe.get_traceback(), f"IQC sample -> lab failed (IQC {iqc_name}, row {row.name})"
+					)
 
 
 def revert_samples_from_lab(doc, method=None):
@@ -213,12 +246,12 @@ def revert_samples_from_lab(doc, method=None):
 		return
 	try:
 		from lumirise_custom.chain import _grn_pos
+
 		pos = _grn_pos(doc)
 	except Exception:
 		return
 	for po in pos:
-		iqc_names = frappe.get_all(
-			"IQC", filters={"purchase_order": po, "docstatus": 1}, pluck="name")
+		iqc_names = frappe.get_all("IQC", filters={"purchase_order": po, "docstatus": 1}, pluck="name")
 		for iqc_name in iqc_names:
 			iqc = frappe.get_doc("IQC", iqc_name)
 			for row in iqc.sample_items:
@@ -227,18 +260,17 @@ def revert_samples_from_lab(doc, method=None):
 						se = frappe.get_doc("Stock Entry", row.stock_entry)
 						if se.docstatus == 1:
 							se.cancel()
-						frappe.db.set_value(
-							"IQC Sample", row.name,
-							{"status": ISSUED, "stock_entry": None})
+						frappe.db.set_value("IQC Sample", row.name, {"status": ISSUED, "stock_entry": None})
 					except Exception:
 						frappe.log_error(
-							frappe.get_traceback(),
-							f"IQC sample lab-revert failed (row {row.name})")
+							frappe.get_traceback(), f"IQC sample lab-revert failed (row {row.name})"
+						)
 				elif row.status == RETURNED:
 					frappe.log_error(
 						f"GRN {doc.name} cancelled but IQC {iqc_name} sample {row.name} "
 						f"was already dispositioned — reverse it manually.",
-						"IQC sample: GRN cancelled after disposition")
+						"IQC sample: GRN cancelled after disposition",
+					)
 
 
 # --- 3. return / disposition (Lab -> RM / FG / scrap) -----------------------
@@ -249,6 +281,9 @@ def return_sample(docname, row_name, disposition):
 	frappe.has_permission("IQC", "write", docname, throw=True)
 	if disposition not in DISPOSITIONS:
 		frappe.throw(_("Choose a valid disposition: {0}.").format(", ".join(DISPOSITIONS)))
+	frappe.db.sql(
+		"SELECT name FROM `tabIQC Sample` WHERE name=%s AND parent=%s FOR UPDATE", (row_name, docname)
+	)
 	iqc = _load_iqc(docname)
 	row = _sample_row(iqc, row_name)
 	if row.status == RETURNED:
@@ -259,19 +294,23 @@ def return_sample(docname, row_name, disposition):
 	lab = config.iqc_lab_warehouse()
 	if disposition == "Returned Intact":
 		back = row.get("source_warehouse") or _received_warehouse(iqc, row.item_code)
-		se = _make_sample_stock_entry(
-			iqc, row, "Material Transfer", lab, back, "returned intact to RM")
+		se = _make_sample_stock_entry(iqc, row, "Material Transfer", lab, back, "returned intact to RM")
 	elif disposition == "Built into Finished Unit":
-		se = _make_sample_stock_entry(
-			iqc, row, "Material Transfer", lab, config.fg_warehouse(), "built into finished unit -> FG")
+		# This row is still the raw-material item. Moving it into an FG warehouse
+		# would falsely retain RM stock under an FG location. Consume the sample;
+		# the Work Order/Manufacture entry remains responsible for receiving the FG.
+		se = _make_sample_stock_entry(iqc, row, "Material Issue", lab, None, "consumed in test build")
 	else:  # Scrapped
-		se = _make_sample_stock_entry(
-			iqc, row, "Material Issue", lab, None, "scrapped (write-off)")
+		se = _make_sample_stock_entry(iqc, row, "Material Issue", lab, None, "scrapped (write-off)")
 
-	frappe.db.set_value("IQC Sample", row.name, {
-		"status": RETURNED,
-		"disposition": disposition,
-		"returned_on": now_datetime(),
-		"stock_entry": se.name,
-	})
+	frappe.db.set_value(
+		"IQC Sample",
+		row.name,
+		{
+			"status": RETURNED,
+			"disposition": disposition,
+			"returned_on": now_datetime(),
+			"stock_entry": se.name,
+		},
+	)
 	return {"stock_entry": se.name, "disposition": disposition}

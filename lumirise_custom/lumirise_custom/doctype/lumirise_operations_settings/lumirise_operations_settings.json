@@ -23,6 +23,10 @@
   "sec_stores",
   "enable_pick_list_task",
   "enable_grn_putaway_task",
+  "sec_rm_barcode",
+  "enable_rm_barcode_system",
+  "enforce_rm_package_scan",
+  "require_batch_for_rm_packages",
   "rm_rejection_hold_days",
   "block_grn_without_container_release",
   "sec_sales",
@@ -46,6 +50,32 @@
   "baseline_custom_fields"
  ],
  "fields": [
+  {
+   "fieldname": "sec_rm_barcode",
+   "fieldtype": "Section Break",
+   "label": "RM Barcode Control"
+  },
+  {
+   "default": "1",
+   "description": "Shows the receiving-package, location-scan and label-printing tools.",
+   "fieldname": "enable_rm_barcode_system",
+   "fieldtype": "Check",
+   "label": "Enable RM Barcode System"
+  },
+  {
+   "default": "0",
+   "description": "Blocks tracked RM Stock Entries without package scans. Turn on only after opening stock has package labels and UAT is complete.",
+   "fieldname": "enforce_rm_package_scan",
+   "fieldtype": "Check",
+   "label": "Enforce RM Package Scan"
+  },
+  {
+   "default": "1",
+   "description": "Require every tracked RM package to use ERPNext Batch traceability.",
+   "fieldname": "require_batch_for_rm_packages",
+   "fieldtype": "Check",
+   "label": "Require Batch for RM Packages"
+  },
   {
    "description": "Default company for documents the engine creates. Falls back to the system default company if left blank.",
    "fieldname": "company",
