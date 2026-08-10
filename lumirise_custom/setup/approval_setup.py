@@ -38,6 +38,9 @@ APPROVAL_ROLES = [
 
 WORKFLOW_STATES = [
 	# (name, style, icon)
+	# A fresh ERPNext site does not create a generic Draft Workflow State. Keep
+	# every state referenced by the managed workflows self-contained here.
+	("Draft", "Primary", ""),
 	("Pending Planning Manager", "Warning", ""),
 	("Pending Purchase Head", "Warning", ""),
 	("Released", "Success", "ok-sign"),
