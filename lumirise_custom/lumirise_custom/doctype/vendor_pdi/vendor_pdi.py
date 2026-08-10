@@ -31,23 +31,34 @@ class VendorPDI(Document):
 			self.status = SCHEDULED
 		any_reject = False
 		for row in self.items:
-			po_qty = flt(frappe.db.get_value(
-				"Purchase Order Item",
-				{"parent": self.purchase_order, "item_code": row.item_code}, "qty"))
+			po_qty = flt(
+				frappe.db.get_value(
+					"Purchase Order Item", {"parent": self.purchase_order, "item_code": row.item_code}, "qty"
+				)
+			)
 			if po_qty:
 				row.po_qty = po_qty
 			if flt(row.approved_qty) < 0 or flt(row.rejected_qty) < 0:
-				frappe.throw(_("Row {0} ({1}): Accepted / Rejected qty cannot be negative.").format(row.idx, row.item_code))
+				frappe.throw(
+					_("Row {0} ({1}): Accepted / Rejected qty cannot be negative.").format(
+						row.idx, row.item_code
+					)
+				)
 			if flt(row.approved_qty) + flt(row.rejected_qty) > flt(row.po_qty) + 0.001:
-				frappe.throw(_("Row {0} ({1}): Accepted + Rejected ({2}) cannot exceed PO Qty {3}.").format(
-					row.idx, row.item_code, flt(row.approved_qty) + flt(row.rejected_qty), row.po_qty))
+				frappe.throw(
+					_("Row {0} ({1}): Accepted + Rejected ({2}) cannot exceed PO Qty {3}.").format(
+						row.idx, row.item_code, flt(row.approved_qty) + flt(row.rejected_qty), row.po_qty
+					)
+				)
 			row.pending_qty = flt(row.po_qty) - flt(row.approved_qty) - flt(row.rejected_qty)
 			row.result = "Fail" if flt(row.rejected_qty) > 0 else "Pass"
 			if flt(row.rejected_qty) > 0:
 				any_reject = True
 		# Reflect the inspection outcome in the header status while still in progress.
 		if self.status in (SCHEDULED, IN_PROGRESS):
-			self.status = FAILED if (any_reject and all(flt(r.approved_qty) == 0 for r in self.items)) else self.status
+			self.status = (
+				FAILED if (any_reject and all(flt(r.approved_qty) == 0 for r in self.items)) else self.status
+			)
 
 
 # --- flow transitions (called from the form buttons) ------------------------

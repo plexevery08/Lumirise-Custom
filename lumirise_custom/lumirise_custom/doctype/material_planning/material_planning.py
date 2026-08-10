@@ -36,25 +36,28 @@ class MaterialPlanning(Document):
 			planned_start = add_days(nowdate(), horizon)
 			so_delivery = (
 				frappe.db.get_value("Sales Order", fg.sales_order, "delivery_date")
-				if fg.sales_order else None
+				if fg.sales_order
+				else None
 			)
 			expected_delivery = so_delivery or add_days(nowdate(), horizon + (_lead_days(fg.fg_item) or 0))
 			exp_dates.append(getdate(expected_delivery))
-			wo = frappe.get_doc({
-				"doctype": "Work Order",
-				"production_item": fg.fg_item,
-				"bom_no": bom_no,
-				"qty": flt(fg.required_qty),
-				"company": company,
-				"use_multi_level_bom": 0,  # consume the stocked MCPCB sub-assembly directly
-				"sales_order": fg.sales_order,
-				"fg_warehouse": fg_wh,
-				"wip_warehouse": wip_wh,
-				"source_warehouse": rm_wh,
-				"planned_start_date": planned_start,
-				"expected_delivery_date": expected_delivery,
-				"lr_source_planning": self.name,
-			})
+			wo = frappe.get_doc(
+				{
+					"doctype": "Work Order",
+					"production_item": fg.fg_item,
+					"bom_no": bom_no,
+					"qty": flt(fg.required_qty),
+					"company": company,
+					"use_multi_level_bom": 0,  # consume the stocked MCPCB sub-assembly directly
+					"sales_order": fg.sales_order,
+					"fg_warehouse": fg_wh,
+					"wip_warehouse": wip_wh,
+					"source_warehouse": rm_wh,
+					"planned_start_date": planned_start,
+					"expected_delivery_date": expected_delivery,
+					"lr_source_planning": self.name,
+				}
+			)
 			wo.insert(ignore_permissions=True)
 			wo.submit()
 			wo_names.append(wo.name)
@@ -72,6 +75,7 @@ class MaterialPlanning(Document):
 		# siblings — so the SO shows its Indent/WO/PO and each WO shows the Indent
 		# (they weren't all created yet when each doc first validated). Fail-safe.
 		from lumirise_custom import traceability
+
 		for so in {fg.sales_order for fg in self.fg_plan if fg.get("sales_order")}:
 			traceability.restamp("Sales Order", so)
 		for wo in wo_names:
@@ -90,31 +94,41 @@ class MaterialPlanning(Document):
 		for c in self.components:
 			if flt(c.to_be_ordered) <= 0:
 				continue
-			row = agg.setdefault(c.component_item, {"qty": 0, "model": c.fg_item, "so": c.sales_order, "lead": 0})
+			row = agg.setdefault(
+				c.component_item, {"qty": 0, "model": c.fg_item, "so": c.sales_order, "lead": 0}
+			)
 			row["qty"] += flt(c.to_be_ordered)
 			# Track this component's own procurement lead so its Indent line gets a real
 			# required_date (today + its lead), not the flat +15 the code used before.
 			row["lead"] = max(row["lead"], _lead_days(c.component_item))
 		if not agg:
 			return None
-		indent = frappe.get_doc({
-			"doctype": "Indent",
-			# The Planning User who prepared the plan remains the Indent maker even
-			# though the Planning Manager's approval executes this on_submit hook.
-			# This preserves the maker/checker boundary on the separate Indent flow.
-			"owner": self.owner,
-			"indent_date": nowdate(),
-			"branch": self.branch or config.get_company(self),
-			"indent_type": "Purchase",
-			"source_planning": self.name,
-			"source_sales_order": self.fg_plan[0].sales_order if self.fg_plan else None,
-			"items": [{
-				"item_code": item, "qty": d["qty"], "uom": config.item_uom(item),
-				"required_date": add_days(nowdate(), d["lead"] or _plan_lead_buffer()),
-				"source_bom": frappe.db.get_value("Item", d["model"], "default_bom"),
-				"model": d["model"], "for_sales_order": d["so"],
-			} for item, d in agg.items()],
-		})
+		indent = frappe.get_doc(
+			{
+				"doctype": "Indent",
+				# The Planning User who prepared the plan remains the Indent maker even
+				# though the Planning Manager's approval executes this on_submit hook.
+				# This preserves the maker/checker boundary on the separate Indent flow.
+				"owner": self.owner,
+				"indent_date": nowdate(),
+				"branch": self.branch or config.get_company(self),
+				"indent_type": "Purchase",
+				"source_planning": self.name,
+				"source_sales_order": self.fg_plan[0].sales_order if self.fg_plan else None,
+				"items": [
+					{
+						"item_code": item,
+						"qty": d["qty"],
+						"uom": config.item_uom(item),
+						"required_date": add_days(nowdate(), d["lead"] or _plan_lead_buffer()),
+						"source_bom": frappe.db.get_value("Item", d["model"], "default_bom"),
+						"model": d["model"],
+						"for_sales_order": d["so"],
+					}
+					for item, d in agg.items()
+				],
+			}
+		)
 		indent.insert(ignore_permissions=True)
 		return indent.name
 
@@ -237,7 +251,8 @@ def _pending_pdi(item):
 		   WHERE i.item_code=%(item)s AND p.docstatus < 2
 		     AND NOT EXISTS (SELECT 1 FROM `tabInbound Logistics` l
 		                     WHERE l.vendor_pdi = p.name AND l.docstatus < 2)""",
-		{"item": item})
+		{"item": item},
+	)
 	return flt(rows[0][0]) if rows else 0
 
 
@@ -251,14 +266,15 @@ def _in_transit(item):
 		     AND COALESCE(l.status,'') IN ('Dispatched','In Transit')
 		     AND NOT EXISTS (SELECT 1 FROM `tabIQC` q
 		                     WHERE q.inbound_logistics = l.name AND q.docstatus < 2)""",
-		{"item": item})
+		{"item": item},
+	)
 	return flt(rows[0][0]) if rows else 0
 
 
 def _pending_iqc(item):
 	"""Reached the warehouse but not yet GRN'd:
-	 (A) Logistics 'Reached Warehouse' with no IQC raised yet, plus
-	 (B) IQC accepted qty not yet moved to RM (GRN posted)."""
+	(A) Logistics 'Reached Warehouse' with no IQC raised yet, plus
+	(B) IQC accepted qty not yet moved to RM (GRN posted)."""
 	a = frappe.db.sql(
 		"""SELECT COALESCE(SUM(i.qty),0) FROM `tabInbound Logistics Item` i
 		   JOIN `tabInbound Logistics` l ON l.name=i.parent
@@ -266,13 +282,15 @@ def _pending_iqc(item):
 		     AND COALESCE(l.status,'') = 'Reached Warehouse'
 		     AND NOT EXISTS (SELECT 1 FROM `tabIQC` q
 		                     WHERE q.inbound_logistics = l.name AND q.docstatus < 2)""",
-		{"item": item})
+		{"item": item},
+	)
 	b = frappe.db.sql(
 		"""SELECT COALESCE(SUM(i.accepted_qty),0) FROM `tabIQC Item` i
 		   JOIN `tabIQC` q ON q.name=i.parent
 		   WHERE i.item_code=%(item)s AND q.docstatus < 2
 		     AND COALESCE(q.status,'') != 'Moved to RM'""",
-		{"item": item})
+		{"item": item},
+	)
 	return (flt(a[0][0]) if a else 0) + (flt(b[0][0]) if b else 0)
 
 
@@ -282,7 +300,9 @@ def _indent_balance(item):
 		"""SELECT COALESCE(SUM(i.qty),0) FROM `tabIndent Item` i
 		   JOIN `tabIndent` p ON p.name=i.parent
 		   WHERE i.item_code=%(item)s AND p.docstatus=1
-		     AND COALESCE(p.workflow_state,'') != 'Ordered'""", {"item": item})
+		     AND COALESCE(p.workflow_state,'') != 'Ordered'""",
+		{"item": item},
+	)
 	return flt(rows[0][0]) if rows else 0
 
 
@@ -309,13 +329,18 @@ def compute_plan(sales_orders):
 			delivered = min(flt(soi.qty), flt(soi.delivered_qty))
 			so_pending = max(0, flt(soi.qty) - delivered)
 			required = max(0, so_pending - fg_available)
-			fg_plan.append({
-				"sales_order": so, "fg_item": soi.item_code,
-				"fg_item_name": soi.item_name, "bom": bom,
-				"aso_qty": flt(soi.qty), "delivered_qty": delivered,
-				"fg_available": fg_available,
-				"required_qty": required,
-			})
+			fg_plan.append(
+				{
+					"sales_order": so,
+					"fg_item": soi.item_code,
+					"fg_item_name": soi.item_name,
+					"bom": bom,
+					"aso_qty": flt(soi.qty),
+					"delivered_qty": delivered,
+					"fg_available": fg_available,
+					"required_qty": required,
+				}
+			)
 			if required <= 0:
 				continue
 			bom_doc = frappe.get_doc("BOM", bom)
@@ -329,10 +354,10 @@ def compute_plan(sales_orders):
 				usable = max(0, rm_avail - blocked)
 
 				# Live inbound pipeline, each qty in exactly one bucket.
-				open_po = _open_po(comp)            # total still owed by vendors
-				p = _pending_pdi(comp)              # at Vendor PDI, not dispatched
-				t = _in_transit(comp)               # dispatched / in transit
-				r = _pending_iqc(comp)              # reached, IQC not passed/GRN'd
+				open_po = _open_po(comp)  # total still owed by vendors
+				p = _pending_pdi(comp)  # at Vendor PDI, not dispatched
+				t = _in_transit(comp)  # dispatched / in transit
+				r = _pending_iqc(comp)  # reached, IQC not passed/GRN'd
 				pending_po = max(0, open_po - (p + t + r))  # residual = not started
 				indent_bal = _indent_balance(comp)  # on indent, not yet PO'd
 
@@ -340,17 +365,25 @@ def compute_plan(sales_orders):
 				# re-orders qty already on its way in.
 				to_order = max(0, comp_required - usable - open_po - indent_bal)
 
-				components.append({
-					"sales_order": so, "fg_item": soi.item_code, "component_item": comp,
-					"component_item_name": bi.item_name,
-					"required_qty": comp_required, "rm_available": rm_avail,
-					"blocked_for_other_so": blocked,
-					"blocked_against_sos": _blocked_so_label(blocked_detail),
-					"available_after_blocking": usable,
-					"pending_po": pending_po, "pending_pdi": p, "in_transit": t,
-					"pending_iqc": r, "indent_balance": indent_bal,
-					"to_be_ordered": to_order,
-				})
+				components.append(
+					{
+						"sales_order": so,
+						"fg_item": soi.item_code,
+						"component_item": comp,
+						"component_item_name": bi.item_name,
+						"required_qty": comp_required,
+						"rm_available": rm_avail,
+						"blocked_for_other_so": blocked,
+						"blocked_against_sos": _blocked_so_label(blocked_detail),
+						"available_after_blocking": usable,
+						"pending_po": pending_po,
+						"pending_pdi": p,
+						"in_transit": t,
+						"pending_iqc": r,
+						"indent_balance": indent_bal,
+						"to_be_ordered": to_order,
+					}
+				)
 	return {"fg_plan": fg_plan, "components": components}
 
 
@@ -375,7 +408,10 @@ def po_stage_map(po_name):
 		   WHERE p.purchase_order=%(po)s AND p.docstatus < 2
 		     AND NOT EXISTS (SELECT 1 FROM `tabInbound Logistics` l
 		                     WHERE l.vendor_pdi = p.name AND l.docstatus < 2)
-		   GROUP BY i.item_code""", {"po": po_name}, as_dict=True):
+		   GROUP BY i.item_code""",
+		{"po": po_name},
+		as_dict=True,
+	):
 		bucket(r.item_code)["at_pdi"] += flt(r.qty)
 
 	for r in frappe.db.sql(
@@ -385,7 +421,10 @@ def po_stage_map(po_name):
 		     AND COALESCE(l.status,'') IN ('Dispatched','In Transit')
 		     AND NOT EXISTS (SELECT 1 FROM `tabIQC` q
 		                     WHERE q.inbound_logistics = l.name AND q.docstatus < 2)
-		   GROUP BY i.item_code""", {"po": po_name}, as_dict=True):
+		   GROUP BY i.item_code""",
+		{"po": po_name},
+		as_dict=True,
+	):
 		bucket(r.item_code)["in_transit"] += flt(r.qty)
 
 	for r in frappe.db.sql(
@@ -395,7 +434,10 @@ def po_stage_map(po_name):
 		     AND COALESCE(l.status,'') = 'Reached Warehouse'
 		     AND NOT EXISTS (SELECT 1 FROM `tabIQC` q
 		                     WHERE q.inbound_logistics = l.name AND q.docstatus < 2)
-		   GROUP BY i.item_code""", {"po": po_name}, as_dict=True):
+		   GROUP BY i.item_code""",
+		{"po": po_name},
+		as_dict=True,
+	):
 		bucket(r.item_code)["at_iqc"] += flt(r.qty)
 
 	for r in frappe.db.sql(
@@ -403,7 +445,10 @@ def po_stage_map(po_name):
 		   FROM `tabIQC Item` i JOIN `tabIQC` q ON q.name=i.parent
 		   WHERE q.purchase_order=%(po)s AND q.docstatus < 2
 		     AND COALESCE(q.status,'') != 'Moved to RM'
-		   GROUP BY i.item_code""", {"po": po_name}, as_dict=True):
+		   GROUP BY i.item_code""",
+		{"po": po_name},
+		as_dict=True,
+	):
 		bucket(r.item_code)["at_iqc"] += flt(r.qty)
 
 	return stages

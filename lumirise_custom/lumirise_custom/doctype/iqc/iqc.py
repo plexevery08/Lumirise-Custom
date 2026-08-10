@@ -34,22 +34,27 @@ class IQC(Document):
 			self.status = RECEIVED
 		for row in self.items:
 			if row.package_barcode:
-				pkg = frappe.db.get_value("RM Package", row.package_barcode, ["item_code", "batch_no", "status"], as_dict=True)
+				pkg = frappe.db.get_value(
+					"RM Package", row.package_barcode, ["item_code", "batch_no", "status"], as_dict=True
+				)
 				if not pkg or pkg.item_code != row.item_code:
 					frappe.throw(f"Row {row.idx} ({row.item_code}): package does not match the item.")
 				if row.batch_no and row.batch_no != pkg.batch_no:
 					frappe.throw(f"Row {row.idx} ({row.item_code}): batch does not match the package.")
 				row.batch_no = pkg.batch_no
-			parts = (flt(row.accepted_qty) + flt(row.rejected_qty)
-			         + flt(row.under_test_qty) + flt(row.on_hold_qty))
+			parts = (
+				flt(row.accepted_qty) + flt(row.rejected_qty) + flt(row.under_test_qty) + flt(row.on_hold_qty)
+			)
 			if parts > flt(row.received_qty) + 0.001:
 				frappe.throw(
 					f"Row {row.idx} ({row.item_code}): accepted + rejected + under-test "
-					f"+ on-hold cannot exceed received qty.")
+					f"+ on-hold cannot exceed received qty."
+				)
 			if flt(row.rejected_qty) > 0 and not row.disposition:
 				frappe.throw(
 					f"Row {row.idx} ({row.item_code}): set a Disposition "
-					f"(Return to Vendor / Replace / Scrap) for the rejected qty.")
+					f"(Return to Vendor / Replace / Scrap) for the rejected qty."
+				)
 
 	def is_fully_rejected(self):
 		"""True when at least one line was rejected AND no line was accepted — i.e.
@@ -67,7 +72,9 @@ class IQC(Document):
 		if fully_rejected:
 			frappe.msgprint(
 				"All quantities rejected — no GRN can be raised against this IQC.",
-				indicator="red", alert=True)
+				indicator="red",
+				alert=True,
+			)
 
 
 # --- flow transitions (called from the form buttons) ------------------------

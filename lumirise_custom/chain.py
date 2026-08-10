@@ -24,8 +24,10 @@ def make_vendor_pdi(source_name, target_doc=None):
 	doc.purchase_order = po.name
 	doc.mode = "Import" if "Import" in (po.supplier or "") else "Domestic"
 	for it in po.items:
-		doc.append("items", {"item_code": it.item_code, "item_name": it.item_name,
-		                     "po_qty": it.qty, "approved_qty": it.qty})
+		doc.append(
+			"items",
+			{"item_code": it.item_code, "item_name": it.item_name, "po_qty": it.qty, "approved_qty": it.qty},
+		)
 	return doc
 
 
@@ -41,9 +43,15 @@ def make_inbound_logistics(source_name, target_doc=None):
 	# Only the qty accepted at Vendor PDI moves forward into transit.
 	for it in vpdi.items:
 		if flt(it.approved_qty) > 0:
-			doc.append("items", {"item_code": it.item_code,
-			                     "item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
-			                     "qty": it.approved_qty})
+			doc.append(
+				"items",
+				{
+					"item_code": it.item_code,
+					"item_name": it.get("item_name")
+					or frappe.db.get_value("Item", it.item_code, "item_name"),
+					"qty": it.approved_qty,
+				},
+			)
 	return doc
 
 
@@ -56,13 +64,24 @@ def make_iqc(source_name, target_doc=None):
 	doc.purchase_order = log.purchase_order
 	doc.status = "IQC Received"
 	for it in log.items:
-		pkg = frappe.get_all("RM Package", filters={"inbound_logistics": log.name, "item_code": it.item_code, "status": "Pending IQC"}, fields=["name", "batch_no"], limit=1)
-		doc.append("items", {
-			"item_code": it.item_code,
-			"item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
-			"received_qty": it.qty, "accepted_qty": it.qty, "rejected_qty": 0,
-			"package_barcode": pkg[0].name if pkg else None,
-			"batch_no": pkg[0].batch_no if pkg else None})
+		pkg = frappe.get_all(
+			"RM Package",
+			filters={"inbound_logistics": log.name, "item_code": it.item_code, "status": "Pending IQC"},
+			fields=["name", "batch_no"],
+			limit=1,
+		)
+		doc.append(
+			"items",
+			{
+				"item_code": it.item_code,
+				"item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
+				"received_qty": it.qty,
+				"accepted_qty": it.qty,
+				"rejected_qty": 0,
+				"package_barcode": pkg[0].name if pkg else None,
+				"batch_no": pkg[0].batch_no if pkg else None,
+			},
+		)
 	return doc
 
 
@@ -113,6 +132,7 @@ def make_grn(source_name, target_doc=None):
 # accepted qty from the "Pending IQC" bucket in Material Planning (the qty has now
 # landed in the RM store as real Bin stock) — without it the qty would double-count.
 # Assumption (v1, same as iqc_gate): one open passed IQC per PO per GRN.
+
 
 def _grn_pos(doc):
 	return {row.purchase_order for row in doc.items if getattr(row, "purchase_order", None)}

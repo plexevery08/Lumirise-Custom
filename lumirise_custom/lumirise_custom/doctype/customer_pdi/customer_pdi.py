@@ -81,7 +81,9 @@ class CustomerPDI(Document):
 			if not row.fg_item:
 				frappe.throw(_("Row {0}: select an FG item.").format(row.idx))
 			if flt(row.qty) <= 0:
-				frappe.throw(_("Row {0} ({1}): Qty to PDI must be greater than zero.").format(row.idx, row.fg_item))
+				frappe.throw(
+					_("Row {0} ({1}): Qty to PDI must be greater than zero.").format(row.idx, row.fg_item)
+				)
 			# Show on-hand at request time only — once the flow has started the
 			# number would be misleading (the sample has already moved).
 			if self.status == DRAFT:
@@ -105,15 +107,23 @@ class CustomerPDI(Document):
 		old = {r.name: (r.fg_item, flt(r.qty)) for r in before.items}
 		new = {r.name: (r.fg_item, flt(r.qty)) for r in self.items}
 		if set(old) != set(new) or any(old[name] != new[name] for name in old):
-			frappe.throw(_("Items and quantities are locked once the request is sent for "
-				"authorization. Cancel and amend the Customer PDI to change them."))
+			frappe.throw(
+				_(
+					"Items and quantities are locked once the request is sent for "
+					"authorization. Cancel and amend the Customer PDI to change them."
+				)
+			)
 
 	def before_submit(self):
 		# Submission is the LAST step and only ever happens via authorize_return.
 		# Block a stray native Submit so the flow cannot be short-circuited.
 		if self.status != COMPLETED:
-			frappe.throw(_("Use the <b>Authorize Return to FG</b> action to complete and "
-				"submit this Customer PDI — it cannot be submitted directly."))
+			frappe.throw(
+				_(
+					"Use the <b>Authorize Return to FG</b> action to complete and "
+					"submit this Customer PDI — it cannot be submitted directly."
+				)
+			)
 		if not self.customer_signoff:
 			frappe.throw(_("Customer Sign-off is not set. Complete the inspection first."))
 
@@ -136,8 +146,10 @@ def _on_hand(item_code, warehouse):
 def _require_store_authority():
 	if not (STORE_AUTH_ROLES & set(frappe.get_roles())):
 		frappe.throw(
-			_("Only the Store (role <b>Factory Store Manager</b>) can authorize this "
-			  "movement. Ask the store in-charge to authorize."),
+			_(
+				"Only the Store (role <b>Factory Store Manager</b>) can authorize this "
+				"movement. Ask the store in-charge to authorize."
+			),
 			frappe.PermissionError,
 			title=_("Store Authorization Required"),
 		)
@@ -159,15 +171,17 @@ def _post_transfer(doc, from_wh, to_wh, lines, narration):
 		rows.extend(batches.split_for_batches(item_code, flt(qty), from_wh, to_wh))
 	if not rows:
 		return None
-	se = frappe.get_doc({
-		"doctype": "Stock Entry",
-		"stock_entry_type": "Material Transfer",
-		"company": config.get_company(doc),
-		"from_warehouse": from_wh,
-		"to_warehouse": to_wh,
-		"custom_narration": narration,
-		"items": rows,
-	})
+	se = frappe.get_doc(
+		{
+			"doctype": "Stock Entry",
+			"stock_entry_type": "Material Transfer",
+			"company": config.get_company(doc),
+			"from_warehouse": from_wh,
+			"to_warehouse": to_wh,
+			"custom_narration": narration,
+			"items": rows,
+		}
+	)
 	se.flags.ignore_permissions = True
 	se.insert(ignore_permissions=True)
 	se.submit()
@@ -194,9 +208,12 @@ def _check_availability(doc):
 	for item_code, qty in wanted.items():
 		on_hand = _on_hand(item_code, doc.source_warehouse)
 		if on_hand + 0.001 < qty:
-			frappe.throw(_("Only {0} of {1} in {2} — cannot send {3} to the Customer PDI "
-				"store. Move finished goods to the FG store first.").format(
-				on_hand, item_code, doc.source_warehouse, qty))
+			frappe.throw(
+				_(
+					"Only {0} of {1} in {2} — cannot send {3} to the Customer PDI "
+					"store. Move finished goods to the FG store first."
+				).format(on_hand, item_code, doc.source_warehouse, qty)
+			)
 
 
 def _notify(**kwargs):
@@ -257,7 +274,9 @@ def authorize_send(docname):
 
 	_check_availability(doc)
 	se = _post_transfer(
-		doc, doc.source_warehouse, doc.pdi_warehouse,
+		doc,
+		doc.source_warehouse,
+		doc.pdi_warehouse,
 		[(r.fg_item, r.qty) for r in doc.items],
 		f"Customer PDI {doc.name}: issued to PDI store for inspection",
 	)
@@ -333,10 +352,15 @@ def complete_inspection(docname):
 		elif rej == 0 and acc < qty:
 			rej = qty - acc
 		if acc < 0 or rej < 0:
-			frappe.throw(_("Row {0} ({1}): accepted and rejected qty cannot be negative.").format(row.idx, row.fg_item))
+			frappe.throw(
+				_("Row {0} ({1}): accepted and rejected qty cannot be negative.").format(row.idx, row.fg_item)
+			)
 		if abs((acc + rej) - qty) > 0.001:
-			frappe.throw(_("Row {0} ({1}): accepted ({2}) + rejected ({3}) must equal the qty "
-				"sent ({4}).").format(row.idx, row.fg_item, acc, rej, qty))
+			frappe.throw(
+				_("Row {0} ({1}): accepted ({2}) + rejected ({3}) must equal the qty sent ({4}).").format(
+					row.idx, row.fg_item, acc, rej, qty
+				)
+			)
 		row.accepted_qty = acc
 		row.rejected_qty = rej
 		row.result = "Fail" if rej > 0 else "Pass"
@@ -381,16 +405,26 @@ def authorize_return(docname):
 	rejected = [(r.fg_item, r.rejected_qty) for r in doc.items if flt(r.rejected_qty) > 0]
 
 	if rejected and not doc.rejection_warehouse:
-		frappe.throw(_("Set a Rejection Warehouse — some inspected boxes failed and must "
-			"be routed out of dispatchable stock."))
+		frappe.throw(
+			_(
+				"Set a Rejection Warehouse — some inspected boxes failed and must "
+				"be routed out of dispatchable stock."
+			)
+		)
 
 	doc.return_stock_entry = _post_transfer(
-		doc, doc.pdi_warehouse, doc.source_warehouse, accepted,
+		doc,
+		doc.pdi_warehouse,
+		doc.source_warehouse,
+		accepted,
 		f"Customer PDI {doc.name}: passed boxes returned to FG store",
 	)
 	if rejected:
 		doc.rejection_stock_entry = _post_transfer(
-			doc, doc.pdi_warehouse, doc.rejection_warehouse, rejected,
+			doc,
+			doc.pdi_warehouse,
+			doc.rejection_warehouse,
+			rejected,
 			f"Customer PDI {doc.name}: failed boxes moved to Rejection store",
 		)
 
@@ -422,13 +456,15 @@ def fetch_sales_order_items(sales_order, source_warehouse=None):
 	for it in so.items:
 		if not frappe.db.get_value("Item", it.item_code, "is_stock_item"):
 			continue  # only stock FG items can be sent to / inspected in the PDI store
-		rows.append({
-			"fg_item": it.item_code,
-			"item_name": it.item_name,
-			"uom": frappe.db.get_value("Item", it.item_code, "stock_uom") or it.stock_uom,
-			"qty": flt(it.stock_qty) or flt(it.qty),
-			"available_qty": _on_hand(it.item_code, source_warehouse),
-		})
+		rows.append(
+			{
+				"fg_item": it.item_code,
+				"item_name": it.item_name,
+				"uom": frappe.db.get_value("Item", it.item_code, "stock_uom") or it.stock_uom,
+				"qty": flt(it.stock_qty) or flt(it.qty),
+				"available_qty": _on_hand(it.item_code, source_warehouse),
+			}
+		)
 	return rows
 
 

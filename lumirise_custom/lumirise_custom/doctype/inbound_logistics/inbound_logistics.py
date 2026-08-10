@@ -21,6 +21,7 @@ DISPATCHED = "Dispatched"
 IN_TRANSIT = "In Transit"
 REACHED = "Reached Warehouse"
 
+
 class InboundLogistics(Document):
 	def validate(self):
 		if not self.status:
@@ -33,15 +34,17 @@ class InboundLogistics(Document):
 		approved = {
 			d.item_code: flt(d.approved_qty)
 			for d in frappe.get_all(
-				"Vendor PDI Item", {"parent": self.vendor_pdi},
-				["item_code", "approved_qty"]) or []
+				"Vendor PDI Item", {"parent": self.vendor_pdi}, ["item_code", "approved_qty"]
+			)
+			or []
 		}
 		for row in self.items:
 			cap = approved.get(row.item_code)
 			if cap is not None and flt(row.qty) > cap:
 				frappe.throw(
 					f"Row {row.idx} ({row.item_code}): logistics qty {row.qty} "
-					f"cannot exceed the Vendor-PDI approved qty {cap}.")
+					f"cannot exceed the Vendor-PDI approved qty {cap}."
+				)
 
 
 # --- flow transitions (called from the form buttons) ------------------------
