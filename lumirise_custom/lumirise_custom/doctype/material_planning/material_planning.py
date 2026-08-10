@@ -307,7 +307,7 @@ def _indent_balance(item):
 
 
 @frappe.whitelist()
-def compute_plan(sales_orders):
+def compute_plan(sales_orders: str | list[str]):
 	"""Explode the chosen Sales Orders and compute the planning grid.
 	Returns {fg_plan: [...], components: [...]} for the client to populate."""
 	if isinstance(sales_orders, str):

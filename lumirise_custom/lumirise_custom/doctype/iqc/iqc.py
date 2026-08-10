@@ -71,7 +71,7 @@ class IQC(Document):
 			self.db_set("status", REJECTED if fully_rejected else PASSED)
 		if fully_rejected:
 			frappe.msgprint(
-				"All quantities rejected — no GRN can be raised against this IQC.",
+				_("All quantities rejected — no GRN can be raised against this IQC."),
 				indicator="red",
 				alert=True,
 			)
@@ -83,7 +83,7 @@ def _load(docname):
 
 
 @frappe.whitelist()
-def start_testing(docname):
+def start_testing(docname: str):
 	"""Quality begins incoming inspection / testing."""
 	require_quality_action()
 	frappe.has_permission("IQC", "write", docname, throw=True)
@@ -95,7 +95,7 @@ def start_testing(docname):
 
 
 @frappe.whitelist()
-def record_result(docname):
+def record_result(docname: str):
 	"""Quality records the per-line accepted / rejected qty (entered in the grid)
 	and marks the IQC Passed (or Rejected if everything failed)."""
 	require_quality_action()
@@ -109,7 +109,7 @@ def record_result(docname):
 
 
 @frappe.whitelist()
-def hold(docname, reason=None):
+def hold(docname: str, reason: str | None = None):
 	require_quality_action()
 	frappe.has_permission("IQC", "write", docname, throw=True)
 	doc = _load(docname)

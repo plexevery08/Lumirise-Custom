@@ -53,7 +53,7 @@ def _load(docname):
 
 
 @frappe.whitelist()
-def mark_in_transit(docname):
+def mark_in_transit(docname: str):
 	"""Logistics confirms the consignment has left the vendor / port."""
 	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
@@ -69,7 +69,7 @@ def mark_in_transit(docname):
 
 
 @frappe.whitelist()
-def approve_gate(docname):
+def approve_gate(docname: str):
 	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
@@ -84,7 +84,7 @@ def approve_gate(docname):
 
 
 @frappe.whitelist()
-def verify_documents(docname, exception=None):
+def verify_documents(docname: str, exception: str | None = None):
 	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
@@ -98,7 +98,7 @@ def verify_documents(docname, exception=None):
 
 
 @frappe.whitelist()
-def mark_reached(docname):
+def mark_reached(docname: str):
 	"""Consignment has reached the factory dock — qty moves In-Transit -> Pending
 	IQC (derived). Makes the 'Create > IQC' action the next step (no auto-create)."""
 	require_logistics_action()
@@ -111,7 +111,7 @@ def mark_reached(docname):
 
 
 @frappe.whitelist()
-def release_container(docname):
+def release_container(docname: str):
 	"""Purchase authorizes container release once the goods have reached the dock —
 	the gate a not-yet-released consignment's GRN checks (WP-2.3)."""
 	require_purchase_release()

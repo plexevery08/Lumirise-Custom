@@ -234,4 +234,4 @@ def seed_credit_terms():
 			"Sales Credit Term",
 			{"payment_type": term["payment_type"], "credit_days": term["credit_days"]},
 		):
-			frappe.get_doc(dict(term, doctype="Sales Credit Term")).insert(ignore_permissions=True)
+			frappe.get_doc(doctype="Sales Credit Term", **term).insert(ignore_permissions=True)

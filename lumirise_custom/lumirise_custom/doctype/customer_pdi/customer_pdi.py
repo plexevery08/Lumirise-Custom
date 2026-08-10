@@ -228,7 +228,7 @@ def _notify(**kwargs):
 
 # --- flow transitions (called from the form buttons) ------------------------
 @frappe.whitelist()
-def send_for_authorization(docname):
+def send_for_authorization(docname: str):
 	"""FG/Dispatch raises the request. No stock moves yet — it goes to the store
 	for authorization."""
 	frappe.has_permission("Customer PDI", "write", docname, throw=True)
@@ -259,7 +259,7 @@ def send_for_authorization(docname):
 
 
 @frappe.whitelist()
-def authorize_send(docname):
+def authorize_send(docname: str):
 	"""STORE authorizes the request: post the FG -> PDI transfer so the boxes
 	become available in the Customer PDI store, then hand off to Quality."""
 	_require_store_authority()
@@ -305,7 +305,7 @@ def authorize_send(docname):
 
 
 @frappe.whitelist()
-def reject_send(docname, reason=None):
+def reject_send(docname: str, reason: str | None = None):
 	"""STORE declines the request before any stock moves."""
 	_require_store_authority()
 	frappe.has_permission("Customer PDI", "write", docname, throw=True)
@@ -331,7 +331,7 @@ def reject_send(docname, reason=None):
 
 
 @frappe.whitelist()
-def complete_inspection(docname):
+def complete_inspection(docname: str):
 	"""Quality finishes the inspection. Reads the per-item accepted/rejected qty
 	the inspector entered, derives each row's result + the overall sign-off, and
 	hands off to the store to authorize the return."""
@@ -389,7 +389,7 @@ def complete_inspection(docname):
 
 
 @frappe.whitelist()
-def authorize_return(docname):
+def authorize_return(docname: str):
 	"""STORE authorizes the return. Accepted boxes move PDI -> FG (dispatchable
 	again); rejected boxes move PDI -> Rejection. The Customer PDI is then
 	submitted, opening the dispatch gate for a passed sign-off."""
@@ -442,7 +442,7 @@ def authorize_return(docname):
 
 
 @frappe.whitelist()
-def fetch_sales_order_items(sales_order, source_warehouse=None):
+def fetch_sales_order_items(sales_order: str, source_warehouse: str | None = None):
 	"""Return the FG rows for a Sales Order so the Customer PDI child table can be
 	populated when the user picks the order. Qty/UOM are the item's *stock* qty and
 	UOM so they stay unit-consistent with the FG on-hand and the FG->PDI transfer
@@ -469,7 +469,7 @@ def fetch_sales_order_items(sales_order, source_warehouse=None):
 
 
 @frappe.whitelist()
-def fg_on_hand(item_code, warehouse=None):
+def fg_on_hand(item_code: str, warehouse: str | None = None):
 	"""Live on-hand of an FG item in the source (Dispatch FG) store — used to fill
 	'Available in FG' the moment the inspector picks the item, before save."""
 	if not item_code:
@@ -487,7 +487,7 @@ def dispatch_fg_default():
 
 
 @frappe.whitelist()
-def reopen_as_draft(docname):
+def reopen_as_draft(docname: str):
 	"""Put a store-rejected request back to Draft so FG can revise and re-raise it."""
 	frappe.has_permission("Customer PDI", "write", docname, throw=True)
 	doc = _load(docname)

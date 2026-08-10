@@ -67,7 +67,7 @@ def _load(docname):
 
 
 @frappe.whitelist()
-def start_inspection(docname):
+def start_inspection(docname: str):
 	"""Quality begins the vendor inspection."""
 	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
@@ -79,7 +79,7 @@ def start_inspection(docname):
 
 
 @frappe.whitelist()
-def record_result(docname):
+def record_result(docname: str):
 	"""Quality records the per-line accepted / rejected qty (entered in the grid)
 	and marks the inspection Passed (or Failed if everything was rejected)."""
 	require_quality_action()
@@ -93,7 +93,7 @@ def record_result(docname):
 
 
 @frappe.whitelist()
-def dispatch(docname):
+def dispatch(docname: str):
 	"""Vendor PDI passed and the accepted goods are dispatched. Sets the status that
 	makes the 'Create > Inbound Logistics' action available (no auto-creation)."""
 	require_quality_action()
@@ -108,7 +108,7 @@ def dispatch(docname):
 
 
 @frappe.whitelist()
-def hold(docname, reason=None):
+def hold(docname: str, reason: str | None = None):
 	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
 	doc = _load(docname)
