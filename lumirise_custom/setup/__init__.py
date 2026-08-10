@@ -27,6 +27,16 @@ DEFAULT_CREDIT_TERMS = [
 ]
 
 
+def before_install():
+	"""Create role links before a fresh install synchronizes DocType metadata."""
+	before_migrate()
+
+
+def after_install():
+	"""Apply the same idempotent setup to fresh sites that migrations receive."""
+	after_migrate()
+
+
 def before_migrate():
 	"""Roles referenced by DocType JSON permissions must exist before the
 	schema sync imports those DocTypes."""

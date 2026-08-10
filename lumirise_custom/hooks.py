@@ -98,8 +98,8 @@ jinja = {
 # Installation
 # ------------
 
-# before_install = "lumirise_custom.install.before_install"
-# after_install = "lumirise_custom.install.after_install"
+before_install = "lumirise_custom.setup.before_install"
+after_install = "lumirise_custom.setup.after_install"
 
 # Ensure roles referenced by DocType JSON exist BEFORE schema sync.
 before_migrate = "lumirise_custom.setup.before_migrate"
