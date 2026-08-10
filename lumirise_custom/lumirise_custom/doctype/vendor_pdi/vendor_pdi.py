@@ -14,6 +14,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from lumirise_custom.action_permissions import require_quality_action
+
 # --- Status values (single source of truth) ---------------------------------
 SCHEDULED = "PDI Scheduled"
 IN_PROGRESS = "PDI In Progress"
@@ -56,6 +58,7 @@ def _load(docname):
 @frappe.whitelist()
 def start_inspection(docname):
 	"""Quality begins the vendor inspection."""
+	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (SCHEDULED, ON_HOLD):
@@ -68,6 +71,7 @@ def start_inspection(docname):
 def record_result(docname):
 	"""Quality records the per-line accepted / rejected qty (entered in the grid)
 	and marks the inspection Passed (or Failed if everything was rejected)."""
+	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (IN_PROGRESS, SCHEDULED):
@@ -81,6 +85,7 @@ def record_result(docname):
 def dispatch(docname):
 	"""Vendor PDI passed and the accepted goods are dispatched. Sets the status that
 	makes the 'Create > Inbound Logistics' action available (no auto-creation)."""
+	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status != PASSED:
@@ -93,6 +98,7 @@ def dispatch(docname):
 
 @frappe.whitelist()
 def hold(docname, reason=None):
+	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
 	doc = _load(docname)
 	doc.db_set("status", ON_HOLD)

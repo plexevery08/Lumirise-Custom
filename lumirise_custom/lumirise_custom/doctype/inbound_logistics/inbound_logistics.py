@@ -14,13 +14,12 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, now_datetime
 
+from lumirise_custom.action_permissions import require_logistics_action, require_purchase_release
+
 # --- Status values (single source of truth) ---------------------------------
 DISPATCHED = "Dispatched"
 IN_TRANSIT = "In Transit"
 REACHED = "Reached Warehouse"
-
-RELEASE_ROLES = ("Purchase User", "Purchase Manager", "Purchase Head", "System Manager")
-
 
 class InboundLogistics(Document):
 	def validate(self):
@@ -53,6 +52,7 @@ def _load(docname):
 @frappe.whitelist()
 def mark_in_transit(docname):
 	"""Logistics confirms the consignment has left the vendor / port."""
+	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.vehicle_gate_status != "Approved":
@@ -67,6 +67,7 @@ def mark_in_transit(docname):
 
 @frappe.whitelist()
 def approve_gate(docname):
+	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.docstatus != 1:
@@ -81,6 +82,7 @@ def approve_gate(docname):
 
 @frappe.whitelist()
 def verify_documents(docname, exception=None):
+	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
 	if exception:
@@ -96,6 +98,7 @@ def verify_documents(docname, exception=None):
 def mark_reached(docname):
 	"""Consignment has reached the factory dock — qty moves In-Transit -> Pending
 	IQC (derived). Makes the 'Create > IQC' action the next step (no auto-create)."""
+	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (DISPATCHED, IN_TRANSIT, REACHED):
@@ -108,9 +111,8 @@ def mark_reached(docname):
 def release_container(docname):
 	"""Purchase authorizes container release once the goods have reached the dock —
 	the gate a not-yet-released consignment's GRN checks (WP-2.3)."""
+	require_purchase_release()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
-	if not any(r in frappe.get_roles() for r in RELEASE_ROLES):
-		frappe.throw(_("Only Purchase can release a container."))
 	doc = _load(docname)
 	if doc.docstatus != 1:
 		frappe.throw(_("Submit the Inbound Logistics before releasing the container."))

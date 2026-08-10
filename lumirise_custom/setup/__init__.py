@@ -6,15 +6,15 @@ and default Sales Credit Terms exist. Safe to run repeatedly.
 
 import frappe
 
+from lumirise_custom.setup.approval_setup import setup_approvals
+from lumirise_custom.setup.bom_fields import create_bom_fields
 from lumirise_custom.setup.costing_fields import create_costing_fields
 from lumirise_custom.setup.flow_fields import create_flow_fields
-from lumirise_custom.setup.bom_fields import create_bom_fields
-from lumirise_custom.setup.purchase_reco_fields import create_purchase_reco_fields
-from lumirise_custom.setup.wo_line_transfer_fields import create_wo_line_transfer_fields
-from lumirise_custom.setup.purchase_plan_supplier_fields import create_purchase_plan_supplier_fields
 from lumirise_custom.setup.production_setup import setup_production_flow
+from lumirise_custom.setup.purchase_plan_supplier_fields import create_purchase_plan_supplier_fields
+from lumirise_custom.setup.purchase_reco_fields import create_purchase_reco_fields
 from lumirise_custom.setup.task_seed import seed_task_engine
-from lumirise_custom.setup.approval_setup import setup_approvals
+from lumirise_custom.setup.wo_line_transfer_fields import create_wo_line_transfer_fields
 
 SALES_PLATFORM_ROLES = ["Pricing Manager", "Sales Approver", "Sales Auditor"]
 
@@ -30,12 +30,12 @@ DEFAULT_CREDIT_TERMS = [
 def before_migrate():
 	"""Roles referenced by DocType JSON permissions must exist before the
 	schema sync imports those DocTypes."""
-	from lumirise_custom.setup.task_seed import ensure_ops_role
 	from lumirise_custom.setup.approval_setup import ensure_approval_roles
+	from lumirise_custom.setup.task_seed import ensure_ops_role
 
 	ensure_ops_role()
-	# Planning Manager / Purchase Head / MD / Factory Store Manager must exist before
-	# the workflows that reference them (and the new DocType JSON perms) are imported.
+	# Custom approval, Quality, Logistics and Stores roles must exist before the
+	# workflows and DocType permissions that reference them are synchronized.
 	ensure_approval_roles()
 
 

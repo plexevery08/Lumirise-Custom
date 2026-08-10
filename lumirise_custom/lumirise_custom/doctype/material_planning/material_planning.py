@@ -13,7 +13,7 @@ import json
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import flt, nowdate, add_days, cint, getdate
+from frappe.utils import add_days, cint, flt, getdate, nowdate
 
 from lumirise_custom import defaults as config
 
@@ -99,6 +99,10 @@ class MaterialPlanning(Document):
 			return None
 		indent = frappe.get_doc({
 			"doctype": "Indent",
+			# The Planning User who prepared the plan remains the Indent maker even
+			# though the Planning Manager's approval executes this on_submit hook.
+			# This preserves the maker/checker boundary on the separate Indent flow.
+			"owner": self.owner,
 			"indent_date": nowdate(),
 			"branch": self.branch or config.get_company(self),
 			"indent_type": "Purchase",
@@ -164,9 +168,9 @@ def _blocked_so_breakdown(item, exclude_sos):
 	No HAVING filter, so sum(qty over groups) == the old ungrouped total exactly;
 	the label helper filters out non-positive groups for display.
 
-	Blocked = required − TRANSFERRED (per row, floored at 0): once a qty is issued
+	Blocked = required - TRANSFERRED (per row, floored at 0): once a qty is issued
 	to the line it has already left the RM store, so it no longer blocks store
-	stock. The old required − consumed kept counting issued-but-not-yet-consumed
+	stock. The old required - consumed kept counting issued-but-not-yet-consumed
 	material as blocked and over-stated the reservation (Phase-2 point 47)."""
 	return frappe.db.sql(
 		"""
@@ -208,7 +212,7 @@ def _blocked_so_label(breakdown):
 # IQC -> GRN, it is counted at exactly ONE stage (its FURTHEST live document), so
 #   Pending PO + Pending PDI + In Transit + Pending IQC == OPEN  (always).
 # A qty rejected at any stage simply never advances, so it falls back into the
-# Pending PO residual = OPEN − (Pending PDI + In Transit + Pending IQC).
+# Pending PO residual = OPEN - (Pending PDI + In Transit + Pending IQC).
 
 
 def _open_po(item):

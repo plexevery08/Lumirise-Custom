@@ -10,7 +10,7 @@ Implements two requirements Ajay raised on the 2026-06-14 review call:
     order releasing, approval should be needed."
 
 Everything here is safe to run repeatedly -- roles/states/actions are created only
-if missing, and the two Workflows are upserted (child tables fully rebuilt) so the
+if missing, and the managed Workflows are upserted (child tables fully rebuilt) so the
 desired shape is reasserted on every migrate. Roles are also ensured in
 before_migrate so the Workflow `allowed` links resolve during schema sync.
 
@@ -20,9 +20,21 @@ Run standalone:  bench --site site.com execute \
 
 import frappe
 
-# Roles the approval chains reference. Standard "Purchase Manager" already ships.
-# "Planning User" = the maker who drafts a Material Planning (Planning Manager checks).
-APPROVAL_ROLES = ["Planning User", "Planning Manager", "Purchase Head", "MD", "Factory Store Manager", "Line Supervisor"]
+# Custom roles referenced by workflow or DocType permission metadata. Standard
+# ERPNext roles (Purchase User, Purchase Manager, Stock User, Stock Manager) ship
+# with ERPNext and are not duplicated here.
+APPROVAL_ROLES = [
+	"Planning User",
+	"Planning Manager",
+	"Purchase Head",
+	"MD",
+	"Factory Store Manager",
+	"Line Supervisor",
+	"Quality Inspector",
+	"Quality Manager",
+	"Logistics User",
+	"Logistics Manager",
+]
 
 WORKFLOW_STATES = [
 	# (name, style, icon)
@@ -47,8 +59,7 @@ WORKFLOW_ACTIONS = [
 
 
 def ensure_approval_roles():
-	"""Create the approval roles if missing. Called from before_migrate too so the
-	Workflow `allowed` role links exist when the workflows are (re)imported."""
+	"""Create custom workflow and operational roles before schema synchronization."""
 	for role in APPROVAL_ROLES:
 		if not frappe.db.exists("Role", role):
 			frappe.get_doc(
@@ -110,7 +121,9 @@ def _upsert_workflow(name, document_type, states, transitions):
 				"action": t["action"],
 				"next_state": t["next_state"],
 				"allowed": t["allowed"],
-				"allow_self_approval": 1,
+				# The maker must be able to send their own draft into the queue.
+				# Approval/rejection transitions omit this flag and default to 0.
+				"allow_self_approval": t.get("allow_self_approval", 0),
 			},
 		)
 	wf.save(ignore_permissions=True)
@@ -124,17 +137,22 @@ def _indent_workflow():
 	(indent.mark_indents_ordered), so it is intentionally NOT a transition here.
 	"""
 	states = [
-		{"state": "Draft", "doc_status": "0"},
-		{"state": "Pending Planning Manager", "doc_status": "0"},
-		{"state": "Approved", "doc_status": "1"},
-		{"state": "Rejected", "doc_status": "0"},
+		{"state": "Draft", "doc_status": "0", "allow_edit": "Planning User"},
+		{
+			"state": "Pending Planning Manager",
+			"doc_status": "0",
+			"allow_edit": "Planning Manager",
+		},
+		{"state": "Approved", "doc_status": "1", "allow_edit": "Planning Manager"},
+		{"state": "Rejected", "doc_status": "0", "allow_edit": "Planning User"},
 	]
 	transitions = [
 		{
 			"state": "Draft",
 			"action": "Submit for Approval",
 			"next_state": "Pending Planning Manager",
-			"allowed": "Planning Manager",
+			"allowed": "Planning User",
+			"allow_self_approval": 1,
 		},
 		{
 			"state": "Pending Planning Manager",
@@ -169,11 +187,11 @@ def _purchase_order_workflow():
 	is fully authorized.
 	"""
 	states = [
-		{"state": "Draft", "doc_status": "0"},
-		{"state": "Pending Purchase Head", "doc_status": "0"},
-		{"state": "Pending MD", "doc_status": "0"},
-		{"state": "Released", "doc_status": "1"},
-		{"state": "Rejected", "doc_status": "0"},
+		{"state": "Draft", "doc_status": "0", "allow_edit": "Purchase Manager"},
+		{"state": "Pending Purchase Head", "doc_status": "0", "allow_edit": "Purchase Head"},
+		{"state": "Pending MD", "doc_status": "0", "allow_edit": "MD"},
+		{"state": "Released", "doc_status": "1", "allow_edit": "MD"},
+		{"state": "Rejected", "doc_status": "0", "allow_edit": "Purchase Manager"},
 	]
 	transitions = [
 		{
@@ -181,6 +199,7 @@ def _purchase_order_workflow():
 			"action": "Submit for Release",
 			"next_state": "Pending Purchase Head",
 			"allowed": "Purchase Manager",
+			"allow_self_approval": 1,
 		},
 		{
 			"state": "Pending Purchase Head",
@@ -216,10 +235,10 @@ def _rm_price_book_workflow():
 	rates into costing. Ref 01:00:57 "it should be approved by MD."
 	"""
 	states = [
-		{"state": "Draft", "doc_status": "0"},
-		{"state": "Pending MD", "doc_status": "0"},
-		{"state": "Approved", "doc_status": "1"},
-		{"state": "Rejected", "doc_status": "0"},
+		{"state": "Draft", "doc_status": "0", "allow_edit": "Purchase Manager"},
+		{"state": "Pending MD", "doc_status": "0", "allow_edit": "MD"},
+		{"state": "Approved", "doc_status": "1", "allow_edit": "MD"},
+		{"state": "Rejected", "doc_status": "0", "allow_edit": "Purchase Manager"},
 	]
 	transitions = [
 		{
@@ -227,6 +246,7 @@ def _rm_price_book_workflow():
 			"action": "Submit for MD Approval",
 			"next_state": "Pending MD",
 			"allowed": "Purchase Manager",
+			"allow_self_approval": 1,
 		},
 		{
 			"state": "Pending MD",
@@ -269,6 +289,7 @@ def _material_planning_workflow():
 			"action": "Submit for Approval",
 			"next_state": "Pending Planning Manager",
 			"allowed": "Planning User",
+			"allow_self_approval": 1,
 		},
 		{
 			"state": "Pending Planning Manager",

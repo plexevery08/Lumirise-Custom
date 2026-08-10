@@ -17,6 +17,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from lumirise_custom.action_permissions import require_quality_action
+
 # --- Status values (single source of truth) ---------------------------------
 RECEIVED = "IQC Received"
 TESTING = "Testing"
@@ -76,6 +78,7 @@ def _load(docname):
 @frappe.whitelist()
 def start_testing(docname):
 	"""Quality begins incoming inspection / testing."""
+	require_quality_action()
 	frappe.has_permission("IQC", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (RECEIVED, ON_HOLD):
@@ -88,6 +91,7 @@ def start_testing(docname):
 def record_result(docname):
 	"""Quality records the per-line accepted / rejected qty (entered in the grid)
 	and marks the IQC Passed (or Rejected if everything failed)."""
+	require_quality_action()
 	frappe.has_permission("IQC", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (RECEIVED, TESTING):
@@ -99,6 +103,7 @@ def record_result(docname):
 
 @frappe.whitelist()
 def hold(docname, reason=None):
+	require_quality_action()
 	frappe.has_permission("IQC", "write", docname, throw=True)
 	doc = _load(docname)
 	doc.db_set("status", ON_HOLD)

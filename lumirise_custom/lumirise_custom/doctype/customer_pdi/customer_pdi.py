@@ -28,6 +28,7 @@ from frappe.utils import flt, now_datetime
 
 from lumirise_custom import batches
 from lumirise_custom import defaults as config
+from lumirise_custom.action_permissions import require_quality_action
 
 # --- Status values (single source of truth) ---------------------------------
 DRAFT = "Draft"
@@ -315,6 +316,7 @@ def complete_inspection(docname):
 	"""Quality finishes the inspection. Reads the per-item accepted/rejected qty
 	the inspector entered, derives each row's result + the overall sign-off, and
 	hands off to the store to authorize the return."""
+	require_quality_action()
 	frappe.has_permission("Customer PDI", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.docstatus != 0 or doc.status != AT_PDI:
