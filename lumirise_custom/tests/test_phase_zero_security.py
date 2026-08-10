@@ -106,6 +106,7 @@ class TestPhaseZeroSecurity(IntegrationTestCase):
 
 	def test_generated_indent_keeps_the_planning_user_as_owner(self):
 		planning = SimpleNamespace(
+			name="PLAN-TEST",
 			owner="planner@example.com",
 			branch=None,
 			fg_plan=[],
@@ -139,6 +140,10 @@ class TestPhaseZeroSecurity(IntegrationTestCase):
 			patch(
 				"lumirise_custom.lumirise_custom.doctype.material_planning.material_planning._lead_days",
 				return_value=5,
+			),
+			patch(
+				"lumirise_custom.lumirise_custom.doctype.material_planning.material_planning.nowdate",
+				return_value="2026-08-10",
 			),
 		):
 			result = MaterialPlanning._create_consolidated_indent(planning)
