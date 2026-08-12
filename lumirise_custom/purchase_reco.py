@@ -26,10 +26,13 @@ def _indent_names(po):
 	return [n.strip() for n in refs.split(",") if n.strip()]
 
 
-def _rm_price(item_code, qty=None):
+def _rm_price(item_code, qty=None, supplier=None):
 	"""MD-approved RM Price Book rate for the item, from the LATEST approved book that
 	prices it. v2 supports multiple vendor / qty-range rows: among the rows matching the
-	qty range, pick the Preferred vendor, else the lowest rate.
+	qty range, pick the Preferred vendor, else the lowest rate. Pass `supplier` to pin the
+	lookup to that one vendor's own rows instead (Purchase Plan: the buyer already chose
+	the vendor, so fetch that vendor's rate/qty-tier rather than preferred-or-cheapest
+	across every vendor who prices the item).
 
 	Reads base_rate (company currency), NOT the vendor-currency rate -- rows from
 	different vendors can be quoted in different currencies, so comparing raw `rate`
@@ -39,17 +42,19 @@ def _rm_price(item_code, qty=None):
 	arbitrary row; the final vendor-selection policy is confirmed at the purchase meeting
 	(lumirise-decision-gates). Backward compatible — a single legacy row returns as before.
 	"""
+	supplier_cond = "AND i.supplier = %(supplier)s" if supplier else ""
+	supplier_cond2 = "AND i2.supplier = %(supplier)s" if supplier else ""
 	rows = frappe.db.sql(
-		"""SELECT i.base_rate AS rate, i.min_qty, i.max_qty, i.preferred
+		f"""SELECT i.base_rate AS rate, i.min_qty, i.max_qty, i.preferred
 		   FROM `tabRM Price Book Item` i
 		   JOIN `tabRM Price Book` p ON p.name = i.parent
-		   WHERE i.item_code = %s AND p.docstatus = 1
+		   WHERE i.item_code = %(item_code)s {supplier_cond} AND p.docstatus = 1
 		     AND p.name = (
 		        SELECT p2.name FROM `tabRM Price Book Item` i2
 		        JOIN `tabRM Price Book` p2 ON p2.name = i2.parent
-		        WHERE i2.item_code = %s AND p2.docstatus = 1
+		        WHERE i2.item_code = %(item_code)s {supplier_cond2} AND p2.docstatus = 1
 		        ORDER BY p2.modified DESC LIMIT 1)""",
-		(item_code, item_code),
+		{"item_code": item_code, "supplier": supplier},
 		as_dict=True,
 	)
 	if not rows:

@@ -65,6 +65,7 @@ frappe.ui.form.on("Purchase Plan", {
 		if (!frm.doc.lr_global_supplier) return;
 		(frm.doc.items || []).forEach((row) => {
 			row.supplier = frm.doc.lr_global_supplier;
+			fetch_rm_rate(frm, row.doctype, row.name);
 		});
 		frm.refresh_field("items");
 		render_supplier_split(frm);
@@ -81,13 +82,29 @@ frappe.ui.form.on("Purchase Plan", {
 	items_remove(frm) { draw_balance(frm); render_supplier_split(frm); },
 });
 
+// Auto-fetch the vendor's Approved RM Price Book rate once a line has both an item and
+// a supplier. Never overwrites a rate that's already there — the buyer's typed-in
+// negotiated rate (or an earlier fetch) is sticky; clear the rate field to re-fetch.
+function fetch_rm_rate(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	if (!row || !row.item_code || !row.supplier || flt(row.rate) > 0) return;
+	frappe.call({
+		method: "lumirise_custom.lumirise_custom.doctype.purchase_plan.purchase_plan.get_rm_rate",
+		args: { item_code: row.item_code, supplier: row.supplier, qty: row.qty },
+		callback(r) {
+			const rate = flt(r.message);
+			if (rate > 0) frappe.model.set_value(cdt, cdn, "rate", rate);
+		},
+	});
+}
+
 // Recompute the balance/kit view when an order qty changes.
 frappe.ui.form.on("Purchase Plan Item", {
 	qty(frm) { draw_balance(frm); render_supplier_split(frm); draw_kit_calc(frm); },
-	// Per-item supplier override -> refresh the supplier-wise split.
-	supplier(frm) { render_supplier_split(frm); },
+	// Per-item supplier override -> refresh the supplier-wise split + fetch its rate.
+	supplier(frm, cdt, cdn) { render_supplier_split(frm); fetch_rm_rate(frm, cdt, cdn); },
 	model(frm) { render_kit_calc(frm); },
-	item_code(frm) { draw_kit_calc(frm); },
+	item_code(frm, cdt, cdn) { draw_kit_calc(frm); fetch_rm_rate(frm, cdt, cdn); },
 });
 
 // Kit Calculator (change-list 6.3): per model, how many COMPLETE kits the ordered

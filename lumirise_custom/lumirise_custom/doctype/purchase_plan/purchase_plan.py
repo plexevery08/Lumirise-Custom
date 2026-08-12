@@ -15,6 +15,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from lumirise_custom.purchase_reco import _rm_price
+
 RM_STORE = "Stores - L"
 
 
@@ -28,6 +30,17 @@ class PurchasePlan(Document):
 			for row in self.items:
 				if not row.supplier:
 					row.supplier = self.lr_global_supplier
+		self._fetch_rm_rates()
+
+	def _fetch_rm_rates(self):
+		"""Server-side safety net for get_rm_rate(): fill a line's rate from the vendor's
+		Approved RM Price Book whenever item + supplier are set but rate is still blank.
+		Never overwrites a rate that's already there (buyer-typed or previously fetched) —
+		same sticky-once-set rule the client fetch uses. Catches API/import-created plans
+		and any line the client-side fetch (purchase_plan.js) missed."""
+		for row in self.items:
+			if row.item_code and row.supplier and not flt(row.rate):
+				row.rate = _rm_price(row.item_code, row.qty, supplier=row.supplier)
 
 	def before_submit(self):
 		"""Every consolidated line must have a vendor before the plan is released for
@@ -68,6 +81,17 @@ def get_indent_qty(plan_name=None, indent_refs=None):
 		                          fields=["item_code", "qty"]):
 			qty[row.item_code] = flt(qty.get(row.item_code, 0)) + flt(row.qty)
 	return qty
+
+
+@frappe.whitelist()
+def get_rm_rate(item_code, supplier, qty=None):
+	"""Approved RM Price Book rate for one Purchase Plan line, once item + supplier are
+	both set on it. Called from purchase_plan.js on the row's supplier/item_code change.
+	Returns 0 when no Approved RM Price Book prices this item for this supplier — the
+	buyer then types the negotiated rate manually, same as before this existed."""
+	if not (item_code and supplier):
+		return 0.0
+	return _rm_price(item_code, qty, supplier=supplier)
 
 
 @frappe.whitelist()
