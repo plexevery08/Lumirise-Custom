@@ -6,15 +6,15 @@ and default Sales Credit Terms exist. Safe to run repeatedly.
 
 import frappe
 
+from lumirise_custom.setup.approval_setup import setup_approvals
+from lumirise_custom.setup.bom_fields import create_bom_fields
 from lumirise_custom.setup.costing_fields import create_costing_fields
 from lumirise_custom.setup.flow_fields import create_flow_fields
-from lumirise_custom.setup.bom_fields import create_bom_fields
-from lumirise_custom.setup.purchase_reco_fields import create_purchase_reco_fields
-from lumirise_custom.setup.wo_line_transfer_fields import create_wo_line_transfer_fields
-from lumirise_custom.setup.purchase_plan_supplier_fields import create_purchase_plan_supplier_fields
 from lumirise_custom.setup.production_setup import setup_production_flow
+from lumirise_custom.setup.purchase_plan_supplier_fields import create_purchase_plan_supplier_fields
+from lumirise_custom.setup.purchase_reco_fields import create_purchase_reco_fields
 from lumirise_custom.setup.task_seed import seed_task_engine
-from lumirise_custom.setup.approval_setup import setup_approvals
+from lumirise_custom.setup.wo_line_transfer_fields import create_wo_line_transfer_fields
 
 SALES_PLATFORM_ROLES = ["Pricing Manager", "Sales Approver", "Sales Auditor"]
 
@@ -27,15 +27,25 @@ DEFAULT_CREDIT_TERMS = [
 ]
 
 
+def before_install():
+	"""Create role links before a fresh install synchronizes DocType metadata."""
+	before_migrate()
+
+
+def after_install():
+	"""Apply the same idempotent setup to fresh sites that migrations receive."""
+	after_migrate()
+
+
 def before_migrate():
 	"""Roles referenced by DocType JSON permissions must exist before the
 	schema sync imports those DocTypes."""
-	from lumirise_custom.setup.task_seed import ensure_ops_role
 	from lumirise_custom.setup.approval_setup import ensure_approval_roles
+	from lumirise_custom.setup.task_seed import ensure_ops_role
 
 	ensure_ops_role()
-	# Planning Manager / Purchase Head / MD / Factory Store Manager must exist before
-	# the workflows that reference them (and the new DocType JSON perms) are imported.
+	# Custom approval, Quality, Logistics and Stores roles must exist before the
+	# workflows and DocType permissions that reference them are synchronized.
 	ensure_approval_roles()
 
 
@@ -53,23 +63,30 @@ def after_migrate():
 	# Lumirise Traceability panel (SO / Indent / WO / PO refs) on the standard chain
 	# doctypes. The custom chain doctypes carry the same four fields in their JSON.
 	from lumirise_custom.setup.traceability_fields import create_traceability_fields
+
 	create_traceability_fields()
 	# Purchase Invoice: GRN Date field (auto-filled from the linked Purchase Receipt).
 	from lumirise_custom.setup.purchase_invoice_fields import create_purchase_invoice_fields
+
 	create_purchase_invoice_fields()
 
 	from lumirise_custom.setup.sales_po_fields import create_sales_po_fields
+
 	create_sales_po_fields()
 
 	from lumirise_custom.setup.planning_fields import create_planning_fields
+
 	create_planning_fields()
 
 	from lumirise_custom.setup.dispatch_fields import create_dispatch_fields
+
 	create_dispatch_fields()
 	from lumirise_custom.setup.barcode_flow import create_barcode_flow_fields
+
 	create_barcode_flow_fields()
 	# Small UI tweaks (Sai walkthrough): field hides / read-only as Property Setters.
 	from lumirise_custom.setup.ui_tweaks import apply_ui_tweaks
+
 	apply_ui_tweaks()
 	seed_credit_terms()
 	init_settings()
@@ -146,26 +163,43 @@ def setup_line_dashboard():
 	"""Idempotent: seed the control-tower line Number Cards (WP-3.2). Number Cards are
 	not fixtures in Frappe, so they are (re)created here on migrate. Never breaks migrate."""
 	cards = [
-		("Lines: Open Job Cards", "Lumirise Job Card", [["Lumirise Job Card", "status", "=", "Open", False]], "#ffa00a"),
-		("Lines: Missed Job Cards", "Lumirise Job Card", [["Lumirise Job Card", "status", "=", "Missed", False]], "#e24c4c"),
-		("Lines: Unbalanced Closings", "Line Daily Closing", [["Line Daily Closing", "is_balanced", "=", 0, False]], "#e24c4c"),
+		(
+			"Lines: Open Job Cards",
+			"Lumirise Job Card",
+			[["Lumirise Job Card", "status", "=", "Open", False]],
+			"#ffa00a",
+		),
+		(
+			"Lines: Missed Job Cards",
+			"Lumirise Job Card",
+			[["Lumirise Job Card", "status", "=", "Missed", False]],
+			"#e24c4c",
+		),
+		(
+			"Lines: Unbalanced Closings",
+			"Line Daily Closing",
+			[["Line Daily Closing", "is_balanced", "=", 0, False]],
+			"#e24c4c",
+		),
 	]
 	for label, dt, filters, color in cards:
 		try:
 			if not frappe.db.exists("DocType", dt) or frappe.db.exists("Number Card", {"label": label}):
 				continue
-			frappe.get_doc({
-				"doctype": "Number Card",
-				"label": label,
-				"module": "Lumirise Custom",
-				"type": "Document Type",
-				"document_type": dt,
-				"function": "Count",
-				"is_public": 1,
-				"show_percentage_stats": 0,
-				"filters_json": frappe.as_json(filters),
-				"color": color,
-			}).insert(ignore_permissions=True)
+			frappe.get_doc(
+				{
+					"doctype": "Number Card",
+					"label": label,
+					"module": "Lumirise Custom",
+					"type": "Document Type",
+					"document_type": dt,
+					"function": "Count",
+					"is_public": 1,
+					"show_percentage_stats": 0,
+					"filters_json": frappe.as_json(filters),
+					"color": color,
+				}
+			).insert(ignore_permissions=True)
 		except Exception:
 			frappe.log_error(frappe.get_traceback(), f"setup_line_dashboard: {label} failed")
 
@@ -178,6 +212,7 @@ def seed_defect_master():
 		from lumirise_custom.lumirise_custom.doctype.lumirise_defect_code.lumirise_defect_code import (
 			seed_defect_codes,
 		)
+
 		seed_defect_codes()
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "seed_defect_master failed")
@@ -187,6 +222,7 @@ def seed_quality_inspection_templates():
 	"""Idempotent: seed native QI Parameters + the two Lumirise QI templates."""
 	try:
 		from lumirise_custom.setup.quality_setup import seed_quality_templates
+
 		seed_quality_templates()
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "seed_quality_inspection_templates failed")
@@ -208,6 +244,4 @@ def seed_credit_terms():
 			"Sales Credit Term",
 			{"payment_type": term["payment_type"], "credit_days": term["credit_days"]},
 		):
-			frappe.get_doc(dict(term, doctype="Sales Credit Term")).insert(
-				ignore_permissions=True
-			)
+			frappe.get_doc(doctype="Sales Credit Term", **term).insert(ignore_permissions=True)

@@ -14,12 +14,12 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, now_datetime
 
+from lumirise_custom.action_permissions import require_logistics_action, require_purchase_release
+
 # --- Status values (single source of truth) ---------------------------------
 DISPATCHED = "Dispatched"
 IN_TRANSIT = "In Transit"
 REACHED = "Reached Warehouse"
-
-RELEASE_ROLES = ("Purchase User", "Purchase Manager", "Purchase Head", "System Manager")
 
 
 class InboundLogistics(Document):
@@ -34,15 +34,17 @@ class InboundLogistics(Document):
 		approved = {
 			d.item_code: flt(d.approved_qty)
 			for d in frappe.get_all(
-				"Vendor PDI Item", {"parent": self.vendor_pdi},
-				["item_code", "approved_qty"]) or []
+				"Vendor PDI Item", {"parent": self.vendor_pdi}, ["item_code", "approved_qty"]
+			)
+			or []
 		}
 		for row in self.items:
 			cap = approved.get(row.item_code)
 			if cap is not None and flt(row.qty) > cap:
 				frappe.throw(
 					f"Row {row.idx} ({row.item_code}): logistics qty {row.qty} "
-					f"cannot exceed the Vendor-PDI approved qty {cap}.")
+					f"cannot exceed the Vendor-PDI approved qty {cap}."
+				)
 
 
 # --- flow transitions (called from the form buttons) ------------------------
@@ -51,8 +53,9 @@ def _load(docname):
 
 
 @frappe.whitelist()
-def mark_in_transit(docname):
+def mark_in_transit(docname: str):
 	"""Logistics confirms the consignment has left the vendor / port."""
+	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.vehicle_gate_status != "Approved":
@@ -66,7 +69,8 @@ def mark_in_transit(docname):
 
 
 @frappe.whitelist()
-def approve_gate(docname):
+def approve_gate(docname: str):
+	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.docstatus != 1:
@@ -80,7 +84,8 @@ def approve_gate(docname):
 
 
 @frappe.whitelist()
-def verify_documents(docname, exception=None):
+def verify_documents(docname: str, exception: str | None = None):
+	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
 	if exception:
@@ -93,9 +98,10 @@ def verify_documents(docname, exception=None):
 
 
 @frappe.whitelist()
-def mark_reached(docname):
+def mark_reached(docname: str):
 	"""Consignment has reached the factory dock — qty moves In-Transit -> Pending
 	IQC (derived). Makes the 'Create > IQC' action the next step (no auto-create)."""
+	require_logistics_action()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (DISPATCHED, IN_TRANSIT, REACHED):
@@ -105,12 +111,11 @@ def mark_reached(docname):
 
 
 @frappe.whitelist()
-def release_container(docname):
+def release_container(docname: str):
 	"""Purchase authorizes container release once the goods have reached the dock —
 	the gate a not-yet-released consignment's GRN checks (WP-2.3)."""
+	require_purchase_release()
 	frappe.has_permission("Inbound Logistics", "write", docname, throw=True)
-	if not any(r in frappe.get_roles() for r in RELEASE_ROLES):
-		frappe.throw(_("Only Purchase can release a container."))
 	doc = _load(docname)
 	if doc.docstatus != 1:
 		frappe.throw(_("Submit the Inbound Logistics before releasing the container."))

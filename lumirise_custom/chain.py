@@ -10,20 +10,30 @@ from frappe.utils import flt
 STORES = "Stores - L"
 
 
+def _require_mapping_permissions(source_doctype, source_name, target_doctype):
+	"""Protect every whitelisted document mapper at the server boundary."""
+	frappe.has_permission(source_doctype, "read", source_name, throw=True)
+	frappe.has_permission(target_doctype, "create", throw=True)
+
+
 @frappe.whitelist()
-def make_vendor_pdi(source_name, target_doc=None):
+def make_vendor_pdi(source_name: str, target_doc: object | None = None):
+	_require_mapping_permissions("Purchase Order", source_name, "Vendor PDI")
 	po = frappe.get_doc("Purchase Order", source_name)
 	doc = frappe.new_doc("Vendor PDI")
 	doc.purchase_order = po.name
 	doc.mode = "Import" if "Import" in (po.supplier or "") else "Domestic"
 	for it in po.items:
-		doc.append("items", {"item_code": it.item_code, "item_name": it.item_name,
-		                     "po_qty": it.qty, "approved_qty": it.qty})
+		doc.append(
+			"items",
+			{"item_code": it.item_code, "item_name": it.item_name, "po_qty": it.qty, "approved_qty": it.qty},
+		)
 	return doc
 
 
 @frappe.whitelist()
-def make_inbound_logistics(source_name, target_doc=None):
+def make_inbound_logistics(source_name: str, target_doc: object | None = None):
+	_require_mapping_permissions("Vendor PDI", source_name, "Inbound Logistics")
 	vpdi = frappe.get_doc("Vendor PDI", source_name)
 	doc = frappe.new_doc("Inbound Logistics")
 	doc.vendor_pdi = vpdi.name
@@ -33,32 +43,50 @@ def make_inbound_logistics(source_name, target_doc=None):
 	# Only the qty accepted at Vendor PDI moves forward into transit.
 	for it in vpdi.items:
 		if flt(it.approved_qty) > 0:
-			doc.append("items", {"item_code": it.item_code,
-			                     "item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
-			                     "qty": it.approved_qty})
+			doc.append(
+				"items",
+				{
+					"item_code": it.item_code,
+					"item_name": it.get("item_name")
+					or frappe.db.get_value("Item", it.item_code, "item_name"),
+					"qty": it.approved_qty,
+				},
+			)
 	return doc
 
 
 @frappe.whitelist()
-def make_iqc(source_name, target_doc=None):
+def make_iqc(source_name: str, target_doc: object | None = None):
+	_require_mapping_permissions("Inbound Logistics", source_name, "IQC")
 	log = frappe.get_doc("Inbound Logistics", source_name)
 	doc = frappe.new_doc("IQC")
 	doc.inbound_logistics = log.name
 	doc.purchase_order = log.purchase_order
 	doc.status = "IQC Received"
 	for it in log.items:
-		pkg = frappe.get_all("RM Package", filters={"inbound_logistics": log.name, "item_code": it.item_code, "status": "Pending IQC"}, fields=["name", "batch_no"], limit=1)
-		doc.append("items", {
-			"item_code": it.item_code,
-			"item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
-			"received_qty": it.qty, "accepted_qty": it.qty, "rejected_qty": 0,
-			"package_barcode": pkg[0].name if pkg else None,
-			"batch_no": pkg[0].batch_no if pkg else None})
+		pkg = frappe.get_all(
+			"RM Package",
+			filters={"inbound_logistics": log.name, "item_code": it.item_code, "status": "Pending IQC"},
+			fields=["name", "batch_no"],
+			limit=1,
+		)
+		doc.append(
+			"items",
+			{
+				"item_code": it.item_code,
+				"item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
+				"received_qty": it.qty,
+				"accepted_qty": it.qty,
+				"rejected_qty": 0,
+				"package_barcode": pkg[0].name if pkg else None,
+				"batch_no": pkg[0].batch_no if pkg else None,
+			},
+		)
 	return doc
 
 
 @frappe.whitelist()
-def make_grn(source_name, target_doc=None):
+def make_grn(source_name: str, target_doc: object | None = None):
 	"""GRN = standard Purchase Receipt against the IQC's PO.
 
 	Ajay review 2026-06-14 (00:33:25-00:36:12): the GRN must reflect ACCEPTED stock
@@ -67,9 +95,11 @@ def make_grn(source_name, target_doc=None):
 	rejection is visible downstream (it then drives the auto debit note).
 	"""
 	from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
-	from lumirise_custom import defaults as config
 	from frappe.utils import flt
 
+	from lumirise_custom import defaults as config
+
+	_require_mapping_permissions("IQC", source_name, "Purchase Receipt")
 	iqc = frappe.get_doc("IQC", source_name)
 	pr = make_purchase_receipt(iqc.purchase_order)
 	rej_wh = config.rejection_warehouse()
@@ -103,6 +133,7 @@ def make_grn(source_name, target_doc=None):
 # landed in the RM store as real Bin stock) — without it the qty would double-count.
 # Assumption (v1, same as iqc_gate): one open passed IQC per PO per GRN.
 
+
 def _grn_pos(doc):
 	return {row.purchase_order for row in doc.items if getattr(row, "purchase_order", None)}
 
@@ -132,9 +163,10 @@ def revert_iqc_moved_to_rm(doc, method=None):
 
 
 @frappe.whitelist()
-def make_customer_pdi(source_name, target_doc=None):
+def make_customer_pdi(source_name: str, target_doc: object | None = None):
 	"""Start a Customer PDI from a Sales Order — seed one inspection line per SO
 	item. FG/Dispatch then sends these to the PDI store via store authorization."""
+	_require_mapping_permissions("Sales Order", source_name, "Customer PDI")
 	so = frappe.get_doc("Sales Order", source_name)
 	doc = frappe.new_doc("Customer PDI")
 	doc.sales_order = so.name
@@ -144,14 +176,16 @@ def make_customer_pdi(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def make_delivery_note(source_name, target_doc=None):
+def make_delivery_note(source_name: str, target_doc: object | None = None):
 	"""Dispatch = standard Delivery Note against the Sales Order. Native mapping
 	carries only the remaining (undelivered) qty, so partial / multi-batch dispatch
 	off one SO is tracked automatically. FG is shipped from the Dispatch FG store.
 	The Customer-PDI gate (events.py) blocks submission until a passed PDI exists."""
 	from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note as _mdn
+
 	from lumirise_custom import defaults as config
 
+	_require_mapping_permissions("Sales Order", source_name, "Delivery Note")
 	dn = _mdn(source_name)
 	dispatch_fg = config.dispatch_fg_warehouse()
 	for it in dn.items:
@@ -160,9 +194,10 @@ def make_delivery_note(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def make_sales_invoice(source_name, target_doc=None):
+def make_sales_invoice(source_name: str, target_doc: object | None = None):
 	"""Sales Invoice against a submitted Delivery Note (stock already moved by the
 	DN; this is the billing document)."""
 	from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice as _msi
 
+	_require_mapping_permissions("Delivery Note", source_name, "Sales Invoice")
 	return _msi(source_name)

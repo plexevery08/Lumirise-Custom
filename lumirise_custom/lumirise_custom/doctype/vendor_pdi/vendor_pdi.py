@@ -14,6 +14,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from lumirise_custom.action_permissions import require_quality_action
+
 # --- Status values (single source of truth) ---------------------------------
 SCHEDULED = "PDI Scheduled"
 IN_PROGRESS = "PDI In Progress"
@@ -29,23 +31,34 @@ class VendorPDI(Document):
 			self.status = SCHEDULED
 		any_reject = False
 		for row in self.items:
-			po_qty = flt(frappe.db.get_value(
-				"Purchase Order Item",
-				{"parent": self.purchase_order, "item_code": row.item_code}, "qty"))
+			po_qty = flt(
+				frappe.db.get_value(
+					"Purchase Order Item", {"parent": self.purchase_order, "item_code": row.item_code}, "qty"
+				)
+			)
 			if po_qty:
 				row.po_qty = po_qty
 			if flt(row.approved_qty) < 0 or flt(row.rejected_qty) < 0:
-				frappe.throw(_("Row {0} ({1}): Accepted / Rejected qty cannot be negative.").format(row.idx, row.item_code))
+				frappe.throw(
+					_("Row {0} ({1}): Accepted / Rejected qty cannot be negative.").format(
+						row.idx, row.item_code
+					)
+				)
 			if flt(row.approved_qty) + flt(row.rejected_qty) > flt(row.po_qty) + 0.001:
-				frappe.throw(_("Row {0} ({1}): Accepted + Rejected ({2}) cannot exceed PO Qty {3}.").format(
-					row.idx, row.item_code, flt(row.approved_qty) + flt(row.rejected_qty), row.po_qty))
+				frappe.throw(
+					_("Row {0} ({1}): Accepted + Rejected ({2}) cannot exceed PO Qty {3}.").format(
+						row.idx, row.item_code, flt(row.approved_qty) + flt(row.rejected_qty), row.po_qty
+					)
+				)
 			row.pending_qty = flt(row.po_qty) - flt(row.approved_qty) - flt(row.rejected_qty)
 			row.result = "Fail" if flt(row.rejected_qty) > 0 else "Pass"
 			if flt(row.rejected_qty) > 0:
 				any_reject = True
 		# Reflect the inspection outcome in the header status while still in progress.
 		if self.status in (SCHEDULED, IN_PROGRESS):
-			self.status = FAILED if (any_reject and all(flt(r.approved_qty) == 0 for r in self.items)) else self.status
+			self.status = (
+				FAILED if (any_reject and all(flt(r.approved_qty) == 0 for r in self.items)) else self.status
+			)
 
 
 # --- flow transitions (called from the form buttons) ------------------------
@@ -54,8 +67,9 @@ def _load(docname):
 
 
 @frappe.whitelist()
-def start_inspection(docname):
+def start_inspection(docname: str):
 	"""Quality begins the vendor inspection."""
+	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (SCHEDULED, ON_HOLD):
@@ -65,9 +79,10 @@ def start_inspection(docname):
 
 
 @frappe.whitelist()
-def record_result(docname):
+def record_result(docname: str):
 	"""Quality records the per-line accepted / rejected qty (entered in the grid)
 	and marks the inspection Passed (or Failed if everything was rejected)."""
+	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (IN_PROGRESS, SCHEDULED):
@@ -78,9 +93,10 @@ def record_result(docname):
 
 
 @frappe.whitelist()
-def dispatch(docname):
+def dispatch(docname: str):
 	"""Vendor PDI passed and the accepted goods are dispatched. Sets the status that
 	makes the 'Create > Inbound Logistics' action available (no auto-creation)."""
+	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status != PASSED:
@@ -92,7 +108,8 @@ def dispatch(docname):
 
 
 @frappe.whitelist()
-def hold(docname, reason=None):
+def hold(docname: str, reason: str | None = None):
+	require_quality_action()
 	frappe.has_permission("Vendor PDI", "write", docname, throw=True)
 	doc = _load(docname)
 	doc.db_set("status", ON_HOLD)

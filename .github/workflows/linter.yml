@@ -23,7 +23,11 @@ jobs:
         with:
           python-version: '3.14'
           cache: pip
+      - name: Fetch pull request base
+        run: git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
       - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --from-ref origin/${{ github.base_ref }} --to-ref HEAD
 
       - name: Download Semgrep rules
         run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules

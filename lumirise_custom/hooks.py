@@ -8,7 +8,7 @@ app_license = "mit"
 # Apps
 # ------------------
 
-# required_apps = []
+required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -98,8 +98,8 @@ jinja = {
 # Installation
 # ------------
 
-# before_install = "lumirise_custom.install.before_install"
-# after_install = "lumirise_custom.install.after_install"
+before_install = "lumirise_custom.setup.before_install"
+after_install = "lumirise_custom.setup.after_install"
 
 # Ensure roles referenced by DocType JSON exist BEFORE schema sync.
 before_migrate = "lumirise_custom.setup.before_migrate"

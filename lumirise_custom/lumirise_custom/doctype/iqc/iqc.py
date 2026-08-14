@@ -17,6 +17,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from lumirise_custom.action_permissions import require_quality_action
+
 # --- Status values (single source of truth) ---------------------------------
 RECEIVED = "IQC Received"
 TESTING = "Testing"
@@ -32,22 +34,27 @@ class IQC(Document):
 			self.status = RECEIVED
 		for row in self.items:
 			if row.package_barcode:
-				pkg = frappe.db.get_value("RM Package", row.package_barcode, ["item_code", "batch_no", "status"], as_dict=True)
+				pkg = frappe.db.get_value(
+					"RM Package", row.package_barcode, ["item_code", "batch_no", "status"], as_dict=True
+				)
 				if not pkg or pkg.item_code != row.item_code:
 					frappe.throw(f"Row {row.idx} ({row.item_code}): package does not match the item.")
 				if row.batch_no and row.batch_no != pkg.batch_no:
 					frappe.throw(f"Row {row.idx} ({row.item_code}): batch does not match the package.")
 				row.batch_no = pkg.batch_no
-			parts = (flt(row.accepted_qty) + flt(row.rejected_qty)
-			         + flt(row.under_test_qty) + flt(row.on_hold_qty))
+			parts = (
+				flt(row.accepted_qty) + flt(row.rejected_qty) + flt(row.under_test_qty) + flt(row.on_hold_qty)
+			)
 			if parts > flt(row.received_qty) + 0.001:
 				frappe.throw(
 					f"Row {row.idx} ({row.item_code}): accepted + rejected + under-test "
-					f"+ on-hold cannot exceed received qty.")
+					f"+ on-hold cannot exceed received qty."
+				)
 			if flt(row.rejected_qty) > 0 and not row.disposition:
 				frappe.throw(
 					f"Row {row.idx} ({row.item_code}): set a Disposition "
-					f"(Return to Vendor / Replace / Scrap) for the rejected qty.")
+					f"(Return to Vendor / Replace / Scrap) for the rejected qty."
+				)
 
 	def is_fully_rejected(self):
 		"""True when at least one line was rejected AND no line was accepted — i.e.
@@ -64,8 +71,10 @@ class IQC(Document):
 			self.db_set("status", REJECTED if fully_rejected else PASSED)
 		if fully_rejected:
 			frappe.msgprint(
-				"All quantities rejected — no GRN can be raised against this IQC.",
-				indicator="red", alert=True)
+				_("All quantities rejected — no GRN can be raised against this IQC."),
+				indicator="red",
+				alert=True,
+			)
 
 
 # --- flow transitions (called from the form buttons) ------------------------
@@ -74,8 +83,9 @@ def _load(docname):
 
 
 @frappe.whitelist()
-def start_testing(docname):
+def start_testing(docname: str):
 	"""Quality begins incoming inspection / testing."""
+	require_quality_action()
 	frappe.has_permission("IQC", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (RECEIVED, ON_HOLD):
@@ -85,9 +95,10 @@ def start_testing(docname):
 
 
 @frappe.whitelist()
-def record_result(docname):
+def record_result(docname: str):
 	"""Quality records the per-line accepted / rejected qty (entered in the grid)
 	and marks the IQC Passed (or Rejected if everything failed)."""
+	require_quality_action()
 	frappe.has_permission("IQC", "write", docname, throw=True)
 	doc = _load(docname)
 	if doc.status not in (RECEIVED, TESTING):
@@ -98,7 +109,8 @@ def record_result(docname):
 
 
 @frappe.whitelist()
-def hold(docname, reason=None):
+def hold(docname: str, reason: str | None = None):
+	require_quality_action()
 	frappe.has_permission("IQC", "write", docname, throw=True)
 	doc = _load(docname)
 	doc.db_set("status", ON_HOLD)
