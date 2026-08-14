@@ -13,3 +13,34 @@
 frappe.form.link_formatters["Item"] = function (value) {
 	return value;
 };
+
+// --- Form navigation -------------------------------------------------------
+// Add the client-requested Back button to every Desk form, including standard
+// ERPNext and custom DocTypes. Frappe fires `form-refresh` after the form header
+// is ready, so the button remains in the top form toolbar and is re-added when
+// the form is refreshed.
+$(document).on("form-refresh.lumirise-back-button", function (_event, frm) {
+	if (!frm || !frm.page || frm.meta?.istable) {
+		return;
+	}
+
+	frm.add_custom_button(__("Back"), function () {
+		const go_back = function () {
+			const previous_route = frappe.get_prev_route();
+			if (previous_route && previous_route.length) {
+				frappe.set_route(previous_route);
+			} else {
+				frappe.set_route("List", frm.doctype);
+			}
+		};
+
+		if (frm.is_dirty()) {
+			frappe.confirm(
+				__("This form has unsaved changes. Leave without saving?"),
+				go_back
+			);
+		} else {
+			go_back();
+		}
+	});
+});
