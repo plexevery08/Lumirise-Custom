@@ -47,7 +47,20 @@ class IQC(Document):
 			if flt(row.rejected_qty) > 0 and not row.disposition:
 				frappe.throw(
 					f"Row {row.idx} ({row.item_code}): set a Disposition "
-					f"(Return to Vendor / Replace / Scrap) for the rejected qty.")
+					f"(Return to Vendor / Replace / Scrap) for the rejected qty."
+				)
+			if self.status in (PASSED, REJECTED):
+				final_qty = flt(row.accepted_qty) + flt(row.rejected_qty)
+				if abs(final_qty - flt(row.received_qty)) > 0.001:
+					frappe.throw(
+						f"Row {row.idx} ({row.item_code}): a final IQC result must allocate "
+						f"the full received qty to Accepted or Rejected."
+					)
+				if flt(row.under_test_qty) or flt(row.on_hold_qty):
+					frappe.throw(
+						f"Row {row.idx} ({row.item_code}): clear Under Test and On Hold qty "
+						f"before recording the final result."
+					)
 
 	def is_fully_rejected(self):
 		"""True when at least one line was rejected AND no line was accepted — i.e.
@@ -64,8 +77,13 @@ class IQC(Document):
 			self.db_set("status", REJECTED if fully_rejected else PASSED)
 		if fully_rejected:
 			frappe.msgprint(
-				"All quantities rejected — no GRN can be raised against this IQC.",
-				indicator="red", alert=True)
+				_("All quantities rejected — no GRN can be raised against this IQC."),
+				indicator="red",
+				alert=True,
+			)
+		from lumirise_custom.inward_process import sync_inbound_from_iqc
+
+		sync_inbound_from_iqc(self)
 
 
 # --- flow transitions (called from the form buttons) ------------------------
@@ -81,6 +99,10 @@ def start_testing(docname):
 	if doc.status not in (RECEIVED, ON_HOLD):
 		frappe.throw(_("Only a received / on-hold IQC can start testing."))
 	doc.db_set("status", TESTING)
+	from lumirise_custom.inward_process import sync_inbound_from_iqc
+
+	doc.status = TESTING
+	sync_inbound_from_iqc(doc)
 	return {"status": TESTING}
 
 
@@ -92,8 +114,21 @@ def record_result(docname):
 	doc = _load(docname)
 	if doc.status not in (RECEIVED, TESTING):
 		frappe.throw(_("Record the result from a received / in-testing IQC."))
+	for row in doc.items:
+		if abs(flt(row.accepted_qty) + flt(row.rejected_qty) - flt(row.received_qty)) > 0.001:
+			frappe.throw(
+				_("Row {0} ({1}): allocate the complete received qty to Accepted or Rejected.").format(
+					row.idx, row.item_code
+				)
+			)
+		if flt(row.under_test_qty) or flt(row.on_hold_qty):
+			frappe.throw(_("Clear Under Test and On Hold quantities before recording a final result."))
 	all_rejected = all(flt(r.accepted_qty) == 0 for r in doc.items)
 	doc.db_set("status", REJECTED if all_rejected else PASSED)
+	doc.status = REJECTED if all_rejected else PASSED
+	from lumirise_custom.inward_process import sync_inbound_from_iqc
+
+	sync_inbound_from_iqc(doc)
 	return {"status": doc.status}
 
 

@@ -7,7 +7,9 @@ inward stock posting and Stock Entry remains the only put-away/issue posting.
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, now_datetime
+
+from lumirise_custom.action_permissions import require_doctype_permissions, require_stock_entry_permissions
 
 PENDING_IQC = "Pending IQC"
 AVAILABLE = "Available"
@@ -50,6 +52,7 @@ def scan_package(barcode):
 	if not barcode:
 		frappe.throw(_("Scan an RM package barcode."))
 	doc = _package(barcode.strip())
+	doc.check_permission("read")
 	return {
 		"name": doc.name, "package_barcode": doc.package_barcode,
 		"status": doc.status, "item_code": doc.item_code,
@@ -71,26 +74,53 @@ def create_from_inbound(inbound_logistics, item_code, quantity, supplier_lot=Non
 	"""
 	frappe.has_permission("RM Package", "create", throw=True)
 	log = frappe.get_doc("Inbound Logistics", inbound_logistics)
+	log.check_permission("read")
 	if log.docstatus != 1 or log.status != "Reached Warehouse":
 		frappe.throw(_("Inbound Logistics must be submitted and Reached Warehouse before labelling."))
+	if not log.get("storage_authorized"):
+		frappe.throw(_("IQC must pass and storage must be authorized before package identities are generated."))
+	from lumirise_custom.inward_process import _passed_iqc
+
+	iqc = _passed_iqc(log)
 	line = next((r for r in log.items if r.item_code == item_code), None)
 	if not line:
 		frappe.throw(_("Item {0} is not on inbound logistics {1}.").format(item_code, inbound_logistics))
-	if flt(quantity) <= 0 or flt(quantity) > flt(line.qty):
-		frappe.throw(_("Package quantity must be positive and cannot exceed the inbound quantity."))
+	accepted_qty = sum(flt(row.accepted_qty) for row in iqc.items if row.item_code == item_code)
+	packaged_qty = sum(
+		flt(value)
+		for value in frappe.get_all(
+			"RM Package",
+			filters={
+				"inbound_logistics": log.name,
+				"item_code": item_code,
+				"status": ["!=", "Rejected"],
+			},
+			pluck="quantity",
+		)
+	)
+	if flt(quantity) <= 0 or packaged_qty + flt(quantity) > accepted_qty + 0.001:
+		frappe.throw(
+			_("Package quantity must be positive, and total package quantity cannot exceed IQC accepted qty {0}.").format(
+				accepted_qty
+			)
+		)
 	po = log.purchase_order
 	supplier = frappe.db.get_value("Purchase Order", po, "supplier") if po else None
 	batch_no = batch_no or _make_batch(item_code, supplier_lot, supplier, log.name)
-	warehouse = current_warehouse or frappe.db.get_single_value(
+	warehouse = current_warehouse or log.get("receiving_warehouse") or frappe.db.get_single_value(
 		"Lumirise Operations Settings", "receiving_warehouse")
 	if not warehouse:
 		frappe.throw(_("Configure Receiving / Staging in Lumirise Operations Settings."))
+	pr_name = log.get("purchase_receipt")
+	grn_posted = bool(pr_name and frappe.db.exists("Purchase Receipt", {"name": pr_name, "docstatus": 1}))
 	doc = frappe.get_doc({
 		"doctype": "RM Package", "item_code": item_code, "batch_no": batch_no,
 		"supplier": supplier, "supplier_lot": supplier_lot,
 		"quantity": flt(quantity), "current_warehouse": warehouse,
 		"purchase_order": po, "inbound_logistics": log.name,
-		"status": PENDING_IQC,
+		"purchase_receipt": pr_name if grn_posted else None,
+		"iqc": iqc.name,
+		"status": AVAILABLE if grn_posted else PENDING_IQC,
 	})
 	doc.insert()
 	return doc
@@ -106,6 +136,7 @@ def _make_batch(item_code, supplier_lot, supplier, inbound_name):
 			return name
 		idx += 1
 		name = f"{base[:130]}-{idx}"
+	require_doctype_permissions("Batch", "create")
 	batch = frappe.get_doc({
 		"doctype": "Batch", "batch_id": name, "item": item_code,
 		"supplier": supplier, "description": f"Lumirise inward batch from {inbound_name}",
@@ -120,12 +151,14 @@ def _make_batch(item_code, supplier_lot, supplier, inbound_name):
 @frappe.whitelist()
 def release_after_grn(package, purchase_receipt, iqc=None):
 	"""Release a labelled package only after the standard GRN and IQC are clear."""
-	frappe.has_permission("RM Package", "write", throw=True)
 	pkg = _package(package)
+	pkg.check_permission("write")
 	pr = frappe.get_doc("Purchase Receipt", purchase_receipt)
+	pr.check_permission("read")
 	if pr.docstatus != 1:
 		frappe.throw(_("Purchase Receipt must be submitted before releasing a package."))
 	if iqc:
+		frappe.has_permission("IQC", "read", iqc, throw=True)
 		iqc_status = frappe.db.get_value("IQC", iqc, "status")
 		if iqc_status not in ("Passed", "Moved to RM"):
 			frappe.throw(_("IQC has not passed."))
@@ -142,10 +175,15 @@ def release_after_grn(package, purchase_receipt, iqc=None):
 @frappe.whitelist()
 def put_away(package, destination_warehouse):
 	"""Post a native Material Transfer for one complete physical package."""
-	frappe.has_permission("RM Package", "write", throw=True)
 	pkg = _package(package)
+	pkg.check_permission("write")
+	destination_warehouse = _resolve_location(destination_warehouse)
+	frappe.has_permission("Warehouse", "read", destination_warehouse, throw=True)
+	require_stock_entry_permissions(submit=True)
 	if pkg.status != AVAILABLE:
 		frappe.throw(_("Only an IQC-cleared Available package can be put away."))
+	if not pkg.get("label_applied"):
+		frappe.throw(_("Print and confirm the physical package label before put-away."))
 	if not destination_warehouse or destination_warehouse == pkg.current_warehouse:
 		frappe.throw(_("Choose a different destination leaf warehouse."))
 	if frappe.db.get_value("Warehouse", destination_warehouse, "is_group"):
@@ -169,3 +207,43 @@ def put_away(package, destination_warehouse):
 	pkg.last_stock_entry = se.name
 	pkg.save(ignore_permissions=True)
 	return {"package": pkg.name, "stock_entry": se.name, "destination": destination_warehouse}
+
+
+def _resolve_location(value):
+	"""Resolve either a warehouse name or the barcode printed on its rack/bin."""
+	value = (value or "").strip()
+	if not value:
+		frappe.throw(_("Scan or enter the destination location barcode."))
+	name = frappe.db.get_value("Warehouse", {"lr_location_barcode": value}, "name")
+	name = name or (value if frappe.db.exists("Warehouse", value) else None)
+	if not name:
+		frappe.throw(_("Location barcode {0} does not match a Warehouse.").format(value))
+	status = frappe.db.get_value("Warehouse", name, "lr_location_status")
+	if status and status != "Available":
+		frappe.throw(_("Location {0} is {1} and cannot receive a package.").format(name, status))
+	return name
+
+
+@frappe.whitelist()
+def confirm_label_applied(package):
+	"""Post-GRN physical confirmation that the printed LPN is on the carton/pallet."""
+	require_stock_entry_permissions(submit=False)
+	pkg = _package(package)
+	pkg.check_permission("write")
+	if pkg.status != AVAILABLE or not pkg.purchase_receipt:
+		frappe.throw(_("Post the GRN and release the package before confirming its label."))
+	when = now_datetime()
+	frappe.db.set_value(
+		"RM Package",
+		pkg.name,
+		{
+			"label_printed": 1,
+			"label_printed_by": frappe.session.user,
+			"label_printed_on": when,
+			"label_applied": 1,
+			"label_applied_by": frappe.session.user,
+			"label_applied_on": when,
+		},
+		update_modified=True,
+	)
+	return {"package": pkg.name, "label_applied": 1}

@@ -26,6 +26,7 @@ STOCK_ENTRY_TYPES = [
 
 # Warehouses the flow needs (always created). (warehouse name, is_group)
 CORE_WAREHOUSES = [
+	("Stock-In", 0),
 	("Shop Floor", 0),
 	("Production FG", 0),
 	("Dispatch FG", 0),
@@ -36,6 +37,7 @@ CORE_WAREHOUSES = [
 
 # Simple "create if blank" mapping for the fields with no legacy ambiguity.
 SIMPLE_WH_FIELDS = [
+	("receiving_warehouse", "Stock-In"),
 	("shop_floor_warehouse", "Shop Floor"),
 	("pdi_warehouse", "Customer PDI"),
 	("rejection_warehouse", "RM Rejection"),
@@ -44,6 +46,8 @@ SIMPLE_WH_FIELDS = [
 
 LINE_GROUP = "Production Lines"
 DEMO_LINES = ["Line-1", "Line-2", "Line-3"]
+RM_RACK_GROUP = "RM Racks"
+DEMO_RACKS = ["RM Rack A-01", "RM Rack A-02", "RM Rack B-01"]
 
 
 def setup_production_flow():
@@ -53,6 +57,8 @@ def setup_production_flow():
 		return
 	_seed_core_warehouses(company, abbr)
 	line_warehouses = _seed_line_warehouses(company, abbr)
+	rack_warehouses = _seed_rm_racks(company, abbr)
+	_seed_location_barcodes(abbr, rack_warehouses)
 	_seed_stock_entry_types()
 	_set_backflush_mode()
 	_fill_operations_settings(company, abbr, line_warehouses)
@@ -110,6 +116,32 @@ def _seed_line_warehouses(company, abbr):
 		full = _ensure_warehouse(line, company, abbr, is_group=0, parent=group)
 		out.append((line, full))
 	return out
+
+
+def _seed_rm_racks(company, abbr):
+	"""Create scannable leaf rack locations for the RM put-away flow."""
+	group = _ensure_warehouse(RM_RACK_GROUP, company, abbr, is_group=1)
+	out = []
+	for rack in DEMO_RACKS:
+		out.append(_ensure_warehouse(rack, company, abbr, is_group=0, parent=group))
+	return out
+
+
+def _seed_location_barcodes(abbr, rack_warehouses):
+	"""Seed stable sample barcodes only when a location has no barcode."""
+	if not frappe.get_meta("Warehouse").has_field("lr_location_barcode"):
+		return
+	mapping = {_wh_name("Stock-In", abbr): "STOCK-IN"}
+	for full_name, barcode in zip(rack_warehouses, ("RACK-A-01", "RACK-A-02", "RACK-B-01")):
+		mapping[full_name] = barcode
+	for warehouse, barcode in mapping.items():
+		if not frappe.db.get_value("Warehouse", warehouse, "lr_location_barcode"):
+			frappe.db.set_value(
+				"Warehouse",
+				warehouse,
+				{"lr_location_barcode": barcode, "lr_location_status": "Available"},
+				update_modified=False,
+			)
 
 
 def _seed_stock_entry_types():

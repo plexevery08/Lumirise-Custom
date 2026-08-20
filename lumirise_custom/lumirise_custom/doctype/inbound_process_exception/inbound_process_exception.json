@@ -1,0 +1,125 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "exception_type",
+  "item_code",
+  "expected_qty",
+  "actual_qty",
+  "exception_qty",
+  "status",
+  "required_action",
+  "evidence",
+  "purchase_task",
+  "resolution_reference",
+  "remarks",
+  "resolved_by",
+  "resolved_on"
+ ],
+ "fields": [
+  {
+   "allow_on_submit": 1,
+   "fieldname": "exception_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Exception Type",
+   "options": "Short Quantity\nExcess Quantity\nDamaged Material\nTransport Damage",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "expected_qty",
+   "fieldtype": "Float",
+   "label": "Packing-list Qty"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "actual_qty",
+   "fieldtype": "Float",
+   "label": "Physical Qty"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "exception_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Exception Qty",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Open\nPurchase Notified\nReplacement Pending\nDebit Note Pending\nTransport Claim Pending\nResolved",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "required_action",
+   "fieldtype": "Select",
+   "label": "Required Action",
+   "options": "Debit Note\nVendor Replacement\nManager Approval\nTransport Claim\nERP Quantity Update",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "evidence",
+   "fieldtype": "Attach",
+   "label": "Photo / Evidence"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "purchase_task",
+   "fieldtype": "Link",
+   "label": "Purchase Task",
+   "options": "Lumirise Task",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "resolution_reference",
+   "fieldtype": "Data",
+   "label": "Debit Note / Replacement / Claim Reference"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "resolved_by",
+   "fieldtype": "Link",
+   "label": "Resolved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "resolved_on",
+   "fieldtype": "Datetime",
+   "label": "Resolved On",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "istable": 1,
+ "module": "Lumirise Custom",
+ "name": "Inbound Process Exception",
+ "permissions": []
+}

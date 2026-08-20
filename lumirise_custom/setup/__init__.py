@@ -77,6 +77,9 @@ def after_migrate():
 	create_dispatch_fields()
 	from lumirise_custom.setup.barcode_flow import create_barcode_flow_fields
 	create_barcode_flow_fields()
+	from lumirise_custom.setup.inward_process import create_inward_process_fields
+
+	create_inward_process_fields()
 	# Small UI tweaks (Sai walkthrough): field hides / read-only as Property Setters.
 	from lumirise_custom.setup.ui_tweaks import apply_ui_tweaks
 	apply_ui_tweaks()
@@ -102,6 +105,9 @@ def after_migrate():
 	seed_defect_master()
 	# Quality: seed native QI Parameters + RM-incoming / FG-in-house templates.
 	seed_quality_inspection_templates()
+	from lumirise_custom.inward_process import backfill_inward_stages
+
+	backfill_inward_stages()
 
 
 def init_settings():

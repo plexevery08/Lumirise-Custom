@@ -42,18 +42,34 @@ def make_inbound_logistics(source_name, target_doc=None):
 @frappe.whitelist()
 def make_iqc(source_name, target_doc=None):
 	log = frappe.get_doc("Inbound Logistics", source_name)
+	if log.document_verification_status != "Verified" or not log.get("iqc_task"):
+		frappe.throw(
+			"Use Inward Controls → Raise Mandatory IQC Task after the documents are verified."
+		)
 	doc = frappe.new_doc("IQC")
 	doc.inbound_logistics = log.name
 	doc.purchase_order = log.purchase_order
 	doc.status = "IQC Received"
 	for it in log.items:
-		pkg = frappe.get_all("RM Package", filters={"inbound_logistics": log.name, "item_code": it.item_code, "status": "Pending IQC"}, fields=["name", "batch_no"], limit=1)
-		doc.append("items", {
-			"item_code": it.item_code,
-			"item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
-			"received_qty": it.qty, "accepted_qty": it.qty, "rejected_qty": 0,
-			"package_barcode": pkg[0].name if pkg else None,
-			"batch_no": pkg[0].batch_no if pkg else None})
+		pkg = frappe.get_all(
+			"RM Package",
+			filters={"inbound_logistics": log.name, "item_code": it.item_code, "status": "Pending IQC"},
+			fields=["name", "batch_no"],
+			limit=1,
+		)
+		doc.append(
+			"items",
+			{
+				"item_code": it.item_code,
+				"item_name": it.get("item_name") or frappe.db.get_value("Item", it.item_code, "item_name"),
+				"received_qty": it.qty,
+				"under_test_qty": it.qty,
+				"accepted_qty": 0,
+				"rejected_qty": 0,
+				"package_barcode": pkg[0].name if pkg else None,
+				"batch_no": pkg[0].batch_no if pkg else None,
+			},
+		)
 	return doc
 
 
@@ -71,8 +87,18 @@ def make_grn(source_name, target_doc=None):
 	from frappe.utils import flt
 
 	iqc = frappe.get_doc("IQC", source_name)
+	log = frappe.get_doc("Inbound Logistics", iqc.inbound_logistics)
+	if not log.get("storage_authorized"):
+		frappe.throw("Storage must be authorized after IQC pass before creating the GRN.")
 	pr = make_purchase_receipt(iqc.purchase_order)
 	rej_wh = config.rejection_warehouse()
+	receiving_wh = log.receiving_warehouse or frappe.db.get_single_value(
+		"Lumirise Operations Settings", "receiving_warehouse"
+	)
+	if not receiving_wh:
+		frappe.throw("Configure the Receiving / Staging warehouse before creating the GRN.")
+	pr.lr_inbound_logistics = log.name
+	pr.lr_iqc = iqc.name
 
 	# IQC rows grouped by item (lists -> consume per matching PR row).
 	iqc_rows = {}
@@ -80,7 +106,7 @@ def make_grn(source_name, target_doc=None):
 		iqc_rows.setdefault(r.item_code, []).append(r)
 
 	for it in pr.items:
-		it.warehouse = STORES
+		it.warehouse = receiving_wh
 		bucket = iqc_rows.get(it.item_code)
 		if not bucket:
 			continue
@@ -92,6 +118,22 @@ def make_grn(source_name, target_doc=None):
 		it.rejected_qty = flt(r.rejected_qty)
 		if flt(r.rejected_qty) > 0:
 			it.rejected_warehouse = rej_wh
+		batches = frappe.get_all(
+			"RM Package",
+			filters={"inbound_logistics": log.name, "item_code": it.item_code, "status": "Pending IQC"},
+			pluck="batch_no",
+		)
+		batches = sorted(set(filter(None, batches)))
+		if len(batches) > 1:
+			frappe.throw(
+				f"Item {it.item_code} uses multiple package batches. Split the GRN into one line per batch."
+			)
+		if batches and it.meta.has_field("batch_no"):
+			it.batch_no = batches[0]
+	# This is only set after the submitted GRN's packages are physically labelled
+	# and put away. The before-submit gate validates package identity coverage but
+	# must not present a draft GRN as label-verified.
+	pr.lr_package_labels_verified = 0
 	return pr
 
 

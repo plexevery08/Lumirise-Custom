@@ -41,24 +41,24 @@ def on_purchase_receipt_submit(doc, method=None):
 	"""
 	if doc.get("is_subcontracted"):
 		return
-	pos = {r.purchase_order for r in doc.items if r.get("purchase_order")}
-	for po in pos:
-		iqcs = frappe.get_all("IQC", filters={"purchase_order": po, "docstatus": 1,
-			"status": ["in", ["Passed", "Moved to RM"]]}, fields=["name", "status"], limit=1)
-		if not iqcs:
-			continue
-		for row in doc.items:
-			packages = frappe.get_all("RM Package", filters={
-				"purchase_order": po, "item_code": row.item_code,
-				"status": "Pending IQC",
-			}, pluck="name")
-			for name in packages:
-				pkg = frappe.get_doc("RM Package", name)
-				pkg.purchase_receipt = doc.name
-				pkg.iqc = iqcs[0].name
-				pkg.status = "Available"
-				pkg.current_warehouse = row.warehouse or pkg.current_warehouse
-				pkg.save(ignore_permissions=True)
+	inbound = doc.get("lr_inbound_logistics")
+	iqc_name = doc.get("lr_iqc")
+	if not inbound or not iqc_name:
+		return
+	iqc_status = frappe.db.get_value("IQC", iqc_name, "status")
+	if iqc_status not in ("Passed", "Moved to RM"):
+		return
+	warehouses = {row.item_code: row.warehouse for row in doc.items if row.item_code}
+	for name in frappe.get_all(
+		"RM Package",
+		filters={"inbound_logistics": inbound, "iqc": iqc_name, "status": "Pending IQC"},
+		pluck="name",
+	):
+		pkg = frappe.get_doc("RM Package", name)
+		pkg.purchase_receipt = doc.name
+		pkg.status = "Available"
+		pkg.current_warehouse = warehouses.get(pkg.item_code) or pkg.current_warehouse
+		pkg.save(ignore_permissions=True)
 
 
 def on_stock_entry_submit(doc, method=None):
@@ -79,3 +79,39 @@ def on_stock_entry_submit(doc, method=None):
 			pkg.current_warehouse = row.t_warehouse or pkg.current_warehouse
 			pkg.last_stock_entry = doc.name
 			pkg.save(ignore_permissions=True)
+
+
+def on_purchase_receipt_cancel(doc, method=None):
+	"""Return un-moved packages to Pending IQC when their GRN is cancelled."""
+	for name in frappe.get_all("RM Package", filters={"purchase_receipt": doc.name}, pluck="name"):
+		pkg = frappe.get_doc("RM Package", name)
+		if pkg.last_stock_entry:
+			continue
+		pkg.status = "Pending IQC"
+		pkg.purchase_receipt = None
+		pkg.label_printed = 0
+		pkg.label_printed_by = None
+		pkg.label_printed_on = None
+		pkg.label_applied = 0
+		pkg.label_applied_by = None
+		pkg.label_applied_on = None
+		pkg.save(ignore_permissions=True)
+
+
+def on_stock_entry_cancel(doc, method=None):
+	"""Reverse package custody when a scanned native stock move is cancelled."""
+	barcode = (doc.get("lr_scan_package") or "").strip()
+	if not barcode:
+		return
+	name = frappe.db.get_value("RM Package", {"package_barcode": barcode}, "name") or barcode
+	if not frappe.db.exists("RM Package", name):
+		return
+	pkg = frappe.get_doc("RM Package", name)
+	if pkg.last_stock_entry != doc.name:
+		return
+	row = next((r for r in doc.items if r.item_code == pkg.item_code), None)
+	if row:
+		pkg.current_warehouse = row.s_warehouse or pkg.current_warehouse
+		pkg.status = "Available"
+		pkg.last_stock_entry = None
+		pkg.save(ignore_permissions=True)

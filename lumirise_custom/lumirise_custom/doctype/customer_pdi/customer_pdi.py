@@ -180,6 +180,7 @@ def _cancel_stock_entry(name):
 		return
 	se = frappe.get_doc("Stock Entry", name)
 	if se.docstatus == 1:
+		se.check_permission("cancel")
 		se.flags.ignore_permissions = True
 		se.cancel()
 
@@ -249,6 +250,8 @@ def authorize_send(docname):
 	doc = _load(docname)
 	if doc.docstatus != 0 or doc.status != PENDING_AUTH:
 		frappe.throw(_("This Customer PDI is not pending store authorization."))
+	if doc.requested_by == frappe.session.user:
+		frappe.throw(_("The request maker cannot authorize their own stock movement."), frappe.PermissionError)
 	if doc.send_stock_entry:
 		frappe.throw(_("The issue has already been authorized ({0}).").format(doc.send_stock_entry))
 	if not doc.pdi_warehouse:
@@ -414,6 +417,8 @@ def fetch_sales_order_items(sales_order, source_warehouse=None):
 	FG) warehouse so the inspector sees on-hand up front."""
 	if not sales_order:
 		return []
+	frappe.has_permission("Customer PDI", "read", throw=True)
+	frappe.has_permission("Sales Order", "read", sales_order, throw=True)
 	source_warehouse = source_warehouse or dispatch_fg_default()
 	so = frappe.get_doc("Sales Order", sales_order)
 	rows = []
@@ -436,6 +441,7 @@ def fg_on_hand(item_code, warehouse=None):
 	'Available in FG' the moment the inspector picks the item, before save."""
 	if not item_code:
 		return 0.0
+	frappe.has_permission("Customer PDI", "read", throw=True)
 	return _on_hand(item_code, warehouse or dispatch_fg_default())
 
 

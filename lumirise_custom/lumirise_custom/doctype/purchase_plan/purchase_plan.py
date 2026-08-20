@@ -56,9 +56,11 @@ class PurchasePlan(Document):
 @frappe.whitelist()
 def get_indent_qty(plan_name=None, indent_refs=None):
 	"""Total indented qty per item across the plan's source Indents — the baseline
-	for the Indent-vs-Order balance table (Indent Qty − Order Qty = Balance).
+	for the Indent-vs-Order balance table (Indent Qty - Order Qty = Balance).
 	Returns {item_code: indent_qty}."""
 	names = set()
+	if plan_name:
+		frappe.has_permission("Purchase Plan", "read", plan_name, throw=True)
 	# Source 1: the plan-level indent_refs (or an explicit override).
 	refs = indent_refs
 	if not refs and plan_name:
@@ -77,6 +79,7 @@ def get_indent_qty(plan_name=None, indent_refs=None):
 	for name in names:
 		if not frappe.db.exists("Indent", name):
 			continue
+		frappe.has_permission("Indent", "read", name, throw=True)
 		for row in frappe.get_all("Indent Item", filters={"parent": name},
 		                          fields=["item_code", "qty"]):
 			qty[row.item_code] = flt(qty.get(row.item_code, 0)) + flt(row.qty)
@@ -102,6 +105,7 @@ def get_kit_bom(plan_name):
 	(min over components of ordered ÷ per-kit) and what is left over as LOOSE parts.
 
 	Returns {model: {"fg_item": model, "components": {item_code: per_kit_qty}}}."""
+	frappe.has_permission("Purchase Plan", "read", plan_name, throw=True)
 	models = set()
 	if frappe.db.exists("Purchase Plan", plan_name):
 		for row in frappe.get_all("Purchase Plan Item", filters={"parent": plan_name},
@@ -116,6 +120,7 @@ def get_kit_bom(plan_name):
 			out[model] = {"fg_item": model, "components": {}, "no_bom": True}
 			continue
 		bom_doc = frappe.get_doc("BOM", bom)
+		bom_doc.check_permission("read")
 		per = flt(bom_doc.quantity) or 1
 		comps = {}
 		for bi in bom_doc.items:
@@ -130,6 +135,7 @@ def create_purchase_orders(plan_name):
 	supplier. Returns the list of created PO names. Idempotent guard: refuses to run
 	twice on the same submitted plan."""
 	plan = frappe.get_doc("Purchase Plan", plan_name)
+	plan.check_permission("write")
 	if plan.docstatus != 1:
 		frappe.throw(_("Submit the Purchase Plan before creating Purchase Orders."))
 	if plan.po_status == "POs Created":

@@ -20,9 +20,23 @@ Run standalone:  bench --site site.com execute \
 
 import frappe
 
-# Roles the approval chains reference. Standard "Purchase Manager" already ships.
-# "Planning User" = the maker who drafts a Material Planning (Planning Manager checks).
-APPROVAL_ROLES = ["Planning User", "Planning Manager", "Purchase Head", "MD", "Factory Store Manager", "Line Supervisor"]
+# Custom roles referenced by workflow or DocType permission metadata. Standard
+# ERPNext roles (Purchase User, Purchase Manager, Stock User, Stock Manager) ship
+# with ERPNext and are not duplicated here. Quality/Logistics/Security roles are
+# referenced by action_permissions.py's role gates (material inward flow).
+APPROVAL_ROLES = [
+	"Planning User",
+	"Planning Manager",
+	"Purchase Head",
+	"MD",
+	"Factory Store Manager",
+	"Line Supervisor",
+	"Quality Inspector",
+	"Quality Manager",
+	"Logistics User",
+	"Logistics Manager",
+	"Security User",
+]
 
 WORKFLOW_STATES = [
 	# (name, style, icon)

@@ -186,10 +186,13 @@ doc_events = {
 	"Purchase Receipt": {
 		"before_submit": [
 			"lumirise_custom.events.iqc_gate",
+			# Exact-shipment poster controls: gate/docs/task/unloading/physical/IQC/storage/packages.
+			"lumirise_custom.inward_process.inward_grn_gate",
 			# Warn/block if the PO's Inbound Logistics wasn't released by Purchase (WP-2.3).
 			"lumirise_custom.events.container_release_gate",
 		],
 		"on_submit": [
+			"lumirise_custom.inward_process.on_purchase_receipt_submit",
 			# GRN posted -> RM Stores put-away card.
 			"lumirise_custom.task_engine.on_purchase_receipt_submit",
 			# GRN posted -> SO purchase status = Received.
@@ -209,6 +212,8 @@ doc_events = {
 		"on_cancel": [
 			"lumirise_custom.chain.revert_iqc_moved_to_rm",
 			"lumirise_custom.samples.revert_samples_from_lab",
+			"lumirise_custom.packages.on_purchase_receipt_cancel",
+			"lumirise_custom.inward_process.on_purchase_receipt_cancel",
 		],
 		# Stamp the SO/Indent/WO/PO traceability panel (fail-safe).
 		"validate": "lumirise_custom.traceability.stamp",
@@ -280,6 +285,7 @@ doc_events = {
 			"lumirise_custom.task_engine.on_stock_entry_submit",
 			"lumirise_custom.packages.on_stock_entry_submit",
 		],
+		"on_cancel": "lumirise_custom.packages.on_stock_entry_cancel",
 	},
 	# Production Material Requisition raised -> task Stores to pick & issue.
 	"Material Request": {
@@ -341,7 +347,11 @@ doc_events = {
 	},
 	"IQC": {
 		# Rejection at incoming QC -> Defect card to Purchase (vendor claim).
-		"on_submit": "lumirise_custom.task_engine.on_iqc_submit",
+		"on_submit": [
+			"lumirise_custom.task_engine.on_iqc_submit",
+			"lumirise_custom.inward_process.sync_inbound_from_iqc",
+		],
+		"on_update": "lumirise_custom.inward_process.sync_inbound_from_iqc",
 		"validate": "lumirise_custom.traceability.stamp",
 	},
 	"Customer PDI": {

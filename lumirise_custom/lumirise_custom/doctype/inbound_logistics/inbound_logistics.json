@@ -7,40 +7,143 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "tab_consignment",
+  "sec_consignment",
   "vendor_pdi",
   "purchase_order",
   "type",
   "mode",
+  "col_consignment_b",
   "status",
+  "inward_stage",
+  "container_no",
+  "receiving_warehouse",
+  "sec_transport",
+  "lr_number",
+  "lr_date",
+  "transporter",
+  "col_transport_b",
+  "vehicle_no",
+  "no_of_boxes",
+  "current_location",
+  "sec_dispatch",
   "shipment_date",
   "expected_arrival_date",
-  "container_no",
+  "col_dispatch_b",
   "release_status",
+  "released_by",
+  "released_on",
+  "tab_items",
+  "sec_items",
+  "items",
+  "tab_inward",
+  "sec_gate",
+  "arrival_registered_on",
+  "arrival_registered_by",
+  "manager_notified",
+  "col_gate_b",
   "vehicle_gate_status",
   "gate_approved_by",
   "gate_approved_on",
+  "col_gate_c",
+  "gate_stamp_reference",
+  "gate_invoice_attachment",
+  "gate_verified_by",
+  "gate_verified_on",
+  "sec_documents",
+  "invoice_verified",
+  "packing_list_matched",
+  "waybill_verified",
+  "other_documents_received",
+  "documents_forwarded_to_manager",
+  "col_documents_b",
   "document_verification_status",
   "document_exception",
-  "receiving_warehouse",
-  "released_by",
-  "released_on",
-  "col1",
-  "lr_number",
-  "lr_date",
-  "vehicle_no",
-  "transporter",
-  "no_of_boxes",
-  "current_location",
-  "sec_items",
-  "items",
+  "document_bundle_attachment",
+  "col_documents_c",
+  "documents_verified_by",
+  "documents_verified_on",
+  "sec_iqc",
+  "iqc_reference",
+  "iqc_task",
+  "col_iqc_b",
+  "iqc_task_raised_by",
+  "iqc_task_raised_on",
+  "sec_unloading",
+  "unloading_status",
+  "col_unloading_b",
+  "unloading_started_by",
+  "unloading_started_on",
+  "col_unloading_c",
+  "unloading_completed_by",
+  "unloading_completed_on",
+  "sec_physical",
+  "physical_verification_status",
+  "physical_verification_remarks",
+  "col_physical_b",
+  "physical_verified_by",
+  "physical_verified_on",
+  "col_physical_c",
+  "invoice_price_verified",
+  "price_verified_by",
+  "price_verified_on",
+  "sec_exceptions",
+  "inward_exceptions",
+  "tab_storage",
+  "sec_storage",
+  "rack_warehouse",
+  "rack_allocated_by",
+  "rack_allocated_on",
+  "col_storage_b",
+  "storage_authorized",
+  "storage_authorized_by",
+  "storage_authorized_on",
+  "sec_grn",
+  "purchase_receipt",
+  "signed_packing_list",
+  "col_grn_b",
+  "outward_accepted",
+  "outward_accepted_by",
+  "outward_accepted_on",
+  "sec_putaway",
+  "stock_note_reference",
+  "stock_note_attachment",
+  "col_putaway_b",
+  "erp_entry_verified",
+  "erp_verified_by",
+  "erp_verified_on",
+  "sec_handover",
+  "documents_handed_over",
+  "handover_bundle_attachment",
+  "col_handover_b",
+  "documents_handed_over_by",
+  "documents_handed_over_on",
+  "sec_signoff",
+  "final_signoff",
+  "col_signoff_b",
+  "final_signed_off_by",
+  "final_signed_off_on",
+  "tab_references",
   "lr_traceability_sec",
   "lr_source_so",
   "lr_source_indent",
+  "col_traceability_b",
   "lr_source_wo",
   "lr_source_po",
+  "sec_amendment",
   "amended_from"
  ],
  "fields": [
+  {
+   "fieldname": "tab_consignment",
+   "fieldtype": "Tab Break",
+   "label": "Consignment"
+  },
+  {
+   "fieldname": "sec_consignment",
+   "fieldtype": "Section Break",
+   "label": "Consignment"
+  },
   {
    "fieldname": "vendor_pdi",
    "fieldtype": "Link",
@@ -71,6 +174,10 @@
    "options": "Road\nSea"
   },
   {
+   "fieldname": "col_consignment_b",
+   "fieldtype": "Column Break"
+  },
+  {
    "allow_on_submit": 1,
    "default": "Dispatched",
    "description": "Driven by the flow buttons. Dispatched → In Transit → Reached Warehouse. Do not edit manually.",
@@ -84,45 +191,20 @@
   },
   {
    "allow_on_submit": 1,
-   "default": "Pending Approval",
-   "fieldname": "vehicle_gate_status",
+   "default": "Vehicle In Transit",
+   "description": "Checkpoint reached in the material inward process. Driven by the buttons on the Inward Process tab.",
+   "fieldname": "inward_stage",
    "fieldtype": "Select",
-   "label": "Vehicle Gate Status",
-   "options": "Pending Approval\nApproved\nRejected",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Inward Stage",
+   "options": "Vehicle In Transit\nAwaiting Gate Approval\nGate Approved\nGate Verified\nDocuments Verified\nDocument Exception\nIQC Task Raised\nUnloading In Progress\nPhysical Verification\nIQC In Progress\nIQC Failed\nStorage Authorized\nGRN Posted\nPut Away Complete\nDocuments Handed Over\nClosed",
    "read_only": 1
   },
   {
-   "allow_on_submit": 1,
-   "fieldname": "gate_approved_by",
-   "fieldtype": "Link",
-   "label": "Gate Approved By",
-   "no_copy": 1,
-   "options": "User",
-   "read_only": 1
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "gate_approved_on",
-   "fieldtype": "Datetime",
-   "label": "Gate Approved On",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "allow_on_submit": 1,
-   "default": "Pending",
-   "fieldname": "document_verification_status",
-   "fieldtype": "Select",
-   "label": "Document Verification",
-   "options": "Pending\nVerified\nException",
-   "read_only": 1
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "document_exception",
-   "fieldtype": "Small Text",
-   "label": "Document Exception",
-   "read_only": 1
+   "fieldname": "container_no",
+   "fieldtype": "Data",
+   "label": "Container No"
   },
   {
    "allow_on_submit": 1,
@@ -130,6 +212,54 @@
    "fieldtype": "Link",
    "label": "Receiving / Staging Warehouse",
    "options": "Warehouse"
+  },
+  {
+   "fieldname": "sec_transport",
+   "fieldtype": "Section Break",
+   "label": "Transport & LR"
+  },
+  {
+   "fieldname": "lr_number",
+   "fieldtype": "Data",
+   "label": "LR Number"
+  },
+  {
+   "default": "Today",
+   "fieldname": "lr_date",
+   "fieldtype": "Date",
+   "label": "LR Date"
+  },
+  {
+   "fieldname": "transporter",
+   "fieldtype": "Data",
+   "label": "Transporter"
+  },
+  {
+   "fieldname": "col_transport_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "vehicle_no",
+   "fieldtype": "Data",
+   "label": "Vehicle No"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "no_of_boxes",
+   "fieldtype": "Int",
+   "label": "No. of Boxes"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Latest known location while in transit (updated by Logistics).",
+   "fieldname": "current_location",
+   "fieldtype": "Data",
+   "label": "Current Location"
+  },
+  {
+   "fieldname": "sec_dispatch",
+   "fieldtype": "Section Break",
+   "label": "Dispatch, Arrival & Container Release"
   },
   {
    "allow_on_submit": 1,
@@ -144,9 +274,8 @@
    "label": "Expected Arrival Date"
   },
   {
-   "fieldname": "container_no",
-   "fieldtype": "Data",
-   "label": "Container No"
+   "fieldname": "col_dispatch_b",
+   "fieldtype": "Column Break"
   },
   {
    "allow_on_submit": 1,
@@ -177,43 +306,9 @@
    "read_only": 1
   },
   {
-   "fieldname": "col1",
-   "fieldtype": "Column Break",
-   "label": "Col1"
-  },
-  {
-   "fieldname": "lr_number",
-   "fieldtype": "Data",
-   "label": "LR Number"
-  },
-  {
-   "default": "Today",
-   "fieldname": "lr_date",
-   "fieldtype": "Date",
-   "label": "LR Date"
-  },
-  {
-   "fieldname": "vehicle_no",
-   "fieldtype": "Data",
-   "label": "Vehicle No"
-  },
-  {
-   "fieldname": "transporter",
-   "fieldtype": "Data",
-   "label": "Transporter"
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "no_of_boxes",
-   "fieldtype": "Int",
-   "label": "No. of Boxes"
-  },
-  {
-   "allow_on_submit": 1,
-   "description": "Latest known location while in transit (updated by Logistics).",
-   "fieldname": "current_location",
-   "fieldtype": "Data",
-   "label": "Current Location"
+   "fieldname": "tab_items",
+   "fieldtype": "Tab Break",
+   "label": "Items"
   },
   {
    "fieldname": "sec_items",
@@ -228,7 +323,581 @@
    "reqd": 1
   },
   {
+   "fieldname": "tab_inward",
+   "fieldtype": "Tab Break",
+   "label": "Inward Process"
+  },
+  {
+   "fieldname": "sec_gate",
+   "fieldtype": "Section Break",
+   "label": "Gate Entry & Vehicle Approval"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "arrival_registered_on",
+   "fieldtype": "Datetime",
+   "label": "Vehicle Arrived On",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "arrival_registered_by",
+   "fieldtype": "Link",
+   "label": "Arrival Registered By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "manager_notified",
+   "fieldtype": "Check",
+   "label": "Inward Manager Notified",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_gate_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Pending Approval",
+   "fieldname": "vehicle_gate_status",
+   "fieldtype": "Select",
+   "label": "Vehicle Gate Status",
+   "options": "Pending Approval\nApproved\nRejected",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gate_approved_by",
+   "fieldtype": "Link",
+   "label": "Gate Approved By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gate_approved_on",
+   "fieldtype": "Datetime",
+   "label": "Gate Approved On",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_gate_c",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gate_stamp_reference",
+   "fieldtype": "Data",
+   "label": "Gate Stamp / Signature Reference",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gate_invoice_attachment",
+   "fieldtype": "Attach",
+   "label": "Gate-stamped Invoice",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gate_verified_by",
+   "fieldtype": "Link",
+   "label": "Gate Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gate_verified_on",
+   "fieldtype": "Datetime",
+   "label": "Gate Verified On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_documents",
+   "fieldtype": "Section Break",
+   "label": "Document Verification & Handover"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "invoice_verified",
+   "fieldtype": "Check",
+   "label": "Invoice Received & Verified",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "packing_list_matched",
+   "fieldtype": "Check",
+   "label": "Packing List Received & Matched",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "waybill_verified",
+   "fieldtype": "Check",
+   "label": "Waybill / LR Received & Verified",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "other_documents_received",
+   "fieldtype": "Check",
+   "label": "Other Supporting Documents Received",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "documents_forwarded_to_manager",
+   "fieldtype": "Check",
+   "label": "Documents Forwarded to Manager",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_documents_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Pending",
+   "fieldname": "document_verification_status",
+   "fieldtype": "Select",
+   "label": "Document Verification",
+   "options": "Pending\nVerified\nException",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "document_exception",
+   "fieldtype": "Small Text",
+   "label": "Document Exception",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "document_bundle_attachment",
+   "fieldtype": "Attach",
+   "label": "Inward Document Bundle",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_documents_c",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "documents_verified_by",
+   "fieldtype": "Link",
+   "label": "Documents Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "documents_verified_on",
+   "fieldtype": "Datetime",
+   "label": "Documents Verified On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_iqc",
+   "fieldtype": "Section Break",
+   "label": "Incoming Quality Control"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "iqc_reference",
+   "fieldtype": "Link",
+   "label": "Incoming Quality Control",
+   "options": "IQC",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "iqc_task",
+   "fieldtype": "Link",
+   "label": "IQC Task (Bitrix Mirror Source)",
+   "options": "Lumirise Task",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_iqc_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "iqc_task_raised_by",
+   "fieldtype": "Link",
+   "label": "IQC Task Raised By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "iqc_task_raised_on",
+   "fieldtype": "Datetime",
+   "label": "IQC Task Raised On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_unloading",
+   "fieldtype": "Section Break",
+   "label": "Unloading"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Pending",
+   "fieldname": "unloading_status",
+   "fieldtype": "Select",
+   "label": "Unloading Status",
+   "options": "Pending\nIn Progress\nCompleted\nBlocked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_unloading_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "unloading_started_by",
+   "fieldtype": "Link",
+   "label": "Unloading Started By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "unloading_started_on",
+   "fieldtype": "Datetime",
+   "label": "Unloading Started On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_unloading_c",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "unloading_completed_by",
+   "fieldtype": "Link",
+   "label": "Unloading Completed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "unloading_completed_on",
+   "fieldtype": "Datetime",
+   "label": "Unloading Completed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_physical",
+   "fieldtype": "Section Break",
+   "label": "Physical & Price Verification"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Pending",
+   "fieldname": "physical_verification_status",
+   "fieldtype": "Select",
+   "label": "Packing-list Quantity Check",
+   "options": "Pending\nMatched\nShort Quantity\nExcess Quantity\nDamaged Material\nTransport Damage\nMultiple Exceptions",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "physical_verification_remarks",
+   "fieldtype": "Small Text",
+   "label": "Physical Verification Remarks",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_physical_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "physical_verified_by",
+   "fieldtype": "Link",
+   "label": "Physical Quantity Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "physical_verified_on",
+   "fieldtype": "Datetime",
+   "label": "Physical Quantity Verified On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_physical_c",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "invoice_price_verified",
+   "fieldtype": "Check",
+   "label": "Invoice Price Checked Against PO",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "price_verified_by",
+   "fieldtype": "Link",
+   "label": "Price Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "price_verified_on",
+   "fieldtype": "Datetime",
+   "label": "Price Verified On",
+   "read_only": 1
+  },
+  {
    "collapsible": 1,
+   "fieldname": "sec_exceptions",
+   "fieldtype": "Section Break",
+   "label": "Quantity / Damage Exceptions"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "inward_exceptions",
+   "fieldtype": "Table",
+   "label": "Quantity / Damage Exceptions",
+   "options": "Inbound Process Exception"
+  },
+  {
+   "fieldname": "tab_storage",
+   "fieldtype": "Tab Break",
+   "label": "Storage & Sign-off"
+  },
+  {
+   "fieldname": "sec_storage",
+   "fieldtype": "Section Break",
+   "label": "Rack Allocation & Storage Authorization"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rack_warehouse",
+   "fieldtype": "Link",
+   "label": "Allocated Rack / Bay",
+   "options": "Warehouse"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rack_allocated_by",
+   "fieldtype": "Link",
+   "label": "Rack Allocated By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rack_allocated_on",
+   "fieldtype": "Datetime",
+   "label": "Rack Allocated On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_storage_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "storage_authorized",
+   "fieldtype": "Check",
+   "label": "Storage Authorized",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "storage_authorized_by",
+   "fieldtype": "Link",
+   "label": "Storage Authorized By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "storage_authorized_on",
+   "fieldtype": "Datetime",
+   "label": "Storage Authorized On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_grn",
+   "fieldtype": "Section Break",
+   "label": "GRN & Stores Acceptance"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "purchase_receipt",
+   "fieldtype": "Link",
+   "label": "GRN / Purchase Receipt",
+   "options": "Purchase Receipt",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "signed_packing_list",
+   "fieldtype": "Attach",
+   "label": "Signed Packing List",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_grn_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "outward_accepted",
+   "fieldtype": "Check",
+   "label": "RM / Outward Team Physical Count Accepted",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "outward_accepted_by",
+   "fieldtype": "Link",
+   "label": "Accepted By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "outward_accepted_on",
+   "fieldtype": "Datetime",
+   "label": "Accepted On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_putaway",
+   "fieldtype": "Section Break",
+   "label": "Put-away & ERP Cross-check"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "stock_note_reference",
+   "fieldtype": "Data",
+   "label": "Rack Stock Note Reference",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "stock_note_attachment",
+   "fieldtype": "Attach",
+   "label": "Rack Stock Note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_putaway_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "erp_entry_verified",
+   "fieldtype": "Check",
+   "label": "ERP Stock Entry Cross-checked",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "erp_verified_by",
+   "fieldtype": "Link",
+   "label": "ERP Entry Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "erp_verified_on",
+   "fieldtype": "Datetime",
+   "label": "ERP Entry Verified On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_handover",
+   "fieldtype": "Section Break",
+   "label": "Document Handover to Purchase"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "documents_handed_over",
+   "fieldtype": "Check",
+   "label": "GRN / Invoice / Waybill / IQC Handed to Purchase",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "handover_bundle_attachment",
+   "fieldtype": "Attach",
+   "label": "Purchase Handover Bundle",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_handover_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "documents_handed_over_by",
+   "fieldtype": "Link",
+   "label": "Documents Handed Over By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "documents_handed_over_on",
+   "fieldtype": "Datetime",
+   "label": "Documents Handed Over On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_signoff",
+   "fieldtype": "Section Break",
+   "label": "Final Inward Sign-off"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "final_signoff",
+   "fieldtype": "Check",
+   "label": "Final Inward Sign-off",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_signoff_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "final_signed_off_by",
+   "fieldtype": "Link",
+   "label": "Final Sign-off By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "final_signed_off_on",
+   "fieldtype": "Datetime",
+   "label": "Final Sign-off On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tab_references",
+   "fieldtype": "Tab Break",
+   "label": "References"
+  },
+  {
    "fieldname": "lr_traceability_sec",
    "fieldtype": "Section Break",
    "label": "Lumirise Traceability"
@@ -250,6 +919,10 @@
    "read_only": 1
   },
   {
+   "fieldname": "col_traceability_b",
+   "fieldtype": "Column Break"
+  },
+  {
    "allow_on_submit": 1,
    "fieldname": "lr_source_wo",
    "fieldtype": "Small Text",
@@ -266,6 +939,11 @@
    "read_only": 1
   },
   {
+   "fieldname": "sec_amendment",
+   "fieldtype": "Section Break",
+   "label": "Amendment"
+  },
+  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -279,7 +957,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-13 19:22:57.565897",
+ "modified": "2026-08-11 17:05:00.000000",
  "modified_by": "Administrator",
  "module": "Lumirise Custom",
  "name": "Inbound Logistics",
@@ -299,6 +977,94 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Logistics User",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Logistics Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Purchase User",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Purchase Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Purchase Head",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Inspector"
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Stock User"
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Security User",
    "write": 1
   }
  ],
