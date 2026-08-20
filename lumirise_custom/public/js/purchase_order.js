@@ -16,10 +16,75 @@ frappe.ui.form.on("Purchase Order", {
 				pick_indent_items(frm);
 			}, __("Get Items From"));
 		}
+		// Vendor-to-vendor consignee drop-ship (Rishitha 2026-08-17): submitted PO,
+		// Consignee + its Subcontracting Order both resolved -> one-click bridge.
+		if (frm.doc.docstatus === 1 && frm.doc.lr_consignee && frm.doc.lr_consignee_sco_ref) {
+			frm.add_custom_button(__("Receive & Forward to Consignee"), () => {
+				frappe.confirm(
+					__("Record this PO's RM as received, then prepare the transfer to {0} ({1})? The transfer will be a Draft pending approval.",
+						[frm.doc.lr_consignee, frm.doc.lr_consignee_sco_ref]),
+					() => {
+						frappe.call({
+							method: "lumirise_custom.dropship.receive_and_forward",
+							args: { purchase_order: frm.doc.name },
+							freeze: true,
+							freeze_message: __("Receiving and preparing the transfer…"),
+							callback(r) {
+								if (!r.message) return;
+								frappe.set_route("Form", "Stock Entry", r.message.stock_entry);
+							},
+						});
+					}
+				);
+			});
+		}
 		render_bom_reco(frm);
 	},
 	lr_indent_refs(frm) {
 		render_bom_reco(frm);
+	},
+	// Resolve (or offer a pick-list for) the vendor's open Subcontracting Order the
+	// moment a Consignee is named — this is the "connect the two flows" piece
+	// Rishitha asked for, so the eventual transfer credits the right job.
+	lr_consignee(frm) {
+		if (!frm.doc.lr_consignee) {
+			frm.set_value("lr_consignee_sco_ref", "");
+			return;
+		}
+		frappe.call({
+			method: "lumirise_custom.dropship.get_open_subcontracting_orders",
+			args: { supplier: frm.doc.lr_consignee },
+			callback(r) {
+				const orders = r.message || [];
+				if (!orders.length) {
+					frappe.msgprint({
+						message: __("{0} has no open Subcontracting Order right now. Set it up (or pick the right vendor) before this PO can be drop-shipped.", [frm.doc.lr_consignee]),
+						indicator: "orange",
+						title: __("No Open Job"),
+					});
+					frm.set_value("lr_consignee_sco_ref", "");
+				} else if (orders.length === 1) {
+					frm.set_value("lr_consignee_sco_ref", orders[0].name);
+				} else {
+					const d = new frappe.ui.Dialog({
+						title: __("Which job is this RM for?"),
+						fields: [{
+							fieldname: "sco",
+							fieldtype: "Select",
+							label: __("Subcontracting Order"),
+							options: orders.map((o) => `${o.name} (${o.status})`),
+							reqd: 1,
+						}],
+						primary_action_label: __("Link"),
+						primary_action(values) {
+							frm.set_value("lr_consignee_sco_ref", values.sco.split(" (")[0]);
+							d.hide();
+						},
+					});
+					d.show();
+				}
+			},
+		});
 	},
 	// Re-run the reconciliation when a PO line is added or removed so the panel
 	// tracks the buyer's edits live (it used to only refresh on form reload).

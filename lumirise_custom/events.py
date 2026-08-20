@@ -98,6 +98,12 @@ def iqc_gate(doc, method=None):
 		return
 	pos = {row.purchase_order for row in doc.items if getattr(row, "purchase_order", None)}
 	for po in pos:
+		# Vendor-to-vendor consignee drop-ship (2026-08-17): this RM never physically
+		# reaches Lumirise for inspection — it ships straight to the job-work vendor.
+		# Incoming quality is governed on the eventual Subcontracting Receipt, not
+		# here, same reasoning as the is_subcontracted exemption above.
+		if frappe.db.get_value("Purchase Order", po, "lr_consignee"):
+			continue
 		# Outcome is derived live from the line qtys and locked onto `status` on
 		# submit (Passed / Rejected / On Hold / Moved to RM) — the old stored
 		# `result` column was removed but defaulted to 'Accepted', so filtering on
@@ -113,6 +119,30 @@ def iqc_gate(doc, method=None):
 				f"Goods cannot enter stock until Incoming Quality Control passes "
 				f"(Vendor PDI → Logistics → IQC → GRN).",
 				title="IQC Gate")
+
+
+RM_CONVERSION_APPROVER_ROLES = ["Factory Store Manager", "System Manager"]
+
+
+def rm_conversion_checkpoint(doc, method=None):
+	"""The RM-Conversion checkpoint the client asked for back in May 2026 (never
+	built) — a verification step before RM actually leaves Lumirise's stock, to
+	catch data-entry errors (wrong item, wrong qty, wrong vendor) before they post.
+
+	Gates every "Send to Subcontractor" Stock Entry, not just the 2026-08-17
+	vendor-to-vendor consignee drop-ship path — same document either way. The maker
+	(Store) creates/saves the Draft; only an approver can submit it. Standard
+	maker-checker, same shape as Indent Approval / PO Release (approval_setup.py)."""
+	if (getattr(doc, "stock_entry_type", "") or "") != "Send to Subcontractor":
+		return
+	user_roles = set(frappe.get_roles(frappe.session.user))
+	if user_roles & set(RM_CONVERSION_APPROVER_ROLES):
+		return
+	frappe.throw(
+		"This RM transfer to the subcontractor needs approval before it can be "
+		"submitted (the data-entry checkpoint). Save it as a Draft and ask a "
+		"<b>Factory Store Manager</b> to review and submit it.",
+		title="RM Conversion — Approval Required")
 
 
 def customer_pdi_gate(doc, method=None):

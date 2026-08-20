@@ -515,6 +515,34 @@ def on_stock_entry_submit(doc, method=None):
 	)
 
 
+def on_send_to_subcontractor_draft(doc, method=None):
+	"""A "Send to Subcontractor" Stock Entry was created as a Draft (the RM-Conversion
+	checkpoint, events.rm_conversion_checkpoint) -> raise a card for the Factory Store
+	Manager to review and submit it. Fires on every such Draft, not just the
+	2026-08-17 vendor-to-vendor consignee path -- same document either way."""
+	try:
+		if (getattr(doc, "stock_entry_type", "") or "") != "Send to Subcontractor":
+			return
+		if doc.docstatus != 0:
+			return
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "Lumirise Task Engine: on_send_to_subcontractor_draft gate failed")
+		return
+	create_task(
+		title=f"Approve RM Conversion: {doc.name} to {doc.get('supplier') or 'subcontractor'}",
+		department="Stores - RM",
+		task_type="Approval",
+		priority="High",
+		reference_doctype="Stock Entry",
+		reference_name=doc.name,
+		description=(
+			f"RM transfer {doc.name} (Subcontracting Order {doc.get('subcontracting_order') or '-'}) "
+			f"is waiting for a Factory Store Manager to check the items/quantities/destination "
+			f"vendor and submit it. Stock has NOT moved yet."),
+		source_event="rm_conversion_pending_approval",
+	)
+
+
 # ---------------------------------------------------------------------------
 # Scheduler: escalate overdue tasks to the HOD (the "missed deadline" alert)
 # ---------------------------------------------------------------------------

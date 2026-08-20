@@ -46,6 +46,15 @@ def after_migrate():
 	create_bom_fields()
 	# BOM Reconciliation tab (Tab Break + HTML) on the Purchase Order.
 	create_purchase_reco_fields()
+	# Vendor-to-vendor consignee drop-ship (Rishitha 2026-08-17): Consignee +
+	# linked Subcontracting Order on the Purchase Order.
+	from lumirise_custom.setup.dropship_fields import (
+		create_dropship_fields,
+		ensure_rm_conversion_approver_permission,
+	)
+
+	create_dropship_fields()
+	ensure_rm_conversion_approver_permission()
 	# Line Transfer tab (Tab Break + HTML) on the Work Order — per-line qty breakdown.
 	create_wo_line_transfer_fields()
 	# Purchase Plan: parent Global Supplier (cascades to lines) + supplier-wise split.

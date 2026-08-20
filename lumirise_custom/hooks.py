@@ -264,9 +264,17 @@ doc_events = {
 		# Stamp the shop-floor issue type when the SE comes from a (non-Delivery) Pick
 		# List — authoritative server-side mirror of the public/js/stock_entry.js default.
 		"before_validate": "lumirise_custom.stores.set_shopfloor_issue_type",
-		"before_submit": "lumirise_custom.packages.validate_scanned_stock_entry",
+		"before_submit": [
+			"lumirise_custom.packages.validate_scanned_stock_entry",
+			# RM-Conversion checkpoint (client ask, May 2026): "Send to Subcontractor"
+			# needs a Factory Store Manager to submit, not just whoever drafted it.
+			"lumirise_custom.events.rm_conversion_checkpoint",
+		],
 		# Stamp the SO/Indent/WO/PO traceability panel from the SE's Work Order.
 		"validate": "lumirise_custom.traceability.stamp",
+		# Draft "Send to Subcontractor" -> task the Factory Store Manager to approve it
+		# (the checkpoint above blocks their own submit until that happens).
+		"after_insert": "lumirise_custom.task_engine.on_send_to_subcontractor_draft",
 		"on_submit": [
 			"lumirise_custom.costing.on_stock_entry",
 			"lumirise_custom.task_engine.on_stock_entry_submit",
