@@ -25,7 +25,11 @@ frappe.ui.form.on("Purchase Plan", {
 								<td class="text-right">${esc(p.currency || "")} ${num(p.amount)}</td>
 							</tr>`;
 						}).join("");
-						frappe.msgprint({
+						// reload_doc() rebuilds the form's own DOM; firing it in the same tick
+						// as the dialog can interrupt the dialog's own content still painting
+						// (seen live: title renders, table body doesn't). Defer the reload to
+						// the dialog's own close so nothing competes with it while it renders.
+						const summary_dialog = frappe.msgprint({
 							title: __("Purchase Orders created — one per vendor"),
 							indicator: "green",
 							message: `<table class="table table-bordered" style="font-size:12px;margin-bottom:0;">
@@ -42,7 +46,13 @@ frappe.ui.form.on("Purchase Plan", {
 							</table>
 							<p class="text-muted small" style="margin-top:8px;">${__("Each PO is in Draft and awaits Purchase Head → MD authorization before release.")}</p>`,
 						});
-						frm.reload_doc();
+						if (summary_dialog && summary_dialog.onhide !== undefined) {
+							summary_dialog.onhide = () => frm.reload_doc();
+						} else {
+							// Fallback if the dialog object shape ever changes: still decouple
+							// the reload from this tick instead of racing the dialog paint.
+							setTimeout(() => frm.reload_doc(), 300);
+						}
 					},
 				});
 			}, __("Create"));
