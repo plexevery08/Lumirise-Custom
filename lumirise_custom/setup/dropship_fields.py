@@ -11,6 +11,14 @@ outputs/2026-08-17-consignee-vendor-to-vendor-proposed-solution.md for the full 
                             eventual "Send to Subcontractor" transfer credits the right
                             job (Rishitha: "these two are not connected... if you make
                             these two connected, it would be really easy").
+  - lr_consignee_address  : Link -> Address, the consignee vendor's own ship-to address
+                            (2026-08-21 correction: NOT the native `shipping_address`
+                            field -- AccountsController.validate_company_linked_addresses()
+                            hard-requires shipping_address to belong to the Company on
+                            every Purchase Order save, unconditionally, unless ERPNext's
+                            own `delivered_by_supplier` ship-to-CUSTOMER drop-ship flag is
+                            set -- a different feature we should not repurpose. A plain
+                            custom field sidesteps that validation entirely.
 
 Idempotent -- safe to run on every migrate.
 """
@@ -42,6 +50,18 @@ def create_dropship_fields():
 			description="Auto-filled: the open Subcontracting Order this drop-shipped RM "
 			"is for. Resolved when Consignee is set; pick manually if the vendor has more "
 			"than one open job.",
+		),
+		dict(
+			fieldname="lr_consignee_address",
+			label="Consignee Ship-To Address",
+			fieldtype="Link",
+			options="Address",
+			insert_after="lr_consignee_sco_ref",
+			module="Lumirise Custom",
+			description="The Consignee vendor's own address to print on the PO, telling "
+			"the supplier's dispatch team where to send it. NOT the native Shipping "
+			"Address field -- that must stay a Company address (ERPNext's own hard rule); "
+			"this field exists specifically so it doesn't have to.",
 		),
 	]
 	create_custom_fields({"Purchase Order": fields}, update=True)

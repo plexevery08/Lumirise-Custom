@@ -38,21 +38,19 @@ frappe.ui.form.on("Purchase Order", {
 				);
 			});
 		}
-		// ERPNext hard-codes Shipping Address to Company addresses only on a
-		// Purchase Order (erpnext.queries.company_address_query) — it only opens up
-		// to arbitrary addresses when ERPNext's OWN "delivered_by_supplier" ship-to-
-		// customer drop-ship flag is set, which is a different feature. For a
-		// vendor-to-vendor Consignee, override it so Shipping Address offers the
-		// Consignee vendor's own addresses instead, once one is set. Re-evaluated
-		// live on every open so it always matches the current Consignee.
-		frm.set_query("shipping_address", () => {
-			if (frm.doc.lr_consignee) {
-				return {
-					query: "frappe.contacts.doctype.address.address.address_query",
-					filters: { link_doctype: "Supplier", link_name: frm.doc.lr_consignee },
-				};
-			}
-			return erpnext.queries.company_address_query(frm.doc);
+		// 2026-08-21 correction: the native Shipping Address field can NOT be reused
+		// for the consignee vendor's address -- ERPNext hard-requires it to belong to
+		// the Company on every save (accounts_controller.py::
+		// validate_company_linked_addresses, unconditional unless ERPNext's own
+		// "delivered_by_supplier" ship-to-CUSTOMER drop-ship flag is set, a different
+		// feature). lr_consignee_address is a plain custom field instead, so it never
+		// hits that check. Filter it to the Consignee vendor's own addresses.
+		frm.set_query("lr_consignee_address", () => {
+			if (!frm.doc.lr_consignee) return {};
+			return {
+				query: "frappe.contacts.doctype.address.address.address_query",
+				filters: { link_doctype: "Supplier", link_name: frm.doc.lr_consignee },
+			};
 		});
 		render_bom_reco(frm);
 	},
@@ -63,10 +61,10 @@ frappe.ui.form.on("Purchase Order", {
 	// moment a Consignee is named — this is the "connect the two flows" piece
 	// Rishitha asked for, so the eventual transfer credits the right job.
 	lr_consignee(frm) {
-		// The old Shipping Address (company's, or a previous consignee's) is almost
-		// certainly wrong once Consignee changes -- clear it so the buyer re-picks
-		// from the now-correct filtered list rather than shipping to a stale address.
-		if (frm.doc.shipping_address) frm.set_value("shipping_address", "");
+		// The old Consignee Ship-To Address (a previous consignee's, if any) is
+		// almost certainly wrong once Consignee changes -- clear it so the buyer
+		// re-picks from the now-correct filtered list.
+		if (frm.doc.lr_consignee_address) frm.set_value("lr_consignee_address", "");
 		if (!frm.doc.lr_consignee) {
 			frm.set_value("lr_consignee_sco_ref", "");
 			return;
