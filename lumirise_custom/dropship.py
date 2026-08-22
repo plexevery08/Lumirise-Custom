@@ -131,6 +131,11 @@ def receive_and_forward(purchase_order):
 			f"Supplied on {sco.name} — check the Consignee's linked job.")
 	for row in se.items:
 		row.qty = min(flt(row.qty), received[row.item_code])
+	# The native mapper sets main_item_code (the FG) per row but never bom_no -- carry
+	# the PO's already-resolved child-BOM reference onto the transfer itself, so the
+	# RM-Conversion approver (Store/events.rm_conversion_checkpoint) sees it without
+	# having to open the Subcontracting Order.
+	se.lr_consignee_bom_ref = po.get("lr_consignee_bom_ref")
 	se.insert(ignore_permissions=True)
 
 	frappe.msgprint(

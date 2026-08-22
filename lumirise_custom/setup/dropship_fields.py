@@ -42,6 +42,13 @@ Both address fields live in the standard "Address & Contact" tab (2026-08-22, mo
 of the top supplier section per Riddhi), in their own section that only appears once a
 Consignee is set.
 
+Also stamps the same child-BOM reference onto the Stock Entry itself (Riddhi, 2026-08-22:
+"also add on the send to subcontracting"). The native make_rm_stock_entry mapper
+(erpnext/controllers/subcontracting_controller.py) sets each row's main_item_code (the
+FG/semi-finished item) but never bom_no -- so the actual BOM number was invisible on the
+document the RM-Conversion approver reviews, not just on the PO. receive_and_forward()
+copies lr_consignee_bom_ref from the Purchase Order onto the Stock Entry at creation.
+
 Idempotent -- safe to run on every migrate.
 """
 
@@ -148,7 +155,23 @@ def create_dropship_fields():
 			"Shipping/Dispatch/Billing Address on this form.",
 		),
 	]
-	create_custom_fields({"Purchase Order": fields}, update=True)
+
+	se_fields = [
+		dict(
+			fieldname="lr_consignee_bom_ref",
+			label="Child BOM / Semi-Finished Item",
+			fieldtype="Data",
+			insert_after="subcontracting_order",
+			read_only=1,
+			module="Lumirise Custom",
+			description="Copied from the Purchase Order at Receive & Forward time: which "
+			"child BOM and semi-finished item this transferred RM is destined to become. "
+			"The native Send-to-Subcontractor mapper doesn't carry the BOM number, only "
+			"the FG item code -- this closes that gap for the RM-Conversion approver.",
+		),
+	]
+
+	create_custom_fields({"Purchase Order": fields, "Stock Entry": se_fields}, update=True)
 
 
 def ensure_rm_conversion_approver_permission():
