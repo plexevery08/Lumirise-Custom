@@ -41,6 +41,26 @@ def get_open_subcontracting_orders(supplier):
 
 
 @frappe.whitelist()
+def get_sco_bom_summary(sco_name):
+	"""Rishitha's follow-up (2026-08-22 walkthrough): "can you do that with child BOMs...
+	it would be easier for us to track" -- she wants to see, right on the PO, which child
+	BOM / semi-finished item this drop-shipped RM is destined to become, not just the
+	Subcontracting Order name. Called from purchase_order.js straight after
+	lr_consignee_sco_ref is resolved, to fill lr_consignee_bom_ref.
+
+	One SCO can carry more than one FG item row (each with its own bom) -- join all of
+	them so nothing's silently dropped."""
+	if not sco_name:
+		return ""
+	rows = frappe.get_all(
+		"Subcontracting Order Item",
+		filters={"parent": sco_name},
+		fields=["bom", "item_code"],
+	)
+	return ", ".join(f"{row.bom} -> {row.item_code}" for row in rows if row.bom)
+
+
+@frappe.whitelist()
 def receive_and_forward(purchase_order):
 	"""'Receive & Forward to Consignee' -- the one-click bridge for Store.
 

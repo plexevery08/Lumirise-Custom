@@ -68,6 +68,7 @@ frappe.ui.form.on("Purchase Order", {
 		if (frm.doc.lr_consignee_address_display) frm.set_value("lr_consignee_address_display", "");
 		if (!frm.doc.lr_consignee) {
 			frm.set_value("lr_consignee_sco_ref", "");
+			frm.set_value("lr_consignee_bom_ref", "");
 			return;
 		}
 		frappe.call({
@@ -82,8 +83,10 @@ frappe.ui.form.on("Purchase Order", {
 						title: __("No Open Job"),
 					});
 					frm.set_value("lr_consignee_sco_ref", "");
+					frm.set_value("lr_consignee_bom_ref", "");
 				} else if (orders.length === 1) {
 					frm.set_value("lr_consignee_sco_ref", orders[0].name);
+					set_bom_ref(frm, orders[0].name);
 				} else {
 					const d = new frappe.ui.Dialog({
 						title: __("Which job is this RM for?"),
@@ -96,7 +99,9 @@ frappe.ui.form.on("Purchase Order", {
 						}],
 						primary_action_label: __("Link"),
 						primary_action(values) {
-							frm.set_value("lr_consignee_sco_ref", values.sco.split(" (")[0]);
+							const sco_name = values.sco.split(" (")[0];
+							frm.set_value("lr_consignee_sco_ref", sco_name);
+							set_bom_ref(frm, sco_name);
 							d.hide();
 						},
 					});
@@ -127,6 +132,19 @@ frappe.ui.form.on("Purchase Order Item", {
 	item_code(frm) { render_bom_reco(frm); },
 	qty(frm) { render_bom_reco(frm); },
 });
+
+// Rishitha's follow-up ask (2026-08-22): "can you do that with child BOMs... it would
+// be easier for us to track" -- show which child BOM/semi-finished item this
+// drop-shipped RM is destined to become, right on the PO, not just on the SCO.
+function set_bom_ref(frm, sco_name) {
+	frappe.call({
+		method: "lumirise_custom.dropship.get_sco_bom_summary",
+		args: { sco_name: sco_name },
+		callback(r) {
+			frm.set_value("lr_consignee_bom_ref", r.message || "");
+		},
+	});
+}
 
 function render_bom_reco(frm) {
 	const field = frm.fields_dict.lr_bom_reco_html;

@@ -11,6 +11,16 @@ outputs/2026-08-17-consignee-vendor-to-vendor-proposed-solution.md for the full 
                             eventual "Send to Subcontractor" transfer credits the right
                             job (Rishitha: "these two are not connected... if you make
                             these two connected, it would be really easy").
+  - lr_consignee_bom_ref  : read-only Data (2026-08-22, Rishitha's follow-up: "can you do
+                            that with child BOMs... it would be easier for us to track").
+                            The linked Subcontracting Order's child BOM(s) / semi-finished
+                            item(s) this drop-shipped RM is destined to become -- e.g.
+                            "BOM-P128-001 -> P128". Resolved the same moment as
+                            lr_consignee_sco_ref, so Store/the RM-Conversion approver see
+                            it right on the PO, not just buried in the Subcontracting
+                            Order. (The Send-to-Subcontractor Stock Entry itself already
+                            carries bom_no/subcontracted_item natively per row -- this
+                            field is what was missing at the PO/Consignee stage.)
   - lr_consignee_address  : Link -> Address, the consignee vendor's own ship-to address
                             (2026-08-21 correction: NOT the native `shipping_address`
                             field -- AccountsController.validate_company_linked_addresses()
@@ -19,15 +29,18 @@ outputs/2026-08-17-consignee-vendor-to-vendor-proposed-solution.md for the full 
                             own `delivered_by_supplier` ship-to-CUSTOMER drop-ship flag is
                             set -- a different feature we should not repurpose. A plain
                             custom field sidesteps that validation entirely.
-  - lr_consignee_address_display : read-only Small Text, the formatted address text.
+  - lr_consignee_address_display : read-only Text Editor, the formatted address text.
                             Same Link+display pairing ERPNext itself uses for every other
                             address on this doctype (shipping_address/shipping_address_display,
                             dispatch_address/dispatch_address_display) -- purchase_order.js
                             populates it the same way, via erpnext.utils.get_address_display().
+                            MUST be Text Editor, not Small Text: get_address_display()
+                            always returns HTML (<br> line breaks) -- Small Text has no HTML
+                            renderer and shows the tags literally (bug found 2026-08-22).
 
-Both live in the standard "Address & Contact" tab (2026-08-22, moved out of the top
-supplier section per Riddhi), in their own section that only appears once a Consignee
-is set.
+Both address fields live in the standard "Address & Contact" tab (2026-08-22, moved out
+of the top supplier section per Riddhi), in their own section that only appears once a
+Consignee is set.
 
 Idempotent -- safe to run on every migrate.
 """
@@ -49,6 +62,18 @@ def create_dropship_fields():
 	if old_insert_after and old_insert_after != "billing_address_display":
 		frappe.delete_doc(
 			"Custom Field", "Purchase Order-lr_consignee_address", ignore_permissions=True, force=True
+		)
+
+	# Small Text -> Text Editor isn't in Frappe's ALLOWED_FIELDTYPE_CHANGE groups (would
+	# throw "Fieldtype cannot be changed"), so the same drop-and-recreate trick applies.
+	# Underlying column is text-compatible either way -- data (the HTML string) survives.
+	old_fieldtype = frappe.db.get_value(
+		"Custom Field", {"dt": "Purchase Order", "fieldname": "lr_consignee_address_display"}, "fieldtype"
+	)
+	if old_fieldtype and old_fieldtype != "Text Editor":
+		frappe.delete_doc(
+			"Custom Field", "Purchase Order-lr_consignee_address_display",
+			ignore_permissions=True, force=True,
 		)
 
 	fields = [
@@ -73,6 +98,18 @@ def create_dropship_fields():
 			description="Auto-filled: the open Subcontracting Order this drop-shipped RM "
 			"is for. Resolved when Consignee is set; pick manually if the vendor has more "
 			"than one open job.",
+		),
+		dict(
+			fieldname="lr_consignee_bom_ref",
+			label="Child BOM / Semi-Finished Item",
+			fieldtype="Data",
+			insert_after="lr_consignee_sco_ref",
+			read_only=1,
+			module="Lumirise Custom",
+			description="Auto-filled from the linked Subcontracting Order: which child BOM "
+			"and semi-finished item this drop-shipped RM is destined to become "
+			"(e.g. \"BOM-P128-001 -> P128\"). Rishitha's follow-up ask, 2026-08-22 -- "
+			"traceability for the vendor-to-vendor consignee flow, not just the return leg.",
 		),
 		dict(
 			fieldname="lr_consignee_address_section",
@@ -103,7 +140,7 @@ def create_dropship_fields():
 		dict(
 			fieldname="lr_consignee_address_display",
 			label="Consignee Address Details",
-			fieldtype="Small Text",
+			fieldtype="Text Editor",
 			insert_after="lr_consignee_address_cb",
 			read_only=1,
 			module="Lumirise Custom",
