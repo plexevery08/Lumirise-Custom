@@ -65,6 +65,7 @@ frappe.ui.form.on("Purchase Order", {
 		// almost certainly wrong once Consignee changes -- clear it so the buyer
 		// re-picks from the now-correct filtered list.
 		if (frm.doc.lr_consignee_address) frm.set_value("lr_consignee_address", "");
+		if (frm.doc.lr_consignee_address_display) frm.set_value("lr_consignee_address_display", "");
 		if (!frm.doc.lr_consignee) {
 			frm.set_value("lr_consignee_sco_ref", "");
 			return;
@@ -103,6 +104,17 @@ frappe.ui.form.on("Purchase Order", {
 				}
 			},
 		});
+	},
+	// Same Link+display pairing ERPNext itself uses for Shipping/Dispatch/Billing
+	// Address on this form (buying.js) -- populate the read-only text block the
+	// moment an address is picked, instead of leaving it to reload_doc.
+	lr_consignee_address(frm) {
+		erpnext.utils.get_address_display(
+			frm,
+			"lr_consignee_address",
+			"lr_consignee_address_display",
+			false
+		);
 	},
 	// Re-run the reconciliation when a PO line is added or removed so the panel
 	// tracks the buyer's edits live (it used to only refresh on form reload).

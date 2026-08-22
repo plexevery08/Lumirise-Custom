@@ -19,6 +19,15 @@ outputs/2026-08-17-consignee-vendor-to-vendor-proposed-solution.md for the full 
                             own `delivered_by_supplier` ship-to-CUSTOMER drop-ship flag is
                             set -- a different feature we should not repurpose. A plain
                             custom field sidesteps that validation entirely.
+  - lr_consignee_address_display : read-only Small Text, the formatted address text.
+                            Same Link+display pairing ERPNext itself uses for every other
+                            address on this doctype (shipping_address/shipping_address_display,
+                            dispatch_address/dispatch_address_display) -- purchase_order.js
+                            populates it the same way, via erpnext.utils.get_address_display().
+
+Both live in the standard "Address & Contact" tab (2026-08-22, moved out of the top
+supplier section per Riddhi), in their own section that only appears once a Consignee
+is set.
 
 Idempotent -- safe to run on every migrate.
 """
@@ -28,6 +37,20 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 def create_dropship_fields():
+	# Custom Field only recomputes its idx from insert_after for a brand-new doc
+	# (custom_field.py::validate -- `if self.is_new() or self.insert_after == "append"`).
+	# lr_consignee_address previously lived in the top supplier section; moving it into
+	# the Address & Contact tab means changing insert_after on an EXISTING field, which
+	# on_update alone would silently keep the old position. Drop it first so the create
+	# below is a fresh insert and actually lands in the new spot.
+	old_insert_after = frappe.db.get_value(
+		"Custom Field", {"dt": "Purchase Order", "fieldname": "lr_consignee_address"}, "insert_after"
+	)
+	if old_insert_after and old_insert_after != "billing_address_display":
+		frappe.delete_doc(
+			"Custom Field", "Purchase Order-lr_consignee_address", ignore_permissions=True, force=True
+		)
+
 	fields = [
 		dict(
 			fieldname="lr_consignee",
@@ -52,16 +75,40 @@ def create_dropship_fields():
 			"than one open job.",
 		),
 		dict(
+			fieldname="lr_consignee_address_section",
+			label="Consignee Ship-To Address (Vendor-to-Vendor Drop-Ship)",
+			fieldtype="Section Break",
+			insert_after="billing_address_display",
+			depends_on="eval:doc.lr_consignee",
+			module="Lumirise Custom",
+		),
+		dict(
 			fieldname="lr_consignee_address",
 			label="Consignee Ship-To Address",
 			fieldtype="Link",
 			options="Address",
-			insert_after="lr_consignee_sco_ref",
+			insert_after="lr_consignee_address_section",
 			module="Lumirise Custom",
 			description="The Consignee vendor's own address to print on the PO, telling "
 			"the supplier's dispatch team where to send it. NOT the native Shipping "
 			"Address field -- that must stay a Company address (ERPNext's own hard rule); "
 			"this field exists specifically so it doesn't have to.",
+		),
+		dict(
+			fieldname="lr_consignee_address_cb",
+			fieldtype="Column Break",
+			insert_after="lr_consignee_address",
+			module="Lumirise Custom",
+		),
+		dict(
+			fieldname="lr_consignee_address_display",
+			label="Consignee Address Details",
+			fieldtype="Small Text",
+			insert_after="lr_consignee_address_cb",
+			read_only=1,
+			module="Lumirise Custom",
+			description="Auto-filled from the address above -- same pairing ERPNext uses for "
+			"Shipping/Dispatch/Billing Address on this form.",
 		),
 	]
 	create_custom_fields({"Purchase Order": fields}, update=True)
