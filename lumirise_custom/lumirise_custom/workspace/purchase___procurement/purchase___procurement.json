@@ -1,0 +1,145 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Purchase Order Trends",
+   "label": "Purchase Order Trends"
+  },
+  {
+   "chart_name": "Purchase Order Analysis",
+   "label": "Purchase Order Analysis"
+  },
+  {
+   "chart_name": "Top Suppliers",
+   "label": "Top Suppliers"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Purchase Orders Count\"\n  },\n  \"id\": \"lr-purchase---procurement-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Purchase Orders to Receive\"\n  },\n  \"id\": \"lr-purchase---procurement-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Purchase Orders to Bill\"\n  },\n  \"id\": \"lr-purchase---procurement-card-2\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Purchase Order Trends\",\n   \"col\": 12\n  },\n  \"id\": \"lr-purchase---procurement-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Purchase Order Analysis\",\n   \"col\": 12\n  },\n  \"id\": \"lr-purchase---procurement-dashboard-4\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Top Suppliers\",\n   \"col\": 12\n  },\n  \"id\": \"lr-purchase---procurement-dashboard-5\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Purchase Queue\"\n  },\n  \"id\": \"lr-purchase---procurement-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Suppliers\"\n  },\n  \"id\": \"lr-purchase---procurement-0-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Indents\"\n  },\n  \"id\": \"lr-purchase---procurement-0-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Plans\"\n  },\n  \"id\": \"lr-purchase---procurement-0-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Orders\"\n  },\n  \"id\": \"lr-purchase---procurement-0-4\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Receipt & Vendor Control\"\n  },\n  \"id\": \"lr-purchase---procurement-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Vendor PDI\"\n  },\n  \"id\": \"lr-purchase---procurement-1-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Inbound Logistics\"\n  },\n  \"id\": \"lr-purchase---procurement-1-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Receipts\"\n  },\n  \"id\": \"lr-purchase---procurement-1-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Invoices\"\n  },\n  \"id\": \"lr-purchase---procurement-1-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Reports / Exceptions\"\n  },\n  \"id\": \"lr-purchase---procurement-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"PO Stage Status\"\n  },\n  \"id\": \"lr-purchase---procurement-2-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Supplier Aging\"\n  },\n  \"id\": \"lr-purchase---procurement-2-2\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2026-08-24 21:08:09.902773",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 1,
+ "icon": "buying",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Purchase - Procurement",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-25 12:38:33.971872",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Purchase - Procurement",
+ "number_cards": [
+  {
+   "label": "Purchase Orders",
+   "number_card_name": "Purchase Orders Count"
+  },
+  {
+   "label": "POs to Receive",
+   "number_card_name": "Purchase Orders to Receive"
+  },
+  {
+   "label": "POs to Bill",
+   "number_card_name": "Purchase Orders to Bill"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Purchase Manager"
+  },
+  {
+   "role": "Purchase Head"
+  },
+  {
+   "role": "Planning Manager"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 14.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Suppliers",
+   "link_to": "Supplier",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Indents",
+   "link_to": "Indent",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Purchase Plans",
+   "link_to": "Purchase Plan",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Purchase Orders",
+   "link_to": "Purchase Order",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Vendor PDI",
+   "link_to": "Vendor PDI",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "Inbound Logistics",
+   "link_to": "Inbound Logistics",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Purchase Receipts",
+   "link_to": "Purchase Receipt",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Purchase Invoices",
+   "link_to": "Purchase Invoice",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "PO Stage Status",
+   "link_to": "PO Stage Status",
+   "report_ref_doctype": "Purchase Order",
+   "type": "Report"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Supplier Aging",
+   "link_to": "Accounts Payable",
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Report"
+  }
+ ],
+ "title": "Purchase - Procurement",
+ "type": "Workspace"
+}

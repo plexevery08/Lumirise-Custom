@@ -1,0 +1,132 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Subcontracting Order",
+   "label": "Subcontracting Orders"
+  },
+  {
+   "chart_name": "Purchase Receipt Trends",
+   "label": "Purchase Receipt Trends"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Subcontracting Outward Order Count\"\n  },\n  \"id\": \"lr-subcontracting-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Subcontracting Inward Order Count\"\n  },\n  \"id\": \"lr-subcontracting-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Subcontracting Order\",\n   \"col\": 12\n  },\n  \"id\": \"lr-subcontracting-dashboard-2\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Purchase Receipt Trends\",\n   \"col\": 12\n  },\n  \"id\": \"lr-subcontracting-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Job-work Flow\"\n  },\n  \"id\": \"lr-subcontracting-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Subcontracting Orders\"\n  },\n  \"id\": \"lr-subcontracting-0-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Subcontracting Receipts\"\n  },\n  \"id\": \"lr-subcontracting-0-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Orders\"\n  },\n  \"id\": \"lr-subcontracting-0-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Materials & Logistics\"\n  },\n  \"id\": \"lr-subcontracting-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Stock Entries\"\n  },\n  \"id\": \"lr-subcontracting-1-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Inbound Logistics\"\n  },\n  \"id\": \"lr-subcontracting-1-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Suppliers\"\n  },\n  \"id\": \"lr-subcontracting-1-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Exceptions\"\n  },\n  \"id\": \"lr-subcontracting-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Receipts\"\n  },\n  \"id\": \"lr-subcontracting-2-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Invoices\"\n  },\n  \"id\": \"lr-subcontracting-2-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Lumirise Tasks\"\n  },\n  \"id\": \"lr-subcontracting-2-2\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2020-03-02 17:11:37.032604",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "share",
+ "idx": 2,
+ "is_hidden": 0,
+ "label": "Subcontracting",
+ "links": [],
+ "modified": "2026-08-25 12:38:34.071981",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Subcontracting",
+ "number_cards": [
+  {
+   "label": "Outward Orders",
+   "number_card_name": "Subcontracting Outward Order Count"
+  },
+  {
+   "label": "Inward Orders",
+   "number_card_name": "Subcontracting Inward Order Count"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Purchase Manager"
+  },
+  {
+   "role": "Purchase Head"
+  },
+  {
+   "role": "Planning User"
+  },
+  {
+   "role": "Factory Store Manager"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 15.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Subcontracting Orders",
+   "link_to": "Subcontracting Order",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Subcontracting Receipts",
+   "link_to": "Subcontracting Receipt",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Purchase Orders",
+   "link_to": "Purchase Order",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Stock Entries",
+   "link_to": "Stock Entry",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "Inbound Logistics",
+   "link_to": "Inbound Logistics",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Suppliers",
+   "link_to": "Supplier",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Purchase Receipts",
+   "link_to": "Purchase Receipt",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Purchase Invoices",
+   "link_to": "Purchase Invoice",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Lumirise Tasks",
+   "link_to": "Lumirise Task",
+   "type": "DocType"
+  }
+ ],
+ "title": "Subcontracting",
+ "type": "Workspace"
+}

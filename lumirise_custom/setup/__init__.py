@@ -100,6 +100,11 @@ def after_migrate():
 	# ship as files/fixtures; Number Cards do not).
 	setup_health_check()
 	setup_line_dashboard()
+	# Centralized Lumirise Desk + department workspaces. Navigation is additive;
+	# DocPerms, User Permissions, Permission Queries and Workflow transitions
+	# remain the authorization boundary.
+	from lumirise_custom.setup.workspaces import setup_workspaces
+	setup_workspaces()
 	# Quality: seed the 17-parameter defect master (A/B/C class) that drives the
 	# AQL engine and the IQC / Customer PDI reject-reason link.
 	seed_defect_master()

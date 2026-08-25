@@ -1,0 +1,166 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Profit and Loss",
+   "label": "Profit and Loss"
+  },
+  {
+   "chart_name": "Accounts Receivable Ageing",
+   "label": "Accounts Receivable"
+  },
+  {
+   "chart_name": "Accounts Payable Ageing",
+   "label": "Accounts Payable"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Total Incoming Bills\"\n  },\n  \"id\": \"lr-accounts-&-finance-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Total Outgoing Bills\"\n  },\n  \"id\": \"lr-accounts-&-finance-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Total Incoming Payment\"\n  },\n  \"id\": \"lr-accounts-&-finance-card-2\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Profit and Loss\",\n   \"col\": 12\n  },\n  \"id\": \"lr-accounts-&-finance-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Accounts Receivable Ageing\",\n   \"col\": 12\n  },\n  \"id\": \"lr-accounts-&-finance-dashboard-4\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Accounts Payable Ageing\",\n   \"col\": 12\n  },\n  \"id\": \"lr-accounts-&-finance-dashboard-5\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Receivable / Payable\"\n  },\n  \"id\": \"lr-accounts-&-finance-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Sales Invoices\"\n  },\n  \"id\": \"lr-accounts-&-finance-0-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Invoices\"\n  },\n  \"id\": \"lr-accounts-&-finance-0-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Payment Entries\"\n  },\n  \"id\": \"lr-accounts-&-finance-0-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Journal Entries\"\n  },\n  \"id\": \"lr-accounts-&-finance-0-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Tax, Cash & Assets\"\n  },\n  \"id\": \"lr-accounts-&-finance-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Chart of Accounts\"\n  },\n  \"id\": \"lr-accounts-&-finance-1-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Bank Accounts\"\n  },\n  \"id\": \"lr-accounts-&-finance-1-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Assets\"\n  },\n  \"id\": \"lr-accounts-&-finance-1-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Accounting Periods\"\n  },\n  \"id\": \"lr-accounts-&-finance-1-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Reports / Close\"\n  },\n  \"id\": \"lr-accounts-&-finance-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Daily Cash Flow\"\n  },\n  \"id\": \"lr-accounts-&-finance-2-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Accounts Receivable\"\n  },\n  \"id\": \"lr-accounts-&-finance-2-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Accounts Payable\"\n  },\n  \"id\": \"lr-accounts-&-finance-2-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Profit and Loss\"\n  },\n  \"id\": \"lr-accounts-&-finance-2-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Stock Valuation\"\n  },\n  \"id\": \"lr-accounts-&-finance-2-4\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2026-08-24 21:08:10.593278",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 1,
+ "icon": "accounting",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Accounts & Finance",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-25 12:38:34.692455",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Accounts & Finance",
+ "number_cards": [
+  {
+   "label": "Incoming Bills",
+   "number_card_name": "Total Incoming Bills"
+  },
+  {
+   "label": "Outgoing Bills",
+   "number_card_name": "Total Outgoing Bills"
+  },
+  {
+   "label": "Incoming Payments",
+   "number_card_name": "Total Incoming Payment"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "MD"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 21.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Sales Invoices",
+   "link_to": "Sales Invoice",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Purchase Invoices",
+   "link_to": "Purchase Invoice",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Payment Entries",
+   "link_to": "Payment Entry",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Journal Entries",
+   "link_to": "Journal Entry",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Chart of Accounts",
+   "link_to": "Account",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "Bank Accounts",
+   "link_to": "Bank Account",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Assets",
+   "link_to": "Asset",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Accounting Periods",
+   "link_to": "Accounting Period",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Daily Cash Flow",
+   "link_to": "Daily Cash Flow",
+   "report_ref_doctype": "Payment Entry",
+   "type": "Report"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Accounts Receivable",
+   "link_to": "Accounts Receivable",
+   "report_ref_doctype": "Sales Invoice",
+   "type": "Report"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "Accounts Payable",
+   "link_to": "Accounts Payable",
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Report"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "",
+   "label": "Profit and Loss",
+   "link_to": "Profit and Loss Statement",
+   "report_ref_doctype": "GL Entry",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Stock Valuation",
+   "link_to": "Stock Balance",
+   "report_ref_doctype": "Stock Ledger Entry",
+   "type": "Report"
+  }
+ ],
+ "title": "Accounts & Finance",
+ "type": "Workspace"
+}

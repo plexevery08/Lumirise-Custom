@@ -1,0 +1,159 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Sales Order Trends",
+   "label": "Sales Order Trends"
+  },
+  {
+   "chart_name": "Sales Order Analysis",
+   "label": "Sales Order Analysis"
+  },
+  {
+   "chart_name": "Top Customers",
+   "label": "Top Customers"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Sales Orders Count\"\n  },\n  \"id\": \"lr-sales-&-order-desk-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Sales Orders to Deliver\"\n  },\n  \"id\": \"lr-sales-&-order-desk-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Total Sales Amount\"\n  },\n  \"id\": \"lr-sales-&-order-desk-card-2\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Sales Order Trends\",\n   \"col\": 12\n  },\n  \"id\": \"lr-sales-&-order-desk-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Sales Order Analysis\",\n   \"col\": 12\n  },\n  \"id\": \"lr-sales-&-order-desk-dashboard-4\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Top Customers\",\n   \"col\": 12\n  },\n  \"id\": \"lr-sales-&-order-desk-dashboard-5\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Today / Create\"\n  },\n  \"id\": \"lr-sales-&-order-desk-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Customers\"\n  },\n  \"id\": \"lr-sales-&-order-desk-0-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Quotations\"\n  },\n  \"id\": \"lr-sales-&-order-desk-0-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Sales Orders\"\n  },\n  \"id\": \"lr-sales-&-order-desk-0-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Sales Forecast\"\n  },\n  \"id\": \"lr-sales-&-order-desk-0-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Order Flow\"\n  },\n  \"id\": \"lr-sales-&-order-desk-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Material Planning\"\n  },\n  \"id\": \"lr-sales-&-order-desk-1-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Delivery Notes\"\n  },\n  \"id\": \"lr-sales-&-order-desk-1-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Customer PDI\"\n  },\n  \"id\": \"lr-sales-&-order-desk-1-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Sales Returns\"\n  },\n  \"id\": \"lr-sales-&-order-desk-1-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Reports / Control\"\n  },\n  \"id\": \"lr-sales-&-order-desk-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Customer Quote Summary\"\n  },\n  \"id\": \"lr-sales-&-order-desk-2-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Listing of Documents\"\n  },\n  \"id\": \"lr-sales-&-order-desk-2-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Exceptions\"\n  },\n  \"id\": \"lr-sales-&-order-desk-3-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Lumirise Tasks\"\n  },\n  \"id\": \"lr-sales-&-order-desk-3-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Customer Complaints\"\n  },\n  \"id\": \"lr-sales-&-order-desk-3-1\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2026-08-24 21:04:56.282191",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 1,
+ "icon": "sell",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Sales & Order Desk",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-25 12:38:33.402888",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Sales & Order Desk",
+ "number_cards": [
+  {
+   "label": "Sales Orders",
+   "number_card_name": "Sales Orders Count"
+  },
+  {
+   "label": "Orders to Deliver",
+   "number_card_name": "Sales Orders to Deliver"
+  },
+  {
+   "label": "Total Sales Amount",
+   "number_card_name": "Total Sales Amount"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "Sales Manager"
+  },
+  {
+   "role": "Sales Approver"
+  },
+  {
+   "role": "Sales Auditor"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 10.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Customers",
+   "link_to": "Customer",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Quotations",
+   "link_to": "Quotation",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Sales Orders",
+   "link_to": "Sales Order",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Sales Forecast",
+   "link_to": "Sales Forecast",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Material Planning",
+   "link_to": "Material Planning",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Delivery Notes",
+   "link_to": "Delivery Note",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Customer PDI",
+   "link_to": "Customer PDI",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Sales Returns",
+   "link_to": "Sales Invoice",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Customer Quote Summary",
+   "link_to": "Customer Quote Summary",
+   "report_ref_doctype": "Price Sheet",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Listing of Documents",
+   "link_to": "Listing of Documents",
+   "report_ref_doctype": "Sales Order",
+   "type": "Report"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Lumirise Tasks",
+   "link_to": "Lumirise Task",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Customer Complaints",
+   "link_to": "Issue",
+   "type": "DocType"
+  }
+ ],
+ "title": "Sales & Order Desk",
+ "type": "Workspace"
+}

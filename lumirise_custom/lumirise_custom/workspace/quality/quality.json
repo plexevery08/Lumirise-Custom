@@ -1,0 +1,143 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Quality Inspection Analysis",
+   "label": "Quality Inspection Analysis"
+  },
+  {
+   "chart_name": "Quality Inspections",
+   "label": "Quality Inspections"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Monthly Quality Inspection\"\n  },\n  \"id\": \"lr-quality-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Health: Red Runs\"\n  },\n  \"id\": \"lr-quality-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Quality Inspection Analysis\",\n   \"col\": 12\n  },\n  \"id\": \"lr-quality-dashboard-2\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Quality Inspections\",\n   \"col\": 12\n  },\n  \"id\": \"lr-quality-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Inspection Checkpoints\"\n  },\n  \"id\": \"lr-quality-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Vendor PDI\"\n  },\n  \"id\": \"lr-quality-0-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"IQC\"\n  },\n  \"id\": \"lr-quality-0-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Quality Inspections\"\n  },\n  \"id\": \"lr-quality-0-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Customer PDI\"\n  },\n  \"id\": \"lr-quality-0-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Parameters & Evidence\"\n  },\n  \"id\": \"lr-quality-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Defect Codes\"\n  },\n  \"id\": \"lr-quality-1-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"IQC Samples\"\n  },\n  \"id\": \"lr-quality-1-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Quality Inspection Templates\"\n  },\n  \"id\": \"lr-quality-1-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Non-Conformances\"\n  },\n  \"id\": \"lr-quality-1-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Reports / Exceptions\"\n  },\n  \"id\": \"lr-quality-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Batch-wise Rejection\"\n  },\n  \"id\": \"lr-quality-2-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"RM Rejection Ageing\"\n  },\n  \"id\": \"lr-quality-2-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Material Receipt Stock Analysis\"\n  },\n  \"id\": \"lr-quality-2-2\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2020-03-02 15:49:28.632014",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "quality",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Quality",
+ "links": [],
+ "modified": "2026-08-25 12:38:34.339732",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Quality",
+ "number_cards": [
+  {
+   "label": "Monthly Inspections",
+   "number_card_name": "Monthly Quality Inspection"
+  },
+  {
+   "label": "Health Red Runs",
+   "number_card_name": "Health: Red Runs"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Quality Manager"
+  },
+  {
+   "role": "Manufacturing Manager"
+  },
+  {
+   "role": "Factory Store Manager"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 18.0,
+ "shortcuts": [
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Vendor PDI",
+   "link_to": "Vendor PDI",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "label": "IQC",
+   "link_to": "IQC",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Quality Inspections",
+   "link_to": "Quality Inspection",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Customer PDI",
+   "link_to": "Customer PDI",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Defect Codes",
+   "link_to": "Lumirise Defect Code",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "IQC Samples",
+   "link_to": "IQC Sample",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Quality Inspection Templates",
+   "link_to": "Quality Inspection Template",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Non-Conformances",
+   "link_to": "Non Conformance",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Batch-wise Rejection",
+   "link_to": "Batch Wise Rejection",
+   "report_ref_doctype": "Stock Ledger Entry",
+   "type": "Report"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "RM Rejection Ageing",
+   "link_to": "RM Rejection Ageing",
+   "report_ref_doctype": "Warehouse",
+   "type": "Report"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Material Receipt Stock Analysis",
+   "link_to": "Material Receipt Stock Analysis",
+   "report_ref_doctype": "Material Receipt",
+   "type": "Report"
+  }
+ ],
+ "title": "Quality",
+ "type": "Workspace"
+}

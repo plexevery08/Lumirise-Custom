@@ -47,6 +47,8 @@ def approve_change(docname):
 	doc = _load(docname)
 	if not _has_role(CHANGE_ROLES):
 		frappe.throw(_("Only Vijay (Sales Approver / Manufacturing Manager) can approve the change."))
+	if doc.owner == frappe.session.user:
+		frappe.throw(_("The maker cannot approve their own BOM change request."), frappe.PermissionError)
 	if doc.workflow_state != "Pending Change Approval":
 		frappe.throw(_("This request is not awaiting change approval."))
 	doc.db_set("change_approved_by", frappe.session.user)

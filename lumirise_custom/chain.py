@@ -10,8 +10,15 @@ from frappe.utils import flt
 STORES = "Stores - L"
 
 
+def _require_mapping_permissions(source_doctype, source_name, target_doctype):
+	"""Check the exact source record and target create permission before mapping."""
+	frappe.has_permission(source_doctype, "read", source_name, throw=True)
+	frappe.has_permission(target_doctype, "create", throw=True)
+
+
 @frappe.whitelist()
 def make_vendor_pdi(source_name, target_doc=None):
+	_require_mapping_permissions("Purchase Order", source_name, "Vendor PDI")
 	po = frappe.get_doc("Purchase Order", source_name)
 	doc = frappe.new_doc("Vendor PDI")
 	doc.purchase_order = po.name
@@ -24,6 +31,7 @@ def make_vendor_pdi(source_name, target_doc=None):
 
 @frappe.whitelist()
 def make_inbound_logistics(source_name, target_doc=None):
+	_require_mapping_permissions("Vendor PDI", source_name, "Inbound Logistics")
 	vpdi = frappe.get_doc("Vendor PDI", source_name)
 	doc = frappe.new_doc("Inbound Logistics")
 	doc.vendor_pdi = vpdi.name
@@ -41,6 +49,7 @@ def make_inbound_logistics(source_name, target_doc=None):
 
 @frappe.whitelist()
 def make_iqc(source_name, target_doc=None):
+	_require_mapping_permissions("Inbound Logistics", source_name, "IQC")
 	log = frappe.get_doc("Inbound Logistics", source_name)
 	if log.document_verification_status != "Verified" or not log.get("iqc_task"):
 		frappe.throw(
@@ -82,6 +91,7 @@ def make_grn(source_name, target_doc=None):
 	and routed to the rejection warehouse -- so inventory is truthful and the
 	rejection is visible downstream (it then drives the auto debit note).
 	"""
+	_require_mapping_permissions("IQC", source_name, "Purchase Receipt")
 	from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
 	from lumirise_custom import defaults as config
 	from frappe.utils import flt
@@ -177,6 +187,7 @@ def revert_iqc_moved_to_rm(doc, method=None):
 def make_customer_pdi(source_name, target_doc=None):
 	"""Start a Customer PDI from a Sales Order — seed one inspection line per SO
 	item. FG/Dispatch then sends these to the PDI store via store authorization."""
+	_require_mapping_permissions("Sales Order", source_name, "Customer PDI")
 	so = frappe.get_doc("Sales Order", source_name)
 	doc = frappe.new_doc("Customer PDI")
 	doc.sales_order = so.name
@@ -191,6 +202,7 @@ def make_delivery_note(source_name, target_doc=None):
 	carries only the remaining (undelivered) qty, so partial / multi-batch dispatch
 	off one SO is tracked automatically. FG is shipped from the Dispatch FG store.
 	The Customer-PDI gate (events.py) blocks submission until a passed PDI exists."""
+	_require_mapping_permissions("Sales Order", source_name, "Delivery Note")
 	from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note as _mdn
 	from lumirise_custom import defaults as config
 
@@ -205,6 +217,7 @@ def make_delivery_note(source_name, target_doc=None):
 def make_sales_invoice(source_name, target_doc=None):
 	"""Sales Invoice against a submitted Delivery Note (stock already moved by the
 	DN; this is the billing document)."""
+	_require_mapping_permissions("Delivery Note", source_name, "Sales Invoice")
 	from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice as _msi
 
 	return _msi(source_name)

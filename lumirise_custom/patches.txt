@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 lumirise_custom.patches.remove_dn_pod_attachment
 lumirise_custom.patches.retire_inbound_logistics_custom_fields
+lumirise_custom.patches.backfill_phase_zero_task_contracts

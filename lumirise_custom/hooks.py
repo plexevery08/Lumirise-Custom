@@ -146,13 +146,13 @@ after_migrate = "lumirise_custom.setup.after_migrate"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"Lumirise Task": "lumirise_custom.task_permissions.get_permission_query_conditions",
+}
+
+has_permission = {
+	"Lumirise Task": "lumirise_custom.task_permissions.has_permission",
+}
 
 # Document Events
 # ---------------

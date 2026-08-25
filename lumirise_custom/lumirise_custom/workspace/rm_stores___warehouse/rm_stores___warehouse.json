@@ -1,0 +1,136 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Stock Value by Item Group",
+   "label": "Stock Value by Item Group"
+  },
+  {
+   "chart_name": "Warehouse wise Stock Value",
+   "label": "Warehouse-wise Stock Value"
+  },
+  {
+   "chart_name": "Item Shortage Summary",
+   "label": "Item Shortage Summary"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Total Warehouses\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Total Stock Value\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Total Active Items\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-card-2\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Stock Value by Item Group\",\n   \"col\": 12\n  },\n  \"id\": \"lr-rm-stores---warehouse-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Warehouse wise Stock Value\",\n   \"col\": 12\n  },\n  \"id\": \"lr-rm-stores---warehouse-dashboard-4\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Item Shortage Summary\",\n   \"col\": 12\n  },\n  \"id\": \"lr-rm-stores---warehouse-dashboard-5\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Inward & Put-away\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Material Receipts\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-0-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Receipts\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-0-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Warehouses\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-0-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"RM Packages\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-0-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Issue & Transfer\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Stock Entries\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-1-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Batches\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-1-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Reports / Exceptions\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"RM Stock & Reservations\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-2-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"RM Rejection Ageing\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-2-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Stock Balance\"\n  },\n  \"id\": \"lr-rm-stores---warehouse-2-3\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2026-08-24 21:08:10.164262",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 1,
+ "icon": "stock",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "RM Stores - Warehouse",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-25 12:38:34.142856",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "RM Stores - Warehouse",
+ "number_cards": [
+  {
+   "label": "Warehouses",
+   "number_card_name": "Total Warehouses"
+  },
+  {
+   "label": "Stock Value",
+   "number_card_name": "Total Stock Value"
+  },
+  {
+   "label": "Active Items",
+   "number_card_name": "Total Active Items"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Factory Store Manager"
+  },
+  {
+   "role": "Stock Manager"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 16.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Material Receipts",
+   "link_to": "Material Receipt",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Purchase Receipts",
+   "link_to": "Purchase Receipt",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Warehouses",
+   "link_to": "Warehouse",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "RM Packages",
+   "link_to": "RM Package",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Stock Entries",
+   "link_to": "Stock Entry",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Batches",
+   "link_to": "Batch",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "RM Stock & Reservations",
+   "link_to": "RM Stock and Reservation Tracker",
+   "report_ref_doctype": "Item",
+   "type": "Report"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "RM Rejection Ageing",
+   "link_to": "RM Rejection Ageing",
+   "report_ref_doctype": "Warehouse",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Stock Balance",
+   "link_to": "Stock Balance",
+   "report_ref_doctype": "Stock Ledger Entry",
+   "type": "Report"
+  }
+ ],
+ "title": "RM Stores - Warehouse",
+ "type": "Workspace"
+}

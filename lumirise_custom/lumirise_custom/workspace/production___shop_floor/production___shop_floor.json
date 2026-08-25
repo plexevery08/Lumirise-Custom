@@ -1,0 +1,106 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Work Order Analysis",
+   "label": "Work Order Analysis"
+  },
+  {
+   "chart_name": "Pending Work Order",
+   "label": "Pending Work Order"
+  },
+  {
+   "chart_name": "Produced Quantity",
+   "label": "Produced Quantity"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Open Work Orders\"\n  },\n  \"id\": \"lr-production---shop-floor-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"WIP Work Orders\"\n  },\n  \"id\": \"lr-production---shop-floor-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Monthly Completed Work Order\"\n  },\n  \"id\": \"lr-production---shop-floor-card-2\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Work Order Analysis\",\n   \"col\": 12\n  },\n  \"id\": \"lr-production---shop-floor-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Pending Work Order\",\n   \"col\": 12\n  },\n  \"id\": \"lr-production---shop-floor-dashboard-4\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Produced Quantity\",\n   \"col\": 12\n  },\n  \"id\": \"lr-production---shop-floor-dashboard-5\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Material to Line\"\n  },\n  \"id\": \"lr-production---shop-floor-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Work Orders\"\n  },\n  \"id\": \"lr-production---shop-floor-0-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Execute & Close\"\n  },\n  \"id\": \"lr-production---shop-floor-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Job Cards\"\n  },\n  \"id\": \"lr-production---shop-floor-1-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Line Daily Closings\"\n  },\n  \"id\": \"lr-production---shop-floor-1-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Stock Entries\"\n  },\n  \"id\": \"lr-production---shop-floor-1-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Reports / Exceptions\"\n  },\n  \"id\": \"lr-production---shop-floor-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Line Status\"\n  },\n  \"id\": \"lr-production---shop-floor-2-0\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2026-08-24 21:08:10.244089",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 1,
+ "icon": "manufacturing",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Production - Shop Floor",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-25 12:38:34.266329",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Production - Shop Floor",
+ "number_cards": [
+  {
+   "label": "Open Work Orders",
+   "number_card_name": "Open Work Orders"
+  },
+  {
+   "label": "WIP Work Orders",
+   "number_card_name": "WIP Work Orders"
+  },
+  {
+   "label": "Completed This Month",
+   "number_card_name": "Monthly Completed Work Order"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Manufacturing Manager"
+  },
+  {
+   "role": "Line Manager"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 17.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Work Orders",
+   "link_to": "Work Order",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Job Cards",
+   "link_to": "Job Card",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Line Daily Closings",
+   "link_to": "Line Daily Closing",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "Stock Entries",
+   "link_to": "Stock Entry",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Line Status",
+   "link_to": "Line Status",
+   "report_ref_doctype": "Lumirise Job Card",
+   "type": "Report"
+  }
+ ],
+ "title": "Production - Shop Floor",
+ "type": "Workspace"
+}

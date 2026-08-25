@@ -1,0 +1,130 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Delivery Trends",
+   "label": "Delivery Trends"
+  },
+  {
+   "chart_name": "Purchase Receipt Trends",
+   "label": "Purchase Receipt Trends"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Sales Orders to Deliver\"\n  },\n  \"id\": \"lr-logistics-&-security-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Purchase Orders to Receive\"\n  },\n  \"id\": \"lr-logistics-&-security-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Delivery Trends\",\n   \"col\": 12\n  },\n  \"id\": \"lr-logistics-&-security-dashboard-2\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Purchase Receipt Trends\",\n   \"col\": 12\n  },\n  \"id\": \"lr-logistics-&-security-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Inbound Logistics\"\n  },\n  \"id\": \"lr-logistics-&-security-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Inbound Logistics\"\n  },\n  \"id\": \"lr-logistics-&-security-0-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Purchase Receipts\"\n  },\n  \"id\": \"lr-logistics-&-security-0-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Suppliers\"\n  },\n  \"id\": \"lr-logistics-&-security-0-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Outbound & Gate\"\n  },\n  \"id\": \"lr-logistics-&-security-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Shipments\"\n  },\n  \"id\": \"lr-logistics-&-security-1-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Delivery Notes\"\n  },\n  \"id\": \"lr-logistics-&-security-1-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Vehicles\"\n  },\n  \"id\": \"lr-logistics-&-security-1-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Sales Orders\"\n  },\n  \"id\": \"lr-logistics-&-security-1-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Reports / Exceptions\"\n  },\n  \"id\": \"lr-logistics-&-security-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"PO Stage Status\"\n  },\n  \"id\": \"lr-logistics-&-security-2-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Listing of Documents\"\n  },\n  \"id\": \"lr-logistics-&-security-2-1\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2026-08-24 21:08:10.519260",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 1,
+ "icon": "truck",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Logistics & Security",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-25 12:38:34.629434",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Logistics & Security",
+ "number_cards": [
+  {
+   "label": "Orders to Deliver",
+   "number_card_name": "Sales Orders to Deliver"
+  },
+  {
+   "label": "POs to Receive",
+   "number_card_name": "Purchase Orders to Receive"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Delivery Manager"
+  },
+  {
+   "role": "Delivery User"
+  },
+  {
+   "role": "Fulfillment User"
+  },
+  {
+   "role": "Factory Store Manager"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 20.0,
+ "shortcuts": [
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "Inbound Logistics",
+   "link_to": "Inbound Logistics",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Purchase Receipts",
+   "link_to": "Purchase Receipt",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Suppliers",
+   "link_to": "Supplier",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Shipments",
+   "link_to": "Shipment",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Delivery Notes",
+   "link_to": "Delivery Note",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Vehicles",
+   "link_to": "Vehicle",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Sales Orders",
+   "link_to": "Sales Order",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "PO Stage Status",
+   "link_to": "PO Stage Status",
+   "report_ref_doctype": "Purchase Order",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Listing of Documents",
+   "link_to": "Listing of Documents",
+   "report_ref_doctype": "Sales Order",
+   "type": "Report"
+  }
+ ],
+ "title": "Logistics & Security",
+ "type": "Workspace"
+}

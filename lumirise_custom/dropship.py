@@ -20,9 +20,17 @@ import frappe
 from frappe.utils import flt
 
 from lumirise_custom import defaults as config
+from lumirise_custom.action_permissions import (
+	require_any_role,
+	require_document_permission,
+	require_doctype_permissions,
+)
 
 OPEN_SCO_STATUSES = ["Draft", "Open", "Partial Material Transferred", "Material Transferred",
 					  "Partially Received"]
+DROPSHIP_ROLES = frozenset(
+	{"Factory Store Manager", "Stock User", "Stock Manager", "Purchase User", "Purchase Manager", "Purchase Head", "System Manager"}
+)
 
 
 @frappe.whitelist()
@@ -32,6 +40,7 @@ def get_open_subcontracting_orders(supplier):
 	is for. Called from purchase_order.js on the Consignee field change."""
 	if not supplier:
 		return []
+	frappe.has_permission("Supplier", "read", supplier, throw=True)
 	return frappe.get_all(
 		"Subcontracting Order",
 		filters={"supplier": supplier, "docstatus": 1, "status": ["in", OPEN_SCO_STATUSES]},
@@ -52,6 +61,7 @@ def get_sco_bom_summary(sco_name):
 	them so nothing's silently dropped."""
 	if not sco_name:
 		return ""
+	frappe.has_permission("Subcontracting Order", "read", sco_name, throw=True)
 	rows = frappe.get_all(
 		"Subcontracting Order Item",
 		filters={"parent": sco_name},
@@ -73,6 +83,10 @@ def receive_and_forward(purchase_order):
 	Conversion checkpoint). Route-don't-insert stops at the GRN; the transfer is
 	deliberately left for a human to review, that IS the checkpoint.
 	"""
+	require_any_role(DROPSHIP_ROLES, "Only Purchase or Stores can receive and forward drop-shipped material.")
+	require_document_permission("Purchase Order", purchase_order, "read")
+	require_doctype_permissions("Purchase Receipt", "create", "submit")
+	require_doctype_permissions("Stock Entry", "create")
 	po = frappe.get_doc("Purchase Order", purchase_order)
 	if po.docstatus != 1:
 		frappe.throw("The Purchase Order must be submitted first.")

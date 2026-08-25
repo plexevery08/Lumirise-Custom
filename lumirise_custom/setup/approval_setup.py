@@ -124,7 +124,9 @@ def _upsert_workflow(name, document_type, states, transitions):
 				"action": t["action"],
 				"next_state": t["next_state"],
 				"allowed": t["allowed"],
-				"allow_self_approval": 1,
+				# A maker may send their own draft into the queue, but a
+				# checker decision must always be made by a different role.
+				"allow_self_approval": 1 if t["action"].startswith("Submit for ") else 0,
 			},
 		)
 	wf.save(ignore_permissions=True)
@@ -148,7 +150,7 @@ def _indent_workflow():
 			"state": "Draft",
 			"action": "Submit for Approval",
 			"next_state": "Pending Planning Manager",
-			"allowed": "Planning Manager",
+			"allowed": "Planning User",
 		},
 		{
 			"state": "Pending Planning Manager",

@@ -1,0 +1,115 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Material Request Analysis",
+   "label": "Material Request Analysis"
+  },
+  {
+   "chart_name": "Pending Work Order",
+   "label": "Pending Work Order"
+  },
+  {
+   "chart_name": "Work Order Qty Analysis",
+   "label": "Work Order Quantity"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Sales Orders to Deliver\"\n  },\n  \"id\": \"lr-planning---ppc-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Open Work Orders\"\n  },\n  \"id\": \"lr-planning---ppc-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Purchase Orders to Receive\"\n  },\n  \"id\": \"lr-planning---ppc-card-2\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Material Request Analysis\",\n   \"col\": 12\n  },\n  \"id\": \"lr-planning---ppc-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Pending Work Order\",\n   \"col\": 12\n  },\n  \"id\": \"lr-planning---ppc-dashboard-4\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Work Order Qty Analysis\",\n   \"col\": 12\n  },\n  \"id\": \"lr-planning---ppc-dashboard-5\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Plan & Reserve\"\n  },\n  \"id\": \"lr-planning---ppc-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Material Planning\"\n  },\n  \"id\": \"lr-planning---ppc-0-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Sales Orders\"\n  },\n  \"id\": \"lr-planning---ppc-0-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Procurement Handoff\"\n  },\n  \"id\": \"lr-planning---ppc-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Indents\"\n  },\n  \"id\": \"lr-planning---ppc-1-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Reports / Control\"\n  },\n  \"id\": \"lr-planning---ppc-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Production Plan\"\n  },\n  \"id\": \"lr-planning---ppc-2-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"RM Stock & Reservations\"\n  },\n  \"id\": \"lr-planning---ppc-2-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Material Accountability\"\n  },\n  \"id\": \"lr-planning---ppc-2-2\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2026-08-24 21:08:09.787972",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 1,
+ "icon": "calendar",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Planning - PPC",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-25 12:38:33.704760",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Planning - PPC",
+ "number_cards": [
+  {
+   "label": "Orders to Deliver",
+   "number_card_name": "Sales Orders to Deliver"
+  },
+  {
+   "label": "Open Work Orders",
+   "number_card_name": "Open Work Orders"
+  },
+  {
+   "label": "POs to Receive",
+   "number_card_name": "Purchase Orders to Receive"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Planning User"
+  },
+  {
+   "role": "Planning Manager"
+  },
+  {
+   "role": "Manufacturing Manager"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 12.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Material Planning",
+   "link_to": "Material Planning",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Sales Orders",
+   "link_to": "Sales Order",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Indents",
+   "link_to": "Indent",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Production Plan",
+   "link_to": "Lumirise Production Plan",
+   "report_ref_doctype": "Lumirise Production Schedule",
+   "type": "Report"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "RM Stock & Reservations",
+   "link_to": "RM Stock and Reservation Tracker",
+   "report_ref_doctype": "Item",
+   "type": "Report"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Material Accountability",
+   "link_to": "Material Accountability",
+   "report_ref_doctype": "Work Order",
+   "type": "Report"
+  }
+ ],
+ "title": "Planning - PPC",
+ "type": "Workspace"
+}

@@ -12,13 +12,23 @@
   "title",
   "status",
   "priority",
+  "severity",
   "task_type",
+  "business_impact",
   "department",
+  "source_department",
+  "next_department",
   "col_people",
   "owner_user",
   "supervisor_user",
   "hod_user",
+  "due_on",
   "due_date",
+  "sec_blocker",
+  "blocker_code",
+  "blocker_reason",
+  "col_waiting",
+  "review_on",
   "sec_reference",
   "reference_doctype",
   "reference_name",
@@ -26,6 +36,12 @@
   "source_event",
   "escalated",
   "completed_on",
+  "sec_resolution",
+  "resolution_code",
+  "resolution_note",
+  "col_resolution",
+  "resolved_by",
+  "resolved_on",
   "sec_details",
   "description"
  ],
@@ -58,6 +74,16 @@
    "options": "Low\nMedium\nHigh\nUrgent"
   },
   {
+   "default": "Medium",
+   "description": "Objective business impact, independent from urgency/priority.",
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Severity",
+   "options": "Low\nMedium\nHigh\nCritical"
+  },
+  {
    "default": "General",
    "fieldname": "task_type",
    "fieldtype": "Select",
@@ -66,11 +92,31 @@
    "options": "General\nHandoff\nApproval\nDefect / Rejection\nMissed Deadline\nError\nStock Mismatch"
   },
   {
+   "description": "Concise statement of the business, customer, quality, stock, or schedule impact.",
+   "fieldname": "business_impact",
+   "fieldtype": "Small Text",
+   "label": "Business Impact"
+  },
+  {
    "fieldname": "department",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Department",
+   "options": "Lumirise Department Map"
+  },
+  {
+   "description": "Department which originated the work. Defaults from Department and remains available for handoff history.",
+   "fieldname": "source_department",
+   "fieldtype": "Link",
+   "label": "Source Department",
+   "options": "Lumirise Department Map"
+  },
+  {
+   "description": "Optional next department for an explicit handoff. Department remains the current accountable team.",
+   "fieldname": "next_department",
+   "fieldtype": "Link",
+   "label": "Next Department",
    "options": "Lumirise Department Map"
   },
   {
@@ -98,10 +144,49 @@
    "options": "User"
   },
   {
+   "description": "Canonical due timestamp used by task queues and SLA calculations.",
+   "fieldname": "due_on",
+   "fieldtype": "Datetime",
+   "in_standard_filter": 1,
+   "label": "Due On"
+  },
+  {
+   "description": "Derived date retained for compatibility with existing reports and integrations.",
    "fieldname": "due_date",
    "fieldtype": "Date",
    "in_standard_filter": 1,
-   "label": "Due Date"
+   "label": "Due Date (Compatibility)",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sec_blocker",
+   "fieldtype": "Section Break",
+   "label": "Blocker / Waiting Contract"
+  },
+  {
+   "description": "Stable blocker code from the server registry; labels may change without changing stored meaning.",
+   "fieldname": "blocker_code",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Blocker Code"
+  },
+  {
+   "description": "Required human explanation whenever Status is Blocked.",
+   "fieldname": "blocker_reason",
+   "fieldtype": "Small Text",
+   "label": "Blocker Reason"
+  },
+  {
+   "fieldname": "col_waiting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Blocked plus a future Review On is shown as Waiting. When due or blank, it is actionable Blocked work.",
+   "fieldname": "review_on",
+   "fieldtype": "Datetime",
+   "in_standard_filter": 1,
+   "label": "Review On"
   },
   {
    "collapsible": 1,
@@ -147,6 +232,42 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
+   "fieldname": "sec_resolution",
+   "fieldtype": "Section Break",
+   "label": "Resolution Contract"
+  },
+  {
+   "description": "Stable resolution code from the server registry.",
+   "fieldname": "resolution_code",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Resolution Code"
+  },
+  {
+   "description": "Human-readable outcome and any follow-up needed.",
+   "fieldname": "resolution_note",
+   "fieldtype": "Small Text",
+   "label": "Resolution Note"
+  },
+  {
+   "fieldname": "col_resolution",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resolved_by",
+   "fieldtype": "Link",
+   "label": "Resolved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resolved_on",
+   "fieldtype": "Datetime",
+   "label": "Resolved On",
+   "read_only": 1
+  },
+  {
    "fieldname": "sec_details",
    "fieldtype": "Section Break",
    "label": "Details"
@@ -189,6 +310,61 @@
    "role": "Lumirise Operations",
    "share": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Factory Store Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Stock User"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Quality User"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Quality Inspector"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Planning User"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Planning Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Purchase User"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Purchase Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Purchase Head"
   }
  ],
  "row_format": "Dynamic",

@@ -1,0 +1,138 @@
+{
+ "app": "lumirise_custom",
+ "charts": [
+  {
+   "chart_name": "Profit and Loss",
+   "label": "Profit and Loss"
+  },
+  {
+   "chart_name": "Sales Order Trends",
+   "label": "Sales Order Trends"
+  },
+  {
+   "chart_name": "Stock Value by Item Group",
+   "label": "Stock Value by Item Group"
+  }
+ ],
+ "content": "[\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Sales Orders Count\"\n  },\n  \"id\": \"lr-management-cockpit-card-0\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Purchase Orders Count\"\n  },\n  \"id\": \"lr-management-cockpit-card-1\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"number_card_name\": \"Open Work Orders\"\n  },\n  \"id\": \"lr-management-cockpit-card-2\",\n  \"type\": \"number_card\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Profit and Loss\",\n   \"col\": 12\n  },\n  \"id\": \"lr-management-cockpit-dashboard-3\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Sales Order Trends\",\n   \"col\": 12\n  },\n  \"id\": \"lr-management-cockpit-dashboard-4\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"Stock Value by Item Group\",\n   \"col\": 12\n  },\n  \"id\": \"lr-management-cockpit-dashboard-5\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Executive Review\"\n  },\n  \"id\": \"lr-management-cockpit-0-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Profit and Loss\"\n  },\n  \"id\": \"lr-management-cockpit-0-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Cash Flow\"\n  },\n  \"id\": \"lr-management-cockpit-0-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Stock Valuation\"\n  },\n  \"id\": \"lr-management-cockpit-0-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Operations Review\"\n  },\n  \"id\": \"lr-management-cockpit-1-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Production Plan\"\n  },\n  \"id\": \"lr-management-cockpit-1-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"PO Stage Status\"\n  },\n  \"id\": \"lr-management-cockpit-1-1\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Batch-wise Rejection\"\n  },\n  \"id\": \"lr-management-cockpit-1-2\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Line Status\"\n  },\n  \"id\": \"lr-management-cockpit-1-3\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"level\": 4,\n   \"text\": \"Approvals & Exceptions\"\n  },\n  \"id\": \"lr-management-cockpit-2-header\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Lumirise Tasks\"\n  },\n  \"id\": \"lr-management-cockpit-2-0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 3,\n   \"shortcut_name\": \"Open Health Failures\"\n  },\n  \"id\": \"lr-management-cockpit-2-1\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2026-07-24 00:00:00",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 1,
+ "icon": "organization",
+ "idx": 0,
+ "indicator_color": "blue",
+ "is_hidden": 0,
+ "label": "Management Cockpit",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-25 12:38:34.814302",
+ "modified_by": "Administrator",
+ "module": "Lumirise Custom",
+ "name": "Management Cockpit",
+ "number_cards": [
+  {
+   "label": "Sales Orders",
+   "number_card_name": "Sales Orders Count"
+  },
+  {
+   "label": "Purchase Orders",
+   "number_card_name": "Purchase Orders Count"
+  },
+  {
+   "label": "Open Work Orders",
+   "number_card_name": "Open Work Orders"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "MD"
+  },
+  {
+   "role": "Lumirise Operations"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 22.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Profit and Loss",
+   "link_to": "Profit and Loss Statement",
+   "report_ref_doctype": "GL Entry",
+   "type": "Report"
+  },
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Cash Flow",
+   "link_to": "Daily Cash Flow",
+   "report_ref_doctype": "Payment Entry",
+   "type": "Report"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "Stock Valuation",
+   "link_to": "Stock Balance",
+   "report_ref_doctype": "Stock Ledger Entry",
+   "type": "Report"
+  },
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Production Plan",
+   "link_to": "Lumirise Production Plan",
+   "report_ref_doctype": "Lumirise Production Schedule",
+   "type": "Report"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "PO Stage Status",
+   "link_to": "PO Stage Status",
+   "report_ref_doctype": "Purchase Order",
+   "type": "Report"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Batch-wise Rejection",
+   "link_to": "Batch Wise Rejection",
+   "report_ref_doctype": "Stock Ledger Entry",
+   "type": "Report"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Line Status",
+   "link_to": "Line Status",
+   "report_ref_doctype": "Lumirise Job Card",
+   "type": "Report"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Lumirise Tasks",
+   "link_to": "Lumirise Task",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Open Health Failures",
+   "link_to": "Open Health Failures",
+   "report_ref_doctype": "Health Check Run",
+   "type": "Report"
+  }
+ ],
+ "title": "Management Cockpit",
+ "type": "Workspace"
+}

@@ -99,6 +99,9 @@ class MaterialPlanning(Document):
 			return None
 		indent = frappe.get_doc({
 			"doctype": "Indent",
+			# Preserve the planning maker as the owner so the generated document
+			# enters the checker workflow under the accountable user.
+			"owner": self.owner,
 			"indent_date": nowdate(),
 			"branch": self.branch or config.get_company(self),
 			"indent_type": "Purchase",
