@@ -5,6 +5,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "configuration_group",
   "item",
   "moq",
   "moq_label",
@@ -26,6 +27,13 @@
   "total_without_mono_box"
  ],
  "fields": [
+  {
+   "fieldname": "configuration_group",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Group",
+   "read_only": 1
+  },
   {
    "fieldname": "item",
    "fieldtype": "Link",
@@ -82,6 +90,7 @@
    "fieldname": "mono_purchase_price",
    "fieldtype": "Currency",
    "label": "Mono Purchase",
+   "permlevel": 1,
    "read_only": 1,
    "precision": "3"
   },
@@ -109,6 +118,7 @@
    "fieldname": "master_box_cost_per_light",
    "fieldtype": "Currency",
    "label": "Master Box / Light",
+   "permlevel": 1,
    "read_only": 1,
    "precision": "3"
   },

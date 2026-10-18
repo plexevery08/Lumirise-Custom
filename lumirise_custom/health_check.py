@@ -456,6 +456,8 @@ def _parent_boms():
 			"name",
 			"custom_bom_cost",
 			"custom_raw_materials_total",
+			"custom_costing_status",
+			"custom_missing_cost_items",
 			"custom_1k_moq_price",
 			"custom_3k_moq_price",
 			"custom_6k_moq_price",
@@ -467,7 +469,11 @@ def _parent_boms():
 @readonly_check("bom_cost_rollup", "Submitted Parent BOMs have a non-zero cost", COSTING)
 def _check_bom_cost_rollup():
 	boms = _parent_boms()
-	bad = [b for b in boms if flt(b.custom_bom_cost) <= 0]
+	bad = [
+		b
+		for b in boms
+		if flt(b.custom_bom_cost) <= 0 or b.custom_costing_status == "Missing Costs"
+	]
 	if not boms:
 		return _result("", "", "", "pass", detail="No active Parent BOMs to check.")
 	if bad:
@@ -476,8 +482,8 @@ def _check_bom_cost_rollup():
 			"",
 			"",
 			"fail",
-			detail=f"{len(bad)} of {len(boms)} active Parent BOMs have a zero/blank rolled-up cost.",
-			remediation="Open each BOM and Save to re-run the costing rollup, or fix the raw-material valuation_rate feeding it (costing.py compute).",
+			detail=f"{len(bad)} of {len(boms)} active Parent BOMs have a zero or incomplete rolled-up cost.",
+			remediation="Use Sales Platform Settings > Rebuild All Costing, then fix any BOM row whose Lumirise Cost Source is 'Missing Cost'.",
 			evidence=", ".join(b.name for b in bad[:5]),
 		)
 	return _result("", "", "", "pass", detail=f"All {len(boms)} Parent BOMs costed.")
@@ -494,7 +500,7 @@ def _check_bom_rm_rollup():
 			"",
 			"warn",
 			detail=f"{len(bad)} costed Parent BOMs have a zero raw-material subtotal.",
-			remediation="RM cost is not rolling into custom_raw_materials_total — check child item valuation_rate / Sub-BOM totals (costing.py).",
+			remediation="Check each row's Lumirise Cost Source/Reference and the child BOM Unit Roll-up Cost; then rebuild costing.",
 			evidence=", ".join(b.name for b in bad[:5]),
 		)
 	return _result("", "", "", "pass", detail="RM subtotals roll up.")
@@ -521,6 +527,107 @@ def _check_moq_slabs():
 			evidence=", ".join(b.name for b in bad[:5]),
 		)
 	return _result("", "", "", "pass", detail="MOQ slabs populated on all costed BOMs.")
+
+
+@readonly_check(
+	"quotation_creator_schema",
+	"Quotation Creator schema and source link are installed",
+	COSTING,
+)
+def _check_quotation_creator_schema():
+	missing = []
+	for doctype in ("Price Sheet", "Price Sheet Configuration", "Price Sheet Approval Item"):
+		if not frappe.db.exists("DocType", doctype):
+			missing.append(doctype)
+	if frappe.db.exists("DocType", "Quotation") and not frappe.get_meta("Quotation").has_field(
+		"lr_price_sheet"
+	):
+		missing.append("Quotation.lr_price_sheet")
+	if missing:
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail="Missing: " + ", ".join(missing),
+			remediation="Deploy the current lumirise_custom revision and run bench migrate.",
+		)
+	return _result(
+		"",
+		"",
+		"",
+		"pass",
+		detail="Queue configuration, approval lines, and Quotation source trace are installed.",
+	)
+
+
+@readonly_check(
+	"quotation_price_integrity",
+	"Active Price Sheets have real base prices and live Quotation links",
+	COSTING,
+)
+def _check_quotation_price_integrity():
+	active = frappe.get_all(
+		"Price Sheet",
+		filters={"docstatus": 1, "status": ("in", ("Pending Approval", "Approved"))},
+		pluck="name",
+	)
+	bad_rows = []
+	if active:
+		bad_rows = frappe.get_all(
+			"Price Sheet Row",
+			filters={"parent": ("in", active), "base_price": ("<=", 0)},
+			fields=["parent", "item", "moq"],
+			limit_page_length=20,
+		)
+
+	linked = frappe.get_all(
+		"Price Sheet",
+		filters={"quotation": ("is", "set")},
+		fields=["name", "quotation"],
+	)
+	existing = set()
+	if linked:
+		existing = set(
+			frappe.get_all(
+				"Quotation",
+				filters={"name": ("in", [row.quotation for row in linked])},
+				pluck="name",
+			)
+		)
+	dangling = [row for row in linked if row.quotation not in existing]
+
+	if bad_rows or dangling:
+		evidence = []
+		if bad_rows:
+			evidence.append(
+				"zero base: "
+				+ ", ".join(f"{row.parent}/{row.item}/{row.moq}" for row in bad_rows[:5])
+			)
+		if dangling:
+			evidence.append(
+				"missing quotation: "
+				+ ", ".join(f"{row.name}->{row.quotation}" for row in dangling[:5])
+			)
+		return _result(
+			"",
+			"",
+			"",
+			"fail",
+			detail=f"{len(bad_rows)} unsafe price row(s); {len(dangling)} dangling quotation link(s).",
+			remediation=(
+				"Repair the item base-price/BOM masters, regenerate affected sheets, and repair or clear "
+				"references to deleted Quotations."
+			),
+			evidence="; ".join(evidence),
+		)
+	return _result(
+		"",
+		"",
+		"",
+		"pass",
+		detail=f"Checked {len(active)} active Price Sheet(s) and {len(linked)} quotation link(s).",
+	)
 
 
 @readonly_check("so_shipped_not_completed", "Shipped Sales Orders are marked Completed", STATUS)

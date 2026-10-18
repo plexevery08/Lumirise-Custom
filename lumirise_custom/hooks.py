@@ -54,6 +54,9 @@ doctype_js = {
 	"Delivery Note": "public/js/delivery_note.js",
 	"Material Request": "public/js/material_request.js",
 	"Warehouse": "public/js/warehouse.js",
+	"Quotation": "public/js/quotation.js",
+	"Item": "public/js/item_costing.js",
+	"BOM": "public/js/bom_costing.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -171,7 +174,6 @@ after_migrate = "lumirise_custom.setup.after_migrate"
 fixtures = [
 	{"dt": "Custom Field", "filters": [["module", "=", "Lumirise Custom"]]},
 	{"dt": "Property Setter", "filters": [["module", "=", "Lumirise Custom"]]},
-	{"dt": "Workspace", "filters": [["module", "=", "Lumirise Custom"]]},
 ]
 
 # Focus 9 quality gates on standard ERPNext documents.
@@ -310,6 +312,8 @@ doc_events = {
 			# A submitted BOM's is_active/is_default toggles run here, not validate.
 			"lumirise_custom.bom_lock.guard_bom_change",
 		],
+		"on_submit": "lumirise_custom.costing.bom_on_submit",
+		"on_cancel": "lumirise_custom.costing.bom_on_cancel",
 	},
 	# ---- Task / Notification / Kanban engine (auto-create operational cards) ----
 	"Sales Order": {

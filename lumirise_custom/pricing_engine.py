@@ -8,9 +8,11 @@ platform's roundApprovalPrice: round to 3 decimals.
 """
 
 import frappe
+from frappe import _
 from frappe.utils import flt
 
 from lumirise_custom.costing import get_bom_moq_price
+from lumirise_custom.costing_math import round_cost
 
 QUANTITY_TIERS = [
 	{"moq": 1000, "label": "1000-2999"},
@@ -25,7 +27,7 @@ NO_TRANSPORT = "No Transport"
 
 
 def r3(value):
-	return flt(value, 3)
+	return round_cost(value, 3)
 
 
 def get_settings():
@@ -78,7 +80,9 @@ def get_base_price(item, moq):
 def get_mono_box_data(item, finish, moq):
 	"""purchase/selling/profit for item+finish at best MOQ match, or Nones."""
 	if not finish or finish in (NO_MONO_BOX, "No Box"):
-		return frappe._dict(purchase_price=None, selling_price=None, profit_price=None)
+		return frappe._dict(
+			purchase_price=None, selling_price=None, profit_price=None, found=False
+		)
 	rows = frappe.get_all(
 		"Mono Box Pricing",
 		filters={"item": item, "box_finish": finish},
@@ -86,11 +90,14 @@ def get_mono_box_data(item, finish, moq):
 	)
 	match = _best_moq_match(rows, moq)
 	if not match:
-		return frappe._dict(purchase_price=None, selling_price=None, profit_price=None)
+		return frappe._dict(
+			purchase_price=None, selling_price=None, profit_price=None, found=False
+		)
 	return frappe._dict(
 		purchase_price=flt(match.purchase_price),
 		selling_price=flt(match.selling_price),
 		profit_price=flt(match.profit_price),
+		found=True,
 	)
 
 
@@ -111,10 +118,9 @@ def get_no_box_profit(item, moq, settings=None):
 
 
 def get_master_box_data(item, finish, caselot):
-	"""Exact match on item+finish+caselot. Selected-but-missing returns zeros
-	(platform behaviour); no selection returns Nones."""
+	"""Exact item/finish/caselot match, with an explicit found flag."""
 	if not finish or finish in (NO_MASTER_BOX, "None") or not caselot:
-		return frappe._dict(price=None, cost_per_light=None)
+		return frappe._dict(price=None, cost_per_light=None, found=False)
 	row = frappe.db.get_value(
 		"Master Box Pricing",
 		{"item": item, "box_finish": finish, "caselot": int(caselot)},
@@ -122,34 +128,46 @@ def get_master_box_data(item, finish, caselot):
 		as_dict=True,
 	)
 	if not row:
-		return frappe._dict(price=0.0, cost_per_light=0.0)
+		return frappe._dict(price=None, cost_per_light=None, found=False)
 	return frappe._dict(
-		price=flt(row.purchase_price), cost_per_light=r3(row.price_per_unit)
+		price=flt(row.purchase_price), cost_per_light=r3(row.price_per_unit), found=True
+	)
+
+
+def get_transport_data(item, transport_type, zone):
+	if not transport_type or not zone:
+		return frappe._dict(cost_per_unit=None, found=False)
+	value = frappe.db.get_value(
+		"Transport Pricing",
+		{"item": item, "transport_type": transport_type, "transport_zone": zone},
+		"cost_per_unit",
+	)
+	return frappe._dict(
+		cost_per_unit=r3(value) if value is not None else None,
+		found=value is not None,
 	)
 
 
 def get_transport_cost(item, transport_type, zone):
-	if not transport_type or not zone:
-		return 0.0
-	return flt(
-		frappe.db.get_value(
-			"Transport Pricing",
-			{"item": item, "transport_type": transport_type, "transport_zone": zone},
-			"cost_per_unit",
-		)
+	return flt(get_transport_data(item, transport_type, zone).cost_per_unit)
+
+
+def get_credit_data(credit_days):
+	if not credit_days:
+		return frappe._dict(percentage=0.0, found=True)
+	value = frappe.db.get_value(
+		"Sales Credit Term",
+		{"payment_type": "Credit", "credit_days": int(credit_days)},
+		"percentage",
+	)
+	return frappe._dict(
+		percentage=flt(value) if value is not None else None,
+		found=value is not None,
 	)
 
 
 def get_credit_percentage(credit_days):
-	if not credit_days:
-		return 0.0
-	return flt(
-		frappe.db.get_value(
-			"Sales Credit Term",
-			{"payment_type": "Credit", "credit_days": int(credit_days)},
-			"percentage",
-		)
-	)
+	return flt(get_credit_data(credit_days).percentage)
 
 
 def item_caselots_with_records(item, finish, caselots):
@@ -165,51 +183,176 @@ def item_caselots_with_records(item, finish, caselots):
 	return kept
 
 
-def generate_rows(sheet):
-	"""Build Price Sheet Row dicts for a Price Sheet document (config on doc).
+def _parse_caselots(value):
+	values = []
+	for part in str(value or "").split(","):
+		part = part.strip()
+		if part.isdigit() and int(part) > 0:
+			values.append(int(part))
+	return sorted(set(values))
 
-	Mirrors generatePriceSheet(): rows per item x caselot x tier x finish,
-	plus one baseline row per item x caselot x tier (finish = No Mono Box).
-	"""
+
+def get_master_box_caselots(item, finish):
+	"""Every available caselot for one product/finish, in display order."""
+	if not finish or finish in (NO_MASTER_BOX, "None"):
+		return []
+	return sorted(
+		{
+			int(value)
+			for value in frappe.get_all(
+				"Master Box Pricing",
+				filters={"item": item, "box_finish": finish},
+				pluck="caselot",
+			)
+			if value
+		}
+	)
+
+
+def get_item_mono_finishes(item):
+	"""All mono-box finishes that are genuinely priced for an item."""
+	return frappe.get_all(
+		"Mono Box Pricing",
+		filters={"item": item},
+		pluck="box_finish",
+		distinct=True,
+		order_by="box_finish",
+	)
+
+
+def _configuration_contexts(sheet):
+	"""Normalise the new queue and legacy single-config form into item contexts."""
+	if sheet.get("configurations"):
+		for config in sheet.configurations:
+			master_finish = config.master_box_finish or None
+			caselots = _parse_caselots(config.master_box_caselots)
+			if master_finish and not caselots:
+				caselots = get_master_box_caselots(config.item, master_finish)
+			yield frappe._dict(
+				configuration_group=config.configuration_group,
+				item=config.item,
+				finishes=get_item_mono_finishes(config.item),
+				master_box_finish=master_finish,
+				caselots=caselots,
+				delivery_type=config.delivery_type or "Ex-Factory",
+				transport_type=config.transport_type,
+				transport_zone=config.transport_zone,
+				payment_type=config.payment_type or "Advance",
+				credit_days=int(config.credit_days or 0),
+			)
+		return
+
+	finishes = [row.box_finish for row in (sheet.get("mono_box_finishes") or [])]
+	caselots = _parse_caselots(sheet.get("master_box_caselots"))
+	for product in sheet.get("products") or []:
+		yield frappe._dict(
+			configuration_group="Legacy",
+			item=product.item,
+			finishes=finishes,
+			master_box_finish=sheet.get("master_box_finish"),
+			caselots=caselots,
+			delivery_type=sheet.get("delivery_type") or "Ex-Factory",
+			transport_type=sheet.get("transport_type"),
+			transport_zone=sheet.get("transport_zone"),
+			payment_type=sheet.get("payment_type") or "Advance",
+			credit_days=int(sheet.get("credit_days") or 0),
+		)
+
+
+def _validated_context(context, settings):
+	"""Reject incomplete masters before a customer can receive an understated price."""
+	if not context.item:
+		frappe.throw(_("Every quotation configuration must have a product"))
+
+	if context.master_box_finish:
+		available = get_master_box_caselots(context.item, context.master_box_finish)
+		if not available:
+			frappe.throw(
+				_("{0}: no Master Box Pricing exists for finish {1}").format(
+					context.item, context.master_box_finish
+				)
+			)
+		requested = context.caselots or available
+		missing = sorted(set(requested) - set(available))
+		if missing:
+			frappe.throw(
+				_("{0}: no Master Box Pricing for caselot(s) {1} with finish {2}").format(
+					context.item, ", ".join(str(value) for value in missing), context.master_box_finish
+				)
+			)
+		context.caselots = requested
+	else:
+		context.caselots = [None]
+
+	if context.delivery_type == "Transport":
+		if not context.transport_type or not context.transport_zone:
+			frappe.throw(
+				_("{0}: choose both Transport Type and Transport Zone").format(context.item)
+			)
+		transport = get_transport_data(
+			context.item, context.transport_type, context.transport_zone
+		)
+		if not transport.found:
+			frappe.throw(
+				_("{0}: transport price is missing for {1}, zone {2}").format(
+					context.item, context.transport_type, context.transport_zone
+				)
+			)
+
+	if context.payment_type == "Credit":
+		if context.credit_days <= 0:
+			frappe.throw(_("{0}: choose Credit Days").format(context.item))
+		if not get_credit_data(context.credit_days).found:
+			frappe.throw(
+				_("{0}: no Sales Credit Term exists for {1} days").format(
+					context.item, context.credit_days
+				)
+			)
+
+	for tier in QUANTITY_TIERS:
+		base_price, _source = get_base_price(context.item, tier["moq"])
+		if base_price <= 0:
+			frappe.throw(
+				_("{0}: base price is missing for MOQ {1}. Add a costed Parent BOM or Lumirise Base Price.").format(
+					context.item, tier["moq"]
+				)
+			)
+		if get_no_box_profit(context.item, tier["moq"], settings) <= 0:
+			frappe.throw(
+				_("{0}: no positive mono-box profit fallback exists for MOQ {1}").format(
+					context.item, tier["moq"]
+				)
+			)
+
+	return context
+
+
+def generate_rows(sheet):
+	"""Generate the original platform grid from queued or legacy configuration."""
 	settings = get_settings()
 
-	items = [p.item for p in (sheet.products or [])]
-	finishes = [f.box_finish for f in (sheet.mono_box_finishes or [])]
-	include_transport = sheet.delivery_type == "Transport"
-	has_master_box = bool(sheet.master_box_finish)
-	has_credit = sheet.payment_type == "Credit" and flt(sheet.credit_days) > 0
-	credit_pct = get_credit_percentage(sheet.credit_days) if has_credit else 0.0
-
-	caselots = []
-	if has_master_box and (sheet.master_box_caselots or "").strip():
-		for part in str(sheet.master_box_caselots).split(","):
-			part = part.strip()
-			if part.isdigit():
-				caselots.append(int(part))
-	caselots = caselots or [None]
-
-	def credit_loaded(subtotal):
-		added = r3(subtotal * credit_pct / 100.0) if has_credit else 0.0
-		return added, r3(subtotal + added)
-
 	rows = []
-	for item in items:
-		item_caselots = caselots
-		if has_master_box:
-			real = [c for c in caselots if c]
-			item_caselots = item_caselots_with_records(item, sheet.master_box_finish, real)
-			if not item_caselots:
-				continue  # platform: no master-box record at all -> no rows for item
+	for raw_context in _configuration_contexts(sheet):
+		context = _validated_context(raw_context, settings)
+		item = context.item
+		include_transport = context.delivery_type == "Transport"
+		has_master_box = bool(context.master_box_finish)
+		has_credit = context.payment_type == "Credit" and context.credit_days > 0
+		credit_pct = get_credit_percentage(context.credit_days) if has_credit else 0.0
 
-		for caselot in item_caselots:
-			master = get_master_box_data(item, sheet.master_box_finish, caselot)
+		def credit_loaded(subtotal):
+			added = r3(subtotal * credit_pct / 100.0) if has_credit else 0.0
+			return added, r3(subtotal + added)
+
+		for caselot in context.caselots:
+			master = get_master_box_data(item, context.master_box_finish, caselot)
 			master_cost = flt(master.cost_per_light)
 
 			for tier in QUANTITY_TIERS:
 				moq, label = tier["moq"], tier["label"]
 				base_price, source = get_base_price(item, moq)
 				transport = (
-					get_transport_cost(item, sheet.transport_type, sheet.transport_zone)
+					get_transport_cost(item, context.transport_type, context.transport_zone)
 					if include_transport
 					else 0.0
 				)
@@ -229,13 +372,14 @@ def generate_rows(sheet):
 				)
 				no_mono_added, no_mono_total = credit_loaded(no_mono_subtotal)
 				common = {
+					"configuration_group": context.configuration_group,
 					"item": item,
 					"moq": moq,
 					"moq_label": label,
 					"caselot": caselot,
 					"base_price": base_price,
 					"price_source": source,
-					"master_box_finish": sheet.master_box_finish if has_master_box else None,
+					"master_box_finish": context.master_box_finish if has_master_box else None,
 					"master_box_cost_per_light": master.cost_per_light,
 					"transport_cost": transport if include_transport else 0.0,
 					"credit_percentage": credit_pct,
@@ -255,7 +399,7 @@ def generate_rows(sheet):
 				)
 
 				# One row per requested finish
-				for finish in finishes:
+				for finish in context.finishes:
 					mono = get_mono_box_data(item, finish, moq)
 					has_data = mono.selling_price is not None
 					selling = flt(mono.selling_price)
@@ -278,7 +422,7 @@ def generate_rows(sheet):
 def calculate_approval_price(item, moq, mono_box_finish, master_box_finish,
 		master_box_caselot, transport_mode, transport_type, transport_zone,
 		credit_days):
-	"""Port of calculateApprovalPrice(): single-line breakdown for approval."""
+	"""Port of calculateApprovalPrice(), with missing-master safeguards."""
 	settings = get_settings()
 	if not moq:
 		return frappe._dict(
@@ -287,20 +431,61 @@ def calculate_approval_price(item, moq, mono_box_finish, master_box_finish,
 		)
 
 	base_price, _source = get_base_price(item, moq)
+	if base_price <= 0:
+		frappe.throw(
+			_("{0}: base price is missing for MOQ {1}").format(item, moq)
+		)
 
 	if not mono_box_finish or mono_box_finish in (NO_MONO_BOX, "No Box"):
 		mono_price = r3(get_no_box_profit(item, moq, settings))
+		if mono_price <= 0:
+			frappe.throw(
+				_("{0}: no positive mono-box profit fallback exists for MOQ {1}").format(
+					item, moq
+				)
+			)
 	else:
-		mono_price = r3(flt(get_mono_box_data(item, mono_box_finish, moq).selling_price))
+		mono = get_mono_box_data(item, mono_box_finish, moq)
+		if not mono.found:
+			frappe.throw(
+				_("{0}: mono-box price is missing for {1}, MOQ {2}").format(
+					item, mono_box_finish, moq
+				)
+			)
+		mono_price = r3(mono.selling_price)
 
 	master = get_master_box_data(item, master_box_finish, master_box_caselot)
+	if master_box_finish and not master_box_caselot:
+		frappe.throw(_("{0}: choose a Master Box Caselot").format(item))
+	if master_box_finish and not master.found:
+		frappe.throw(
+			_("{0}: master-box price is missing for {1}, caselot {2}").format(
+				item, master_box_finish, master_box_caselot
+			)
+		)
 	master_price = master.cost_per_light
 
 	transport_price = None
-	if transport_mode != NO_TRANSPORT and transport_type and transport_zone:
-		transport_price = r3(get_transport_cost(item, transport_type, transport_zone))
+	if transport_mode != NO_TRANSPORT:
+		if not transport_type or not transport_zone:
+			frappe.throw(
+				_("{0}: choose both Transport Type and Transport Zone").format(item)
+			)
+		transport = get_transport_data(item, transport_type, transport_zone)
+		if not transport.found:
+			frappe.throw(
+				_("{0}: transport price is missing for {1}, zone {2}").format(
+					item, transport_type, transport_zone
+				)
+			)
+		transport_price = transport.cost_per_unit
 
-	credit_pct = get_credit_percentage(credit_days)
+	credit = get_credit_data(credit_days)
+	if credit_days and not credit.found:
+		frappe.throw(
+			_("{0}: no Sales Credit Term exists for {1} days").format(item, credit_days)
+		)
+	credit_pct = flt(credit.percentage)
 	packaging = master_price if master_price is not None else settings.no_master_box_extra_cost
 	subtotal = r3(base_price + mono_price + packaging + flt(transport_price))
 	credit_price = r3(subtotal * credit_pct / 100.0) if credit_pct > 0 else None

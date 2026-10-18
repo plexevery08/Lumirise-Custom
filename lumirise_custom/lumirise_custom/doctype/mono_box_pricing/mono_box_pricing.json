@@ -70,6 +70,7 @@
    "fieldname": "purchase_price",
    "fieldtype": "Currency",
    "label": "Purchase Price",
+   "permlevel": 1,
    "reqd": 1,
    "precision": "3"
   },
@@ -143,6 +144,23 @@
    "print": 1,
    "read": 1,
    "report": 1,
+   "role": "Sales Auditor"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Pricing Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
    "role": "Sales Auditor"
   }
  ],

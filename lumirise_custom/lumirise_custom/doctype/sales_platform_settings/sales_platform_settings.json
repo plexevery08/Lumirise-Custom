@@ -9,7 +9,16 @@
   "profit_fallback_finish",
   "col_a",
   "approval_window_days",
-  "min_agreed_qty"
+  "min_agreed_qty",
+  "costing_defaults_section",
+  "default_rmb_to_inr_rate",
+  "use_global_rmb_to_inr_rate",
+  "sync_costing_rate_to_valuation_rate",
+  "costing_defaults_col",
+  "default_1k_moq_percentage",
+  "default_3k_moq_percentage",
+  "default_6k_moq_percentage",
+  "default_10k_moq_percentage"
  ],
  "fields": [
   {
@@ -44,6 +53,61 @@
    "fieldtype": "Int",
    "label": "Minimum Customer Agreed Qty",
    "default": "1000"
+  },
+  {
+   "fieldname": "costing_defaults_section",
+   "fieldtype": "Section Break",
+   "label": "Item & BOM Costing Defaults",
+   "description": "One global control point for commercial costing. Item-level RMB rates are optional overrides."
+  },
+  {
+   "fieldname": "default_rmb_to_inr_rate",
+   "fieldtype": "Float",
+   "label": "Default Sales RMB to INR Rate",
+   "precision": "4",
+   "description": "The sales costing exchange rate for imported items. Changing it queues a full costing rebuild."
+  },
+  {
+   "default": "1",
+   "fieldname": "use_global_rmb_to_inr_rate",
+   "fieldtype": "Check",
+   "label": "Enforce Global RMB Rate",
+   "description": "When enabled and the global rate is set, it replaces historical item-level rates for every imported item."
+  },
+  {
+   "default": "0",
+   "fieldname": "sync_costing_rate_to_valuation_rate",
+   "fieldtype": "Check",
+   "label": "Copy Commercial Cost to ERP Valuation Rate",
+   "description": "Compatibility option. Leave off to keep sales costing independent from ERPNext inventory valuation."
+  },
+  {
+   "fieldname": "costing_defaults_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "12",
+   "fieldname": "default_1k_moq_percentage",
+   "fieldtype": "Percent",
+   "label": "Default 1K MOQ %"
+  },
+  {
+   "default": "10",
+   "fieldname": "default_3k_moq_percentage",
+   "fieldtype": "Percent",
+   "label": "Default 3K MOQ %"
+  },
+  {
+   "default": "8",
+   "fieldname": "default_6k_moq_percentage",
+   "fieldtype": "Percent",
+   "label": "Default 6K MOQ %"
+  },
+  {
+   "default": "6",
+   "fieldname": "default_10k_moq_percentage",
+   "fieldtype": "Percent",
+   "label": "Default 10K MOQ %"
   }
  ],
  "issingle": 1,
@@ -64,6 +128,7 @@
   },
   {
    "read": 1,
+   "write": 1,
    "role": "Pricing Manager"
   },
   {

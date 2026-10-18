@@ -7,9 +7,9 @@ unmanageable -- "one item will be having at least 29 pricings" -- so prices come
 via a CSV/Excel upload.
 
 Flow: Purchase fills/uploads the book (Draft) -> Submit for MD Approval -> MD
-Approve (workflow in approval_setup.py). On approval (submit) the approved rates are
-pushed to Item.valuation_rate and every dependent BOM cost is recomputed, so all
-costing immediately uses the current month's prices.
+Approve (workflow in approval_setup.py). The costing resolver reads the latest
+effective approved revision directly; Item cost snapshots and dependent BOMs are
+then refreshed without overwriting ERPNext inventory valuation.
 """
 
 import re
@@ -67,6 +67,10 @@ class RMPriceBook(Document):
 		if not self.company:
 			self.company = config.get_company()
 		company_currency = frappe.get_cached_value("Company", self.company, "default_currency")
+		from lumirise_custom.costing import get_costing_settings
+		from lumirise_custom.costing_math import round_cost
+
+		precision = get_costing_settings().precision
 
 		for row in self.items:
 			if not row.currency:
@@ -88,7 +92,7 @@ class RMPriceBook(Document):
 					f"Enter the Exchange Rate manually or add a Currency Exchange record."
 				)
 
-			row.base_rate = flt(row.rate) * flt(row.conversion_rate)
+			row.base_rate = round_cost(flt(row.rate) * flt(row.conversion_rate), precision)
 
 	def before_submit(self):
 		"""Rows are mandatory to APPROVE, not to save.
@@ -105,27 +109,25 @@ class RMPriceBook(Document):
 			)
 
 	def on_submit(self):
-		"""MD-approved -> push rates into costing and refresh dependent BOMs."""
-		touched = []
-		for row in self.items:
-			if not row.item_code or flt(row.base_rate) <= 0:
-				continue
-			# db.set_value (not a full save) so Item.validate's import-costing model
-			# does not overwrite the manual book rate for domestic items.
-			# base_rate (company currency), never the raw vendor-currency rate.
-			frappe.db.set_value(
-				"Item", row.item_code, "valuation_rate", flt(row.base_rate), update_modified=False
-			)
-			touched.append(row.item_code)
+		"""MD-approved -> refresh snapshots/BOMs from the new authoritative revision."""
+		touched = sorted(
+			{row.item_code for row in self.items if row.item_code and flt(row.base_rate) > 0}
+		)
 		if touched:
-			try:
-				from lumirise_custom.costing import recompute_boms_for_items
-				recompute_boms_for_items(touched)
-			except Exception:
-				frappe.log_error(frappe.get_traceback(), "RM Price Book: BOM recompute failed")
+			from lumirise_custom.costing import sync_item_costs
+
+			sync_item_costs(touched)
 		frappe.msgprint(
-			f"Approved — pushed {len(touched)} raw-material price(s) into costing.",
+			f"Approved — refreshed {len(touched)} raw-material cost(s) and dependent BOMs.",
 			indicator="green", alert=True)
+
+	def on_cancel(self):
+		"""Fall back to the previous approved revision/source and rebuild dependants."""
+		touched = {row.item_code for row in self.items if row.item_code}
+		if touched:
+			from lumirise_custom.costing import sync_item_costs
+
+			sync_item_costs(touched)
 
 
 def _read_price_file(file_url):

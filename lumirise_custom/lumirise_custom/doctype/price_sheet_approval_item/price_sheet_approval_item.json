@@ -6,8 +6,11 @@
  "engine": "InnoDB",
  "field_order": [
   "give_to_customer",
+  "configuration_group",
   "item",
   "customer_agreed_qty",
+  "is_sample_or_exception",
+  "exception_reason",
   "selected_moq",
   "sec_sel",
   "mono_box_finish",
@@ -44,6 +47,14 @@
    "allow_on_submit": 1
   },
   {
+   "allow_on_submit": 1,
+   "fieldname": "configuration_group",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Group",
+   "read_only": 1
+  },
+  {
    "fieldname": "item",
    "fieldtype": "Link",
    "label": "Item",
@@ -62,6 +73,21 @@
    "allow_on_submit": 1
   },
   {
+   "allow_on_submit": 1,
+   "description": "Use only for an approved sample or special sub-MOQ deal.",
+   "fieldname": "is_sample_or_exception",
+   "fieldtype": "Check",
+   "label": "Sample / MOQ Exception"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.is_sample_or_exception",
+   "fieldname": "exception_reason",
+   "fieldtype": "Small Text",
+   "label": "Exception Reason",
+   "mandatory_depends_on": "eval:doc.is_sample_or_exception"
+  },
+  {
    "fieldname": "selected_moq",
    "fieldtype": "Int",
    "label": "MOQ Tier",
@@ -74,6 +100,7 @@
    "label": "Selections"
   },
   {
+   "description": "Leave blank for No Mono Box.",
    "fieldname": "mono_box_finish",
    "fieldtype": "Link",
    "label": "Mono Box Finish",
@@ -83,6 +110,7 @@
    "allow_on_submit": 1
   },
   {
+   "description": "Leave blank for No Master Box (the configured no-box adder applies).",
    "fieldname": "master_box_finish",
    "fieldtype": "Link",
    "label": "Master Box Finish",

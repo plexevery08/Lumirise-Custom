@@ -68,7 +68,7 @@ def ensure_masters():
 	group = (frappe.db.exists("Item Group", "Products")
 		or frappe.db.exists("Item Group", "All Item Groups"))
 
-	# RM with landed-cost inputs: 10 RMB * 12 = 120 INR + 10% duty = 132.0
+	# RM with landed-cost inputs. Global FX enforcement may replace this item override.
 	rm = frappe.new_doc("Item")
 	rm.item_code = RM_ITEM
 	rm.item_name = RM_ITEM
@@ -79,8 +79,9 @@ def ensure_masters():
 	rm.custom_rmb_to_inr_rate = 12
 	rm.custom_custom_duty = 10
 	rm.insert(ignore_permissions=True)
-	check("Item landed cost computed", flt(rm.valuation_rate) == 132.0,
-		f"valuation_rate={rm.valuation_rate}")
+	expected_cost = flt(rm.custom_price_in_inr) + flt(rm.custom_basic_custom_duty)
+	check("Item landed cost computed", flt(rm.custom_costing_rate) == expected_cost,
+		f"custom_costing_rate={rm.custom_costing_rate}")
 
 	fg = frappe.new_doc("Item")
 	fg.item_code = FG_ITEM
@@ -140,10 +141,10 @@ def make_costed_bom():
 	bom.submit()
 	bom.reload()
 
-	# 132 raw + no layers -> bom_cost 132; 3k slab = 132 * 1.10 = 145.2
-	check("BOM cost rolled up", flt(bom.custom_bom_cost) == 132.0,
+	item_cost = flt(frappe.db.get_value("Item", RM_ITEM, "custom_costing_rate"))
+	check("BOM cost rolled up", flt(bom.custom_bom_cost) == item_cost,
 		f"custom_bom_cost={bom.custom_bom_cost}")
-	check("BOM 3k MOQ price", flt(bom.custom_3k_moq_price) == 145.2,
+	check("BOM 3k MOQ price", flt(bom.custom_3k_moq_price) == flt(item_cost * 1.10, 3),
 		f"custom_3k_moq_price={bom.custom_3k_moq_price}")
 	return bom
 
@@ -151,22 +152,27 @@ def make_costed_bom():
 def make_price_sheet():
 	sheet = frappe.new_doc("Price Sheet")
 	sheet.customer = CUSTOMER
-	sheet.delivery_type = "Transport"
-	sheet.transport_type = "Public"
-	sheet.transport_zone = "South"
-	sheet.payment_type = "Credit"
-	sheet.credit_days = 30
 	sheet.listening_percentage = 2
-	sheet.master_box_finish = FINISH_UV
-	sheet.master_box_caselots = str(CASELOT)
-	sheet.append("products", {"item": FG_ITEM})
-	for finish in (FINISH_UV, FINISH_MATT):
-		sheet.append("mono_box_finishes", {"box_finish": finish})
+	sheet.append(
+		"configurations",
+		{
+			"configuration_group": "Group 1",
+			"item": FG_ITEM,
+			"master_box_finish": FINISH_UV,
+			"delivery_type": "Transport",
+			"transport_type": "Public",
+			"transport_zone": "South",
+			"payment_type": "Credit",
+			"credit_days": 30,
+		},
+	)
 	sheet.insert(ignore_permissions=True)
 
 	# 4 tiers x (1 baseline + 2 finishes) x 1 caselot = 12 rows
 	check("Price sheet rows generated", len(sheet.rows) == 12,
 		f"rows={len(sheet.rows)}")
+	check("Configuration queue synced Products", sheet.products[0].item == FG_ITEM)
+	check("Configuration group stamped on rows", all(r.configuration_group == "Group 1" for r in sheet.rows))
 	check("LQ naming series", sheet.name.startswith("LQ-"), sheet.name)
 
 	row = next((r for r in sheet.rows
@@ -197,6 +203,13 @@ def approve(sheet):
 	sheet.reload()
 	line = sheet.approval_items[0]
 	line.customer_agreed_qty = 3500          # -> selected_moq 3000
+	line.mono_box_finish = FINISH_UV
+	line.master_box_finish = FINISH_UV
+	line.master_box_caselot = CASELOT
+	line.transport_mode = "Transport"
+	line.transport_type = "Public"
+	line.transport_zone = "South"
+	line.credit_days = 30
 	line.customer_price = 152.0
 	sheet.save(ignore_permissions=True)
 
@@ -222,8 +235,10 @@ def approve(sheet):
 		q.items[0].rate)
 	check("Quotation qty = agreed qty", flt(q.items[0].qty) == 3500,
 		q.items[0].qty)
-	check("Quotation back-reference", q.get("custom_price_sheet") == sheet.name,
-		q.get("custom_price_sheet"))
+	check("Quotation valid till copied", q.valid_till == sheet.valid_till, q.valid_till)
+	back_reference = q.get("lr_price_sheet") or q.get("custom_price_sheet")
+	check("Quotation back-reference", back_reference == sheet.name, back_reference)
+	check("Approval is idempotent", sheet.approve() == quotation_name)
 
 
 def run():

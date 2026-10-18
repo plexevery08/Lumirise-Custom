@@ -45,6 +45,11 @@ def after_migrate():
 
 	create_rm_barcode_fields()
 	create_costing_fields()
+	# The custom app is the sole calculator. Keep legacy scripts for audit but
+	# disable them, then normalize existing BOMs in a background rebuild.
+	from lumirise_custom.setup.costing_setup import setup_costing_system
+
+	setup_costing_system()
 	create_flow_fields()
 	create_bom_fields()
 	# BOM Reconciliation tab (Tab Break + HTML) on the Purchase Order.
@@ -113,11 +118,16 @@ def init_settings():
 		"profit_fallback_finish": "UV DRIPOFF SPOT",
 		"approval_window_days": 7,
 		"min_agreed_qty": 1000,
+		"use_global_rmb_to_inr_rate": 1,
+		"default_1k_moq_percentage": 12,
+		"default_3k_moq_percentage": 10,
+		"default_6k_moq_percentage": 8,
+		"default_10k_moq_percentage": 6,
 	}
 	settings = frappe.get_single("Sales Platform Settings")
 	changed = False
 	for field, value in defaults.items():
-		if not settings.get(field):
+		if settings.get(field) in (None, ""):
 			settings.set(field, value)
 			changed = True
 	if changed:
